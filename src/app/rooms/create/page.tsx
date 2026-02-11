@@ -311,7 +311,7 @@ export default function CreateRoomPage() {
             <div className="space-y-2 text-[13px] text-neutral-500">
               <p>1. 等待 2-4 人加入后由房主启动</p>
               <p>2. 准备阶段 — 10 分钟阅读文章和问题</p>
-              <p>3. 小组讨论 — 8 分钟 (4人) / 6 分钟 (3人) / 5 分钟 (2人)</p>
+              <p>3. 小组讨论 — 8 分钟自由讨论</p>
               <p>4. 个人回应 — 每人 1 分钟回答跟进问题</p>
             </div>
           </div>

@@ -94,8 +94,7 @@ export default function SessionPage() {
       phaseTransitionRef.current = true;
 
       if (room.status === "preparing") {
-        const discussionMinutes = members.length >= 4 ? 8 : 6;
-        const phaseEnd = new Date(Date.now() + discussionMinutes * 60 * 1000).toISOString();
+        const phaseEnd = new Date(Date.now() + 8 * 60 * 1000).toISOString();
         await supabase
           .from("rooms")
           .update({ status: "discussing", current_phase_end_at: phaseEnd })
@@ -417,9 +416,8 @@ export default function SessionPage() {
                     className="w-full text-[13px] border-neutral-200 text-neutral-500 hover:text-neutral-900"
                     onClick={async () => {
                       if (room.status === "preparing") {
-                        const discussionMinutes = members.length >= 4 ? 8 : 6;
                         const phaseEnd = new Date(
-                          Date.now() + discussionMinutes * 60 * 1000
+                          Date.now() + 8 * 60 * 1000
                         ).toISOString();
                         await supabase
                           .from("rooms")
