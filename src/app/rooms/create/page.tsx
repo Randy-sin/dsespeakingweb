@@ -214,10 +214,10 @@ export default function CreateRoomPage() {
                 </div>
               ) : (
                 <Select value={paperId} onValueChange={setPaperId}>
-                  <SelectTrigger className="h-10 text-[14px] border-neutral-200 rounded-lg">
+                  <SelectTrigger className="w-full h-10 text-[14px] border-neutral-200 rounded-lg">
                     <SelectValue placeholder="选择一个题目" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-80">
+                  <SelectContent position="popper" className="max-h-80 w-[var(--radix-select-trigger-width)]">
                     <SelectItem value="random">
                       <div className="flex items-center gap-2">
                         <Shuffle className="h-3.5 w-3.5" />
@@ -261,10 +261,10 @@ export default function CreateRoomPage() {
               <div className="space-y-1.5">
                 <Label className="text-[12px] text-neutral-400">日期</Label>
                 <Select value={scheduledDate} onValueChange={setScheduledDate}>
-                  <SelectTrigger className="h-10 text-[13px] border-neutral-200 rounded-lg">
+                  <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
                     {dateOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
@@ -278,15 +278,21 @@ export default function CreateRoomPage() {
               <div className="space-y-1.5">
                 <Label className="text-[12px] text-neutral-400">时间</Label>
                 <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                  <SelectTrigger className="h-10 text-[13px] border-neutral-200 rounded-lg">
+                  <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
                     <SelectValue placeholder="选择时间" />
                   </SelectTrigger>
-                  <SelectContent className="max-h-64">
-                    {timeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
+                  <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
+                    {timeOptions.length > 0 ? (
+                      timeOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="px-2 py-3 text-[12px] text-neutral-400 text-center">
+                        今天已无可选时段，请选择其他日期
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
