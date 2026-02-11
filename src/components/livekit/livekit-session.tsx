@@ -16,6 +16,12 @@ interface LiveKitSessionProps {
   roomStatus: RoomStatus;
   currentSpeakerUserId?: string;
   isSpectator?: boolean;
+  /** Whether we're waiting for all mics before starting discussion timer */
+  waitingForMics?: boolean;
+  /** Number of expected participants (non-spectator) */
+  expectedParticipantCount?: number;
+  /** Called when all participants have their mic enabled */
+  onAllMicsReady?: () => void;
 }
 
 export function LiveKitSession({
@@ -23,6 +29,9 @@ export function LiveKitSession({
   roomStatus,
   currentSpeakerUserId,
   isSpectator = false,
+  waitingForMics = false,
+  expectedParticipantCount = 0,
+  onAllMicsReady,
 }: LiveKitSessionProps) {
   const { user } = useUser();
   const [token, setToken] = useState<string | null>(null);
@@ -35,13 +44,8 @@ export function LiveKitSession({
     RoomAudioRenderer: React.ComponentType;
     VideoConference: React.ComponentType;
   } | null>(null);
-  const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<{
-    roomStatus: RoomStatus;
-    currentSpeakerUserId?: string;
-    isSpectator: boolean;
-    userId?: string;
-    connected: boolean;
-  }> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
   const hasAttemptedConnect = useRef(false);
 
   useEffect(() => {
@@ -240,6 +244,9 @@ export function LiveKitSession({
                 isSpectator={isSpectator}
                 userId={user?.id}
                 connected={connected}
+                waitingForMics={waitingForMics}
+                expectedParticipantCount={expectedParticipantCount}
+                onAllMicsReady={onAllMicsReady}
               />
             ) : (
               <div className="flex items-center justify-center gap-1">

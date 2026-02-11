@@ -21,12 +21,16 @@ import {
   Circle,
   Eye,
   LogOut,
+  Mic,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
 
 type MemberWithProfile = RoomMember & { profiles: Profile };
+
+const DISCUSSION_DURATION = 8 * 60; // 8 minutes in seconds
+const COUNTDOWN_SECONDS = 3; // 3-2-1 countdown
 
 export default function SessionPage() {
   const params = useParams();
@@ -41,6 +45,7 @@ export default function SessionPage() {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const phaseTransitionRef = useRef(false);
+  const micsReadyRef = useRef(false);
 
   // Separate participants from spectators
   const participants = allMembers.filter((m) => m.role !== "spectator");
@@ -101,7 +106,64 @@ export default function SessionPage() {
     };
   }, [roomId, fetchData, supabase]);
 
-  const { isExpired } = useCountdown(room?.current_phase_end_at ?? null);
+  const { timeLeft, isExpired } = useCountdown(room?.current_phase_end_at ?? null);
+
+  // ---- Waiting for mics + 3-2-1 countdown logic ----
+  const isWaitingForMics =
+    room?.status === "discussing" && !room?.current_phase_end_at;
+
+  // When discussion timer is set with 3s buffer, calculate countdown number
+  // timeLeft > DISCUSSION_DURATION means we're in the countdown phase
+  const countdownNumber =
+    room?.status === "discussing" &&
+    room?.current_phase_end_at &&
+    timeLeft > DISCUSSION_DURATION
+      ? Math.ceil(timeLeft - DISCUSSION_DURATION)
+      : null;
+
+  // Reset micsReadyRef when we enter a new "waiting for mics" state
+  useEffect(() => {
+    if (isWaitingForMics) {
+      micsReadyRef.current = false;
+    }
+  }, [isWaitingForMics]);
+
+  // Called by MediaControls when all participants have their mic on
+  const handleAllMicsReady = useCallback(async () => {
+    if (micsReadyRef.current || isSpectator || !room) return;
+    micsReadyRef.current = true;
+
+    // Set timer to 8 minutes + 3 seconds (for the countdown)
+    const phaseEnd = new Date(
+      Date.now() + (DISCUSSION_DURATION + COUNTDOWN_SECONDS) * 1000
+    ).toISOString();
+
+    await supabase
+      .from("rooms")
+      .update({ current_phase_end_at: phaseEnd })
+      .eq("id", roomId)
+      .eq("status", "discussing")
+      .is("current_phase_end_at", null); // Optimistic lock: only first client wins
+  }, [isSpectator, room, roomId, supabase]);
+
+  // Manual override: start discussion without waiting for all mics
+  const handleManualStartDiscussion = useCallback(async () => {
+    if (isSpectator || !room) return;
+    micsReadyRef.current = true;
+
+    const phaseEnd = new Date(
+      Date.now() + (DISCUSSION_DURATION + COUNTDOWN_SECONDS) * 1000
+    ).toISOString();
+
+    await supabase
+      .from("rooms")
+      .update({ current_phase_end_at: phaseEnd })
+      .eq("id", roomId)
+      .eq("status", "discussing")
+      .is("current_phase_end_at", null);
+
+    toast.success("讨论即将开始");
+  }, [isSpectator, room, roomId, supabase]);
 
   // ---- Phase transition (any PARTICIPANT can trigger when timer expires) ----
   useEffect(() => {
@@ -111,17 +173,17 @@ export default function SessionPage() {
       phaseTransitionRef.current = true;
 
       if (room.status === "preparing") {
-        const phaseEnd = new Date(Date.now() + 8 * 60 * 1000).toISOString();
+        // Transition to discussing: set current_phase_end_at = null (wait for mics)
         await supabase
           .from("rooms")
           .update({
             status: "discussing",
-            current_phase_end_at: phaseEnd,
+            current_phase_end_at: null, // Timer NOT started yet — wait for all mics
             skip_votes: [],
           })
           .eq("id", roomId)
           .eq("status", "preparing");
-        toast("进入讨论阶段");
+        toast("进入讨论阶段 — 请开启麦克风");
       } else if (room.status === "discussing") {
         const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
         await supabase
@@ -187,17 +249,17 @@ export default function SessionPage() {
       phaseTransitionRef.current = true;
 
       if (room.status === "preparing") {
-        const phaseEnd = new Date(Date.now() + 8 * 60 * 1000).toISOString();
+        // Skip to discussing: set current_phase_end_at = null (wait for mics)
         await supabase
           .from("rooms")
           .update({
             status: "discussing",
-            current_phase_end_at: phaseEnd,
+            current_phase_end_at: null, // Timer NOT started — wait for mics
             skip_votes: [],
           })
           .eq("id", roomId)
           .eq("status", "preparing");
-        toast.success("全员同意，跳过准备阶段");
+        toast.success("全员同意，跳过准备阶段 — 请开启麦克风");
       } else if (room.status === "discussing") {
         const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
         await supabase
@@ -283,10 +345,40 @@ export default function SessionPage() {
 
   const canVoteSkip =
     !isSpectator &&
-    (room.status === "preparing" || room.status === "discussing");
+    (room.status === "preparing" ||
+      (room.status === "discussing" && room.current_phase_end_at !== null));
+
+  // Timer display label
+  const timerLabel = isWaitingForMics
+    ? "Mic Check"
+    : room.status === "preparing"
+      ? "Prep"
+      : room.status === "discussing"
+        ? "Discussion"
+        : room.status === "individual"
+          ? `Individual ${currentSpeakerIndex + 1}/${participants.length}`
+          : "Done";
 
   return (
     <div className="min-h-screen bg-white">
+      {/* 3-2-1 Countdown Overlay */}
+      {countdownNumber !== null && countdownNumber > 0 && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div
+              key={countdownNumber}
+              className="text-white text-[140px] font-bold leading-none animate-bounce"
+              style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
+            >
+              {countdownNumber}
+            </div>
+            <p className="text-white/60 text-[16px] mt-6 tracking-wide">
+              Discussion starts in...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Top Bar */}
       <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-lg border-b border-neutral-200/60">
         <div className="max-w-7xl mx-auto px-5 py-2.5 flex items-center justify-between">
@@ -309,19 +401,40 @@ export default function SessionPage() {
             )}
             <TimerDisplay
               targetDate={room.current_phase_end_at}
-              label={
-                room.status === "preparing"
-                  ? "Prep"
-                  : room.status === "discussing"
-                    ? "Discussion"
-                    : room.status === "individual"
-                      ? `Individual ${currentSpeakerIndex + 1}/${participants.length}`
-                      : "Done"
-              }
+              label={timerLabel}
             />
           </div>
         </div>
       </div>
+
+      {/* Waiting for Mics Banner */}
+      {isWaitingForMics && !isSpectator && (
+        <div className="bg-amber-50/80 border-b border-amber-200/60">
+          <div className="max-w-7xl mx-auto px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-amber-100 flex items-center justify-center">
+                <Mic className="h-4 w-4 text-amber-600 animate-pulse" />
+              </div>
+              <div>
+                <p className="text-[13px] text-amber-900 font-medium">
+                  等待所有参与者开启麦克风
+                </p>
+                <p className="text-[11px] text-amber-600">
+                  所有人麦克风就绪后自动开始 3-2-1 倒数
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[12px] border-amber-300 text-amber-700 hover:bg-amber-100 h-8"
+              onClick={handleManualStartDiscussion}
+            >
+              跳过等待，直接开始
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Spectator banner */}
       {isSpectator && room.status !== "finished" && (
@@ -453,9 +566,7 @@ export default function SessionPage() {
                           <p className="text-[12px] text-neutral-400">
                             {isCurrentSpeaker
                               ? "轮到你了"
-                              : isSpectator
-                                ? "正在回答"
-                                : "正在回答"}
+                              : "正在回答"}
                           </p>
                         </div>
                       </div>
@@ -508,6 +619,9 @@ export default function SessionPage() {
                     roomStatus={room.status}
                     currentSpeakerUserId={currentSpeaker?.user_id}
                     isSpectator={isSpectator}
+                    waitingForMics={isWaitingForMics}
+                    expectedParticipantCount={participants.length}
+                    onAllMicsReady={handleAllMicsReady}
                   />
                 </div>
               </div>
