@@ -125,6 +125,30 @@ export function LiveKitSession({
     }
   }, [roomStatus, currentSpeakerUserId, user?.id, isSpectator]);
 
+  // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
+  const roomOptions = useMemo(
+    () => ({
+      audioCaptureDefaults: {
+        autoGainControl: true,
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 48000,
+        channelCount: 1,
+      },
+      videoCaptureDefaults: {
+        resolution: { width: 640, height: 480, frameRate: 24 },
+      },
+      publishDefaults: {
+        audioBitrate: 32_000,
+        dtx: true,
+        red: true,
+      },
+      adaptiveStream: true,
+      dynacast: true,
+    }),
+    []
+  );
+
   if (roomStatus === "preparing" && !isSpectator) {
     return (
       <div className="text-center py-6">
@@ -193,30 +217,6 @@ export function LiveKitSession({
       </div>
     );
   }
-
-  // Audio optimisation: noise suppression + echo cancellation + auto gain
-  const roomOptions = useMemo(
-    () => ({
-      audioCaptureDefaults: {
-        autoGainControl: true,
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-        channelCount: 1,
-      },
-      videoCaptureDefaults: {
-        resolution: { width: 640, height: 480, frameRate: 24 },
-      },
-      publishDefaults: {
-        audioBitrate: 32_000,
-        dtx: true,
-        red: true,
-      },
-      adaptiveStream: true,
-      dynacast: true,
-    }),
-    []
-  );
 
   if (token && url && lkComponents) {
     const {
