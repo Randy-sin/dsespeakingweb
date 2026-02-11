@@ -33,11 +33,14 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes - redirect to login if not authenticated
-  const protectedPaths = ["/rooms"];
-  const isProtectedPath = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
+  // Protected routes - only actions that require auth
+  const protectedPaths = ["/rooms/create"];
+  const isProtectedPath =
+    protectedPaths.some((path) =>
+      request.nextUrl.pathname.startsWith(path)
+    ) ||
+    // /rooms/[id] (waiting room & session) require auth, but /rooms itself is public
+    /^\/rooms\/[^/]+/.test(request.nextUrl.pathname);
 
   if (!user && isProtectedPath) {
     const url = request.nextUrl.clone();

@@ -13,7 +13,10 @@ import {
   Loader2,
   Play,
   LogOut,
+  CalendarDays,
 } from "lucide-react";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
@@ -91,7 +94,7 @@ export default function WaitingRoomPage() {
   const isHost = user?.id === room?.host_id;
   const isMember = members.some((m) => m.user_id === user?.id);
   const memberCount = members.length;
-  const canStart = isHost && memberCount >= 3;
+  const canStart = isHost && memberCount >= 2;
 
   const handleStart = async () => {
     if (!canStart) return;
@@ -197,9 +200,20 @@ export default function WaitingRoomPage() {
               {memberCount}/{room.max_members}
             </span>
           </div>
-          <p className="text-[14px] text-neutral-400">
-            等待队友加入...
-          </p>
+          {room.scheduled_at ? (
+            <div className="flex items-center gap-2 text-[14px] text-neutral-500 mt-1">
+              <CalendarDays className="h-3.5 w-3.5 text-neutral-400" />
+              <span>
+                计划于{" "}
+                <span className="font-medium text-neutral-700">
+                  {format(new Date(room.scheduled_at), "M月d日 EEEE HH:mm", { locale: zhCN })}
+                </span>{" "}
+                开始
+              </span>
+            </div>
+          ) : (
+            <p className="text-[14px] text-neutral-400">等待队友加入...</p>
+          )}
         </div>
 
         <div className="grid gap-10 lg:grid-cols-5">
@@ -275,7 +289,7 @@ export default function WaitingRoomPage() {
                     )}
                     {canStart
                       ? "开始练习"
-                      : `还需 ${3 - memberCount} 人`}
+                      : `还需 ${2 - memberCount} 人`}
                   </Button>
                   <Button
                     variant="ghost"

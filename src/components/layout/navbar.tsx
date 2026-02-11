@@ -33,75 +33,77 @@ export function Navbar() {
     : user?.email?.slice(0, 2).toUpperCase() || "??";
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-200/60 bg-white/90 backdrop-blur-lg">
+    <nav className="sticky top-0 z-50 border-b border-neutral-100 bg-white/80 backdrop-blur-xl">
       <div className="max-w-6xl mx-auto px-5 sm:px-8">
         <div className="flex h-14 items-center justify-between">
-          <Link
-            href="/"
-            className="font-serif text-[17px] font-semibold tracking-tight text-neutral-900 hover:text-neutral-600 transition-colors"
-          >
-            DSE Speaking
-          </Link>
+          <div className="flex items-center gap-8">
+            <Link
+              href="/"
+              className="font-serif text-[17px] font-semibold tracking-tight text-neutral-900 hover:text-neutral-600 transition-colors"
+            >
+              DSE Speaking
+            </Link>
+            <div className="hidden sm:flex items-center gap-1">
+              <Link href="/rooms">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal h-8"
+                >
+                  Rooms
+                </Button>
+              </Link>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             {loading ? (
-              <div className="h-8 w-16 bg-neutral-100 animate-pulse rounded" />
+              <div className="h-8 w-16 bg-neutral-100 animate-pulse rounded-full" />
             ) : user ? (
-              <>
-                <Link href="/rooms">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
-                    className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal"
+                    className="relative h-8 w-8 rounded-full"
                   >
-                    Rooms
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-neutral-900 text-white text-[11px] font-medium">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
-                </Link>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="relative h-8 w-8 rounded-full"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className="bg-neutral-900 text-white text-[11px] font-medium">
-                          {initials}
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <div className="px-3 py-2">
-                      <p className="text-sm font-medium text-neutral-900">
-                        {profile?.display_name || "用户"}
-                      </p>
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        {user.email}
-                      </p>
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="cursor-pointer text-[13px]">
-                      <User className="mr-2 h-3.5 w-3.5" />
-                      个人资料
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      className="cursor-pointer text-[13px] text-neutral-500"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="mr-2 h-3.5 w-3.5" />
-                      退出登录
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                  <div className="px-3 py-2.5">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {profile?.display_name || "用户"}
+                    </p>
+                    <p className="text-xs text-neutral-400 mt-0.5">
+                      {user.email}
+                    </p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="cursor-pointer text-[13px] rounded-lg mx-1">
+                    <User className="mr-2 h-3.5 w-3.5" />
+                    个人资料
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="cursor-pointer text-[13px] text-neutral-500 rounded-lg mx-1"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-3.5 w-3.5" />
+                    退出登录
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : (
               <>
                 <Link href="/login">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal"
+                    className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal h-8"
                   >
                     登录
                   </Button>
@@ -109,7 +111,7 @@ export function Navbar() {
                 <Link href="/register">
                   <Button
                     size="sm"
-                    className="text-[13px] h-8 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-4"
+                    className="text-[13px] h-8 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-4 shadow-sm"
                   >
                     注册
                   </Button>
