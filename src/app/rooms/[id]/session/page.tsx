@@ -22,12 +22,36 @@ import {
   Eye,
   LogOut,
   Mic,
+  ClipboardCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { MarkerScoringPanel } from "@/components/session/marker-scoring-panel";
+import { MarkerQuestionSelector } from "@/components/session/marker-question-selector";
 import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
 
 type MemberWithProfile = RoomMember & { profiles: Profile };
+
+type PartBQuestion = {
+  text?: string;
+  question?: string;
+  number?: number;
+  difficulty?: string;
+  difficulty_level?: string;
+};
+
+/** Evenly distribute N questions across P participants */
+function assignQuestions(
+  questions: PartBQuestion[],
+  participantCount: number
+): PartBQuestion[] {
+  if (!questions.length || !participantCount) return [];
+  const step = Math.max(1, Math.floor(questions.length / participantCount));
+  return Array.from({ length: participantCount }, (_, i) => {
+    const idx = Math.min(i * step, questions.length - 1);
+    return questions[idx];
+  });
+}
 
 const DISCUSSION_DURATION = 8 * 60; // 8 minutes in seconds
 const COUNTDOWN_SECONDS = 3; // 3-2-1 countdown
@@ -48,13 +72,17 @@ export default function SessionPage() {
   const phaseTransitionRef = useRef(false);
   const micsReadyRef = useRef(false);
 
-  // Separate participants from spectators
-  const participants = allMembers.filter((m) => m.role !== "spectator");
+  // Separate participants from spectators and marker
+  const participants = allMembers.filter((m) => m.role === "participant");
   const spectators = allMembers.filter((m) => m.role === "spectator");
+  const markerMember = allMembers.find((m) => m.role === "marker");
 
-  // Detect if current user is a spectator
+  // Detect current user's role
   const myMembership = allMembers.find((m) => m.user_id === user?.id);
   const isSpectator = myMembership?.role === "spectator";
+  const isMarker = myMembership?.role === "marker";
+  const hasMarker = !!markerMember;
+  const isObserver = isSpectator || isMarker; // Neither can publish or vote
 
   const fetchData = useCallback(async () => {
     const { data: roomData } = await supabase
@@ -131,7 +159,7 @@ export default function SessionPage() {
 
   // Called by MediaControls when all participants have their mic on
   const handleAllMicsReady = useCallback(async () => {
-    if (micsReadyRef.current || isSpectator || !room) return;
+    if (micsReadyRef.current || isObserver || !room) return;
     micsReadyRef.current = true;
 
     // Set timer to 8 minutes + 3 seconds (for the countdown)
@@ -145,11 +173,11 @@ export default function SessionPage() {
       .eq("id", roomId)
       .eq("status", "discussing")
       .is("current_phase_end_at", null); // Optimistic lock: only first client wins
-  }, [isSpectator, room, roomId, supabase]);
+  }, [isObserver, room, roomId, supabase]);
 
   // Manual override: start discussion without waiting for all mics
   const handleManualStartDiscussion = useCallback(async () => {
-    if (isSpectator || !room) return;
+    if (isObserver || !room) return;
     micsReadyRef.current = true;
 
     const phaseEnd = new Date(
@@ -164,11 +192,11 @@ export default function SessionPage() {
       .is("current_phase_end_at", null);
 
     toast.success("讨论即将开始");
-  }, [isSpectator, room, roomId, supabase]);
+  }, [isObserver, room, roomId, supabase]);
 
   // ---- Phase transition (any PARTICIPANT can trigger when timer expires) ----
   useEffect(() => {
-    if (!isExpired || !room || phaseTransitionRef.current || isSpectator) return;
+    if (!isExpired || !room || phaseTransitionRef.current || isObserver) return;
 
     const transitionPhase = async () => {
       phaseTransitionRef.current = true;
@@ -194,6 +222,7 @@ export default function SessionPage() {
             current_phase_end_at: phaseEnd,
             current_speaker_index: 0,
             skip_votes: [],
+            marker_questions: {},
           })
           .eq("id", roomId)
           .eq("status", "discussing");
@@ -230,7 +259,7 @@ export default function SessionPage() {
     };
 
     transitionPhase();
-  }, [isExpired, room, participants.length, roomId, supabase, isSpectator]);
+  }, [isExpired, room, participants.length, roomId, supabase, isObserver]);
 
   // ---- Voting to skip current phase (participants only) ----
   const skipVotes = room?.skip_votes ?? [];
@@ -243,7 +272,7 @@ export default function SessionPage() {
 
   // Auto-execute skip when all participants voted
   useEffect(() => {
-    if (!allVotedSkip || !room || phaseTransitionRef.current || isSpectator)
+    if (!allVotedSkip || !room || phaseTransitionRef.current || isObserver)
       return;
 
     const executeSkip = async () => {
@@ -270,6 +299,7 @@ export default function SessionPage() {
             current_phase_end_at: phaseEnd,
             current_speaker_index: 0,
             skip_votes: [],
+            marker_questions: {},
           })
           .eq("id", roomId)
           .eq("status", "discussing");
@@ -282,10 +312,10 @@ export default function SessionPage() {
     };
 
     executeSkip();
-  }, [allVotedSkip, room, roomId, supabase, isSpectator]);
+  }, [allVotedSkip, room, roomId, supabase, isObserver]);
 
   const handleToggleSkipVote = async () => {
-    if (!user || !room || isSpectator) return;
+    if (!user || !room || isObserver) return;
     const currentVotes = room.skip_votes ?? [];
 
     if (myVoteSkip) {
@@ -341,13 +371,26 @@ export default function SessionPage() {
   const currentSpeakerIndex = room.current_speaker_index ?? 0;
   const currentSpeaker = participants[currentSpeakerIndex];
   const isCurrentSpeaker = user?.id === currentSpeaker?.user_id;
-  const partBQuestions =
-    (paper.part_b_questions as { question?: string; text?: string }[]) || [];
+  const rawPartBQuestions = (paper.part_b_questions as PartBQuestion[]) || [];
+  const assignedQuestions = assignQuestions(rawPartBQuestions, participants.length);
 
   const canVoteSkip =
-    !isSpectator &&
+    !isObserver &&
     (room.status === "preparing" ||
       (room.status === "discussing" && room.current_phase_end_at !== null));
+
+  // Marker-selected question for current speaker
+  const markerQuestions = (room.marker_questions ?? {}) as Record<string, number>;
+  const markerSelectedQIdx = markerQuestions[String(currentSpeakerIndex)];
+  const markerSelectedQuestion =
+    hasMarker && markerSelectedQIdx !== undefined && markerSelectedQIdx !== null
+      ? rawPartBQuestions[markerSelectedQIdx]
+      : null;
+
+  // Determine which question to show: marker-selected or auto-assigned
+  const displayQuestion = hasMarker
+    ? markerSelectedQuestion
+    : assignedQuestions[currentSpeakerIndex] ?? null;
 
   // Timer display label
   const timerLabel = isWaitingForMics
@@ -400,6 +443,12 @@ export default function SessionPage() {
                 观众模式
               </span>
             )}
+            {isMarker && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-violet-50 text-violet-600 border border-violet-100">
+                <ClipboardCheck className="h-3 w-3" />
+                Marker
+              </span>
+            )}
             <TimerDisplay
               targetDate={room.current_phase_end_at}
               label={timerLabel}
@@ -409,7 +458,7 @@ export default function SessionPage() {
       </div>
 
       {/* Waiting for Mics Banner */}
-      {isWaitingForMics && !isSpectator && (
+      {isWaitingForMics && !isObserver && (
         <div className="bg-amber-50/80 border-b border-amber-200/60">
           <div className="max-w-7xl mx-auto px-5 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -457,6 +506,29 @@ export default function SessionPage() {
         </div>
       )}
 
+      {/* Marker banner */}
+      {isMarker && room.status !== "finished" && (
+        <div className="bg-violet-50/60 border-b border-violet-100/60">
+          <div className="max-w-7xl mx-auto px-5 py-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-3.5 w-3.5 text-violet-500" />
+              <p className="text-[12px] text-violet-600">
+                Marker 模式 — 你可以评分并选择 Individual Response 问题
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[12px] text-violet-500 hover:text-violet-700 h-7"
+              onClick={handleLeaveSpectator}
+            >
+              <LogOut className="mr-1 h-3 w-3" />
+              退出
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-5 py-6">
         {/* Finished */}
         {room.status === "finished" && (
@@ -468,10 +540,24 @@ export default function SessionPage() {
               练习完成
             </h2>
             <p className="text-[15px] text-neutral-400 mb-10 max-w-md mx-auto">
-              {isSpectator
+              {isMarker
+                ? "练习已结束。你可以在下方完成评分。"
+                : isSpectator
                 ? "你观看的 DSE Speaking 模拟练习已经结束。"
                 : "你完成了一次完整的 DSE Speaking 模拟练习。回顾讨论中的表现，持续进步。"}
             </p>
+
+            {/* Marker scoring panel after finish */}
+            {isMarker && user && (
+              <div className="max-w-lg mx-auto mb-10">
+                <MarkerScoringPanel
+                  roomId={roomId}
+                  markerId={user.id}
+                  participants={participants}
+                />
+              </div>
+            )}
+
             <Link href="/rooms">
               <Button className="h-10 px-6 bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] rounded-full">
                 <Home className="mr-2 h-4 w-4" />
@@ -596,51 +682,162 @@ export default function SessionPage() {
                 {room.status === "individual" && (
                   <div>
                     <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
-                      Individual Response
+                      Individual Response — Part B
                     </p>
-                    <div className="border border-neutral-200/60 rounded-lg p-5">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-neutral-900 text-white text-[11px]">
+
+                    {/* Speaker queue overview */}
+                    <div className="flex items-center gap-1.5 mb-4">
+                      {participants.map((m, idx) => {
+                        const isActive = idx === currentSpeakerIndex;
+                        const isDone = idx < currentSpeakerIndex;
+                        return (
+                          <div
+                            key={m.user_id}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${
+                              isActive
+                                ? "bg-neutral-900 text-white shadow-sm"
+                                : isDone
+                                ? "bg-emerald-50 text-emerald-600 line-through"
+                                : "bg-neutral-100 text-neutral-400"
+                            }`}
+                          >
+                            {isDone && <Check className="h-3 w-3" />}
+                            {isActive && <Mic className="h-3 w-3 animate-pulse" />}
+                            <span>
+                              {m.profiles?.display_name?.split(" ")[0] || `#${idx + 1}`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Current speaker & question */}
+                    <div className="border border-neutral-200/60 rounded-xl overflow-hidden">
+                      {/* Speaker header */}
+                      <div className="flex items-center gap-3 px-5 py-4 bg-neutral-50/70 border-b border-neutral-100">
+                        <Avatar className="h-9 w-9 ring-2 ring-neutral-900 ring-offset-2">
+                          <AvatarFallback className="bg-neutral-900 text-white text-[11px] font-semibold">
                             {currentSpeaker?.profiles?.display_name
                               ?.slice(0, 2)
                               ?.toUpperCase() || "??"}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
-                          <p className="text-[14px] font-medium text-neutral-900">
-                            {currentSpeaker?.profiles?.display_name ||
-                              "Speaker"}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-semibold text-neutral-900 truncate">
+                            {currentSpeaker?.profiles?.display_name || "Speaker"}
                           </p>
                           <p className="text-[12px] text-neutral-400">
                             {isCurrentSpeaker
-                              ? "轮到你了"
-                              : "正在回答"}
+                              ? "Your turn — answer the question below"
+                              : `Candidate ${currentSpeakerIndex + 1} of ${participants.length} is responding`}
                           </p>
                         </div>
+                        <Badge variant="outline" className="text-[11px] font-mono shrink-0">
+                          {currentSpeakerIndex + 1} / {participants.length}
+                        </Badge>
                       </div>
-                      {partBQuestions[currentSpeakerIndex] && (
-                        <p className="text-[14px] text-neutral-700 leading-relaxed bg-neutral-50 p-4 rounded border border-neutral-100">
-                          {typeof partBQuestions[currentSpeakerIndex] ===
-                          "string"
-                            ? partBQuestions[currentSpeakerIndex]
-                            : (() => {
-                                const q =
-                                  partBQuestions[currentSpeakerIndex] as {
-                                    question?: string;
-                                    text?: string;
-                                  };
-                                return q?.text ?? q?.question ?? JSON.stringify(q);
-                              })()}
-                        </p>
-                      )}
+
+                      {/* Question card */}
+                      {displayQuestion ? (() => {
+                        const q = displayQuestion;
+                        const questionText = q?.text ?? q?.question ?? "";
+                        const questionNum = q?.number;
+                        const difficulty = q?.difficulty;
+                        const difficultyLevel = q?.difficulty_level;
+
+                        return (
+                          <div className="px-5 py-5 space-y-3">
+                            {/* Question number & difficulty */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {questionNum && (
+                                <span className="inline-flex items-center justify-center h-6 min-w-[24px] px-1.5 rounded-md bg-neutral-900 text-white text-[11px] font-bold font-mono">
+                                  Q{questionNum}
+                                </span>
+                              )}
+                              {difficulty && (
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-[11px] font-medium ${
+                                    difficulty === "hard"
+                                      ? "bg-red-50 text-red-600 border-red-200"
+                                      : difficulty === "medium"
+                                      ? "bg-amber-50 text-amber-600 border-amber-200"
+                                      : "bg-green-50 text-green-600 border-green-200"
+                                  }`}
+                                >
+                                  {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                                </Badge>
+                              )}
+                              {difficultyLevel && (
+                                <span className="text-[11px] text-neutral-400 font-mono">
+                                  Level {difficultyLevel}
+                                </span>
+                              )}
+                              {hasMarker && (
+                                <span className="text-[10px] text-violet-400 ml-auto">
+                                  selected by Marker
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Question text */}
+                            <p className="text-[16px] leading-[1.7] text-neutral-800 font-medium">
+                              {questionText}
+                            </p>
+
+                            {/* Tip for current speaker */}
+                            {isCurrentSpeaker && (
+                              <div className="mt-2 flex items-start gap-2.5 p-3.5 rounded-lg bg-blue-50/60 border border-blue-100">
+                                <Mic className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                                <p className="text-[13px] text-blue-700 leading-relaxed">
+                                  You have <strong>1 minute</strong> to respond. Speak clearly and support your answer with reasons or examples.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })() : hasMarker ? (
+                        <div className="px-5 py-8 text-center">
+                          <ClipboardCheck className="h-6 w-6 text-violet-300 mx-auto mb-2" />
+                          <p className="text-[14px] text-neutral-500 font-medium">
+                            Waiting for Marker to select a question...
+                          </p>
+                          <p className="text-[12px] text-neutral-400 mt-1">
+                            Marker 正在为当前候选人选择问题
+                          </p>
+                        </div>
+                      ) : null}
                     </div>
+
+                    {/* Questions pool for all (visible after all speakers done or for spectators) */}
+                    {(isSpectator || (!isMarker && currentSpeakerIndex >= participants.length)) && rawPartBQuestions.length > 0 && (
+                      <div className="mt-4 border border-neutral-200/60 rounded-xl p-4">
+                        <p className="text-[12px] text-neutral-400 uppercase tracking-wide mb-3">
+                          All Part B Questions
+                        </p>
+                        <div className="space-y-2">
+                          {rawPartBQuestions.map((q, idx) => (
+                            <div
+                              key={idx}
+                              className="flex gap-3 items-start text-[13px]"
+                            >
+                              <span className="font-mono text-neutral-300 mt-px shrink-0 w-5 text-right">
+                                {q.number ?? idx + 1}.
+                              </span>
+                              <span className="text-neutral-600 leading-relaxed">
+                                {q.text ?? q.question ?? ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Notes (participants only) */}
-              {room.status === "preparing" && !isSpectator && (
+              {room.status === "preparing" && !isObserver && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                     Notes
@@ -667,7 +864,7 @@ export default function SessionPage() {
                     roomId={roomId}
                     roomStatus={room.status}
                     currentSpeakerUserId={currentSpeaker?.user_id}
-                    isSpectator={isSpectator}
+                    isSpectator={isObserver}
                     waitingForMics={isWaitingForMics}
                     expectedParticipantCount={participants.length}
                     onAllMicsReady={handleAllMicsReady}
@@ -778,6 +975,46 @@ export default function SessionPage() {
                         </p>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Marker: Question Selector (during individual phase) */}
+              {isMarker && room.status === "individual" && (
+                <MarkerQuestionSelector
+                  room={room}
+                  roomId={roomId}
+                  participants={participants}
+                  questions={rawPartBQuestions}
+                  currentSpeakerIndex={currentSpeakerIndex}
+                />
+              )}
+
+              {/* Marker: Scoring Panel */}
+              {isMarker && user && (room.status === "discussing" || room.status === "individual") && (
+                <MarkerScoringPanel
+                  roomId={roomId}
+                  markerId={user.id}
+                  participants={participants}
+                />
+              )}
+
+              {/* Marker in sidebar */}
+              {hasMarker && !isMarker && (
+                <div>
+                  <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <ClipboardCheck className="h-3.5 w-3.5" />
+                    Marker
+                  </p>
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-violet-50/50 border border-violet-100">
+                    <Avatar className="h-7 w-7">
+                      <AvatarFallback className="text-[10px] font-medium bg-violet-600 text-white">
+                        {markerMember?.profiles?.display_name?.slice(0, 2)?.toUpperCase() || "MK"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <p className="text-[13px] font-medium text-neutral-900 truncate">
+                      {markerMember?.profiles?.display_name || "Marker"}
+                    </p>
                   </div>
                 </div>
               )}

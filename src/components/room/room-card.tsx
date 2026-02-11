@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { formatDistanceToNow, format, isToday, isTomorrow } from "date-fns";
 import { zhCN } from "date-fns/locale";
-import { ArrowRight, Users, CalendarDays, Eye } from "lucide-react";
+import { ArrowRight, Users, CalendarDays, Eye, ClipboardCheck } from "lucide-react";
 import type { Room, Profile, RoomMember } from "@/lib/supabase/types";
 
 type RoomWithInfo = Room & {
@@ -25,8 +25,9 @@ export function RoomCard({ room }: RoomCardProps) {
   const router = useRouter();
   const supabase = createClient();
 
-  const participants = room.room_members?.filter((m) => m.role !== "spectator") || [];
+  const participants = room.room_members?.filter((m) => m.role === "participant") || [];
   const spectators = room.room_members?.filter((m) => m.role === "spectator") || [];
+  const hasMarker = room.room_members?.some((m) => m.role === "marker") || false;
   const participantCount = participants.length;
   const spectatorCount = spectators.length;
   const isFull = participantCount >= room.max_members;
@@ -210,6 +211,11 @@ export function RoomCard({ room }: RoomCardProps) {
             <span className="text-[12px] text-neutral-400 tabular-nums">
               {participantCount}/{room.max_members}
             </span>
+            {hasMarker && (
+              <span className="flex items-center gap-1 text-[11px] text-violet-400">
+                <ClipboardCheck className="h-3 w-3" />
+              </span>
+            )}
             {spectatorCount > 0 && (
               <span className="flex items-center gap-1 text-[11px] text-neutral-300">
                 <Eye className="h-3 w-3" />

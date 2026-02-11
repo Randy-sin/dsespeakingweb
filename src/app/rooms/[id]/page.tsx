@@ -16,6 +16,8 @@ import {
   Check,
   Circle,
   Eye,
+  Users,
+  ClipboardCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -24,6 +26,7 @@ import Link from "next/link";
 import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
 
 type MemberWithProfile = RoomMember & { profiles: Profile };
+type RoleType = "participant" | "spectator" | "marker";
 
 export default function WaitingRoomPage() {
   const params = useParams();
@@ -37,6 +40,7 @@ export default function WaitingRoomPage() {
   const [paper, setPaper] = useState<PastPaper | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const startingRef = useRef(false);
 
   const fetchRoom = useCallback(async () => {
@@ -99,19 +103,117 @@ export default function WaitingRoomPage() {
     }
   }, [room, members, user?.id, roomId, router]);
 
+  // Derived state
   const isHost = user?.id === room?.host_id;
-  const isMember = members.some((m) => m.user_id === user?.id);
-  const participants = members.filter((m) => m.role !== "spectator");
+  const myMember = members.find((m) => m.user_id === user?.id);
+  const isMember = !!myMember;
+  const myRole = myMember?.role as RoleType | undefined;
+  const participants = members.filter((m) => m.role === "participant");
+  const spectators = members.filter((m) => m.role === "spectator");
+  const markerMember = members.find((m) => m.role === "marker");
+  const hasMarker = !!markerMember;
   const memberCount = participants.length;
   const readyVotes: string[] = Array.isArray(room?.ready_votes) ? room.ready_votes : [];
   const myVoteReady = user ? readyVotes.includes(user.id) : false;
   const readyCount = readyVotes.filter((v) => participants.some((m) => m.user_id === v)).length;
   const allReady = memberCount >= 2 && readyCount === memberCount;
+  const isInSession =
+    room?.status === "preparing" ||
+    room?.status === "discussing" ||
+    room?.status === "individual";
+  const isFull = memberCount >= (room?.max_members ?? 4);
 
-  // Auto-start when all participants are ready (ANY member can trigger, not just host)
+  // ---- Role switching / joining ----
+  const handleSelectRole = async (role: RoleType) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (switching) return;
+    setSwitching(true);
+
+    try {
+      if (isMember && myRole === role) {
+        // Already this role — no-op
+        setSwitching(false);
+        return;
+      }
+
+      // Validation
+      if (role === "participant" && isInSession) {
+        toast.error("练习已开始，无法加入为参与者");
+        setSwitching(false);
+        return;
+      }
+      if (role === "participant" && !isMember && isFull) {
+        toast.error("参与者席位已满");
+        setSwitching(false);
+        return;
+      }
+      if (role === "participant" && isMember && myRole !== "participant" && isFull) {
+        toast.error("参与者席位已满");
+        setSwitching(false);
+        return;
+      }
+      if (role === "marker" && hasMarker && markerMember?.user_id !== user.id) {
+        toast.error("已有 Marker，每个房间只允许一位");
+        setSwitching(false);
+        return;
+      }
+
+      if (isMember) {
+        // Switch role
+        // If switching away from participant, remove ready vote
+        if (myRole === "participant" && role !== "participant" && room) {
+          const newVotes = readyVotes.filter((v) => v !== user.id);
+          await supabase.from("rooms").update({ ready_votes: newVotes }).eq("id", roomId);
+        }
+        const { error } = await supabase
+          .from("room_members")
+          .update({ role: role })
+          .eq("room_id", roomId)
+          .eq("user_id", user.id);
+        if (error) {
+          toast.error("切换角色失败");
+        } else {
+          const labels: Record<RoleType, string> = {
+            participant: "参与者",
+            spectator: "观众",
+            marker: "Marker",
+          };
+          toast.success(`已切换为${labels[role]}`);
+          // If switching to spectator/marker and room is in session, go to session
+          if ((role === "spectator" || role === "marker") && isInSession) {
+            router.push(`/rooms/${roomId}/session`);
+          }
+        }
+      } else {
+        // Join with role
+        const { error } = await supabase
+          .from("room_members")
+          .insert({ room_id: roomId, user_id: user.id, role });
+        if (error) {
+          toast.error("加入失败");
+        } else {
+          const labels: Record<RoleType, string> = {
+            participant: "参与者",
+            spectator: "观众",
+            marker: "Marker",
+          };
+          toast.success(`以${labels[role]}身份加入`);
+          if ((role === "spectator" || role === "marker") && isInSession) {
+            router.push(`/rooms/${roomId}/session`);
+          }
+        }
+      }
+    } finally {
+      setSwitching(false);
+    }
+  };
+
+  // Auto-start when all participants are ready
   useEffect(() => {
     if (!allReady || startingRef.current || !user?.id) return;
-    // Only let one member trigger it (the host, or the first member alphabetically)
     const triggerUserId = isHost ? room?.host_id : participants[0]?.user_id;
     if (user.id !== triggerUserId) return;
 
@@ -120,7 +222,6 @@ export default function WaitingRoomPage() {
 
     const autoStart = async () => {
       try {
-        // Shuffle speaking order for participants only
         const shuffled = [...participants].sort(() => Math.random() - 0.5);
         for (let i = 0; i < shuffled.length; i++) {
           await supabase
@@ -136,9 +237,10 @@ export default function WaitingRoomPage() {
             current_phase_end_at: phaseEnd,
             current_speaker_index: 0,
             ready_votes: [],
+            marker_questions: {},
           })
           .eq("id", roomId)
-          .eq("status", "waiting"); // optimistic lock — only if still waiting
+          .eq("status", "waiting");
 
         if (error) {
           console.error("Auto-start failed:", error);
@@ -172,7 +274,6 @@ export default function WaitingRoomPage() {
       newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
     }
 
-    // Optimistic update — show immediately in UI
     setRoom({ ...room, ready_votes: newVotes });
 
     const { error } = await supabase
@@ -183,7 +284,6 @@ export default function WaitingRoomPage() {
     if (error) {
       console.error("Toggle ready failed:", error);
       toast.error("操作失败，请重试");
-      // Revert optimistic update
       setRoom({ ...room, ready_votes: currentVotes });
     } else if (!myVoteReady) {
       toast.success("已准备");
@@ -215,38 +315,6 @@ export default function WaitingRoomPage() {
     router.push("/rooms");
   };
 
-  const handleJoin = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    const { error } = await supabase
-      .from("room_members")
-      .insert({ room_id: roomId, user_id: user.id, role: "participant" });
-    if (error) toast.error("加入失败");
-  };
-
-  const handleJoinAsSpectator = async () => {
-    if (!user) {
-      router.push("/login");
-      return;
-    }
-    const { error } = await supabase
-      .from("room_members")
-      .insert({ room_id: roomId, user_id: user.id, role: "spectator" });
-    if (error) {
-      toast.error("加入观看失败");
-      return;
-    }
-    toast.success("以观众身份加入");
-    router.push(`/rooms/${roomId}/session`);
-  };
-
-  const isInSession =
-    room?.status === "preparing" ||
-    room?.status === "discussing" ||
-    room?.status === "individual";
-
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -276,6 +344,40 @@ export default function WaitingRoomPage() {
       </div>
     );
   }
+
+  // Role selector tab config
+  const roleConfig: {
+    role: RoleType;
+    label: string;
+    icon: React.ReactNode;
+    count: string;
+    disabled: boolean;
+    disabledReason?: string;
+  }[] = [
+    {
+      role: "participant",
+      label: "参与者",
+      icon: <Users className="h-3.5 w-3.5" />,
+      count: `${memberCount}/${room.max_members}`,
+      disabled: (isInSession && myRole !== "participant") || (!isMember && isFull && !isInSession),
+      disabledReason: isInSession ? "练习中" : "已满",
+    },
+    {
+      role: "spectator",
+      label: "观众",
+      icon: <Eye className="h-3.5 w-3.5" />,
+      count: `${spectators.length}`,
+      disabled: false,
+    },
+    {
+      role: "marker",
+      label: "Marker",
+      icon: <ClipboardCheck className="h-3.5 w-3.5" />,
+      count: hasMarker ? "1/1" : "0/1",
+      disabled: hasMarker && markerMember?.user_id !== user?.id,
+      disabledReason: "已占用",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-white">
@@ -318,12 +420,52 @@ export default function WaitingRoomPage() {
         </div>
 
         <div className="grid gap-10 lg:grid-cols-5">
-          {/* Members */}
+          {/* Left column: Members + Role Selector */}
           <div className="lg:col-span-3 space-y-6">
+
+            {/* Role Selector Tabs */}
+            <div className="flex rounded-lg border border-neutral-200/60 overflow-hidden">
+              {roleConfig.map((cfg) => {
+                const isActive = myRole === cfg.role;
+                const isDisabled = cfg.disabled && !isActive;
+                return (
+                  <button
+                    key={cfg.role}
+                    type="button"
+                    disabled={isDisabled || switching}
+                    onClick={() => handleSelectRole(cfg.role)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 px-2 text-[13px] font-medium transition-all border-r last:border-r-0 border-neutral-200/60 ${
+                      isActive
+                        ? cfg.role === "marker"
+                          ? "bg-violet-50 text-violet-700 border-b-2 border-b-violet-500"
+                          : cfg.role === "spectator"
+                          ? "bg-blue-50 text-blue-700 border-b-2 border-b-blue-500"
+                          : "bg-neutral-900 text-white"
+                        : isDisabled
+                        ? "bg-neutral-50 text-neutral-300 cursor-not-allowed"
+                        : "bg-white text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 cursor-pointer"
+                    }`}
+                  >
+                    {cfg.icon}
+                    <span>{cfg.label}</span>
+                    <span className={`text-[11px] font-mono ${isActive ? "opacity-70" : "text-neutral-300"}`}>
+                      {cfg.count}
+                    </span>
+                    {isDisabled && cfg.disabledReason && (
+                      <span className="text-[10px] text-neutral-300 ml-0.5">
+                        ({cfg.disabledReason})
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Participant Seats */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[13px] text-neutral-400 uppercase tracking-wide">
-                  Members
+                  Participants
                 </p>
                 {memberCount >= 2 && (
                   <span className="text-[12px] text-neutral-400">
@@ -412,17 +554,60 @@ export default function WaitingRoomPage() {
               </div>
             </div>
 
+            {/* Marker Seat */}
+            <div>
+              <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
+                Marker
+              </p>
+              <div
+                className={`flex items-center gap-3 p-3.5 rounded-lg border transition-colors ${
+                  hasMarker
+                    ? "border-violet-200 bg-violet-50/50"
+                    : "border-dashed border-neutral-200 bg-neutral-50/50"
+                }`}
+              >
+                {markerMember ? (
+                  <>
+                    <Avatar className="h-9 w-9">
+                      <AvatarFallback className="text-[11px] font-medium bg-violet-600 text-white">
+                        {markerMember.profiles?.display_name
+                          ?.slice(0, 2)
+                          ?.toUpperCase() || "MK"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium text-neutral-900 truncate">
+                        {markerMember.profiles?.display_name || "Marker"}
+                      </p>
+                      <p className="text-[12px] text-violet-500">
+                        评分员
+                        {markerMember.user_id === room.host_id && " · 房主"}
+                      </p>
+                    </div>
+                    <ClipboardCheck className="h-4 w-4 text-violet-500" />
+                  </>
+                ) : (
+                  <div className="flex items-center gap-3 text-neutral-400">
+                    <div className="w-9 h-9 rounded-full border border-dashed border-violet-200 flex items-center justify-center">
+                      <ClipboardCheck className="h-4 w-4 text-violet-300" />
+                    </div>
+                    <span className="text-[13px]">等待 Marker 加入</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Spectators count */}
+            {spectators.length > 0 && (
+              <div className="flex items-center gap-2 text-[12px] text-neutral-400">
+                <Eye className="h-3.5 w-3.5" />
+                <span>{spectators.length} 位观众</span>
+              </div>
+            )}
+
             {/* Actions */}
             <div className="flex gap-2">
-              {isInSession && !isMember ? (
-                <Button
-                  onClick={handleJoinAsSpectator}
-                  className="h-10 flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[14px]"
-                >
-                  <Eye className="mr-2 h-4 w-4" />
-                  以观众身份观看
-                </Button>
-              ) : isMember ? (
+              {isMember && myRole === "participant" ? (
                 <>
                   <Button
                     onClick={handleToggleReady}
@@ -459,13 +644,33 @@ export default function WaitingRoomPage() {
                     {isHost ? "解散" : "离开"}
                   </Button>
                 </>
+              ) : isMember ? (
+                <>
+                  {isInSession ? (
+                    <Button
+                      onClick={() => router.push(`/rooms/${roomId}/session`)}
+                      className="flex-1 h-10 text-[14px] bg-neutral-900 hover:bg-neutral-800 text-white"
+                    >
+                      进入练习
+                    </Button>
+                  ) : (
+                    <p className="text-[13px] text-neutral-400 py-2">
+                      {myRole === "marker" ? "等待参与者准备就绪后自动开始" : "等待练习开始..."}
+                    </p>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={handleLeave}
+                    className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
+                  >
+                    <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                    {isHost ? "解散" : "离开"}
+                  </Button>
+                </>
               ) : (
-                <Button
-                  onClick={handleJoin}
-                  className="h-10 flex-1 bg-neutral-900 hover:bg-neutral-800 text-white text-[14px]"
-                >
-                  加入房间
-                </Button>
+                <p className="text-[13px] text-neutral-400 py-2">
+                  选择上方角色加入房间
+                </p>
               )}
             </div>
           </div>

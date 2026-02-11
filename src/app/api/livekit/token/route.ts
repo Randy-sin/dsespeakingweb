@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
     }
 
     const isSpectator = member.role === "spectator";
+    const isMarker = member.role === "marker";
+    const isObserver = isSpectator || isMarker; // Both are non-publishing roles
 
     // Get user profile for display name
     const { data: profile } = await supabase
@@ -57,18 +59,19 @@ export async function POST(req: NextRequest) {
     }
 
     const displayName = profile?.display_name || user.email || "Anonymous";
+    const namePrefix = isMarker ? "[Marker] " : isSpectator ? "[观众] " : "";
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
-      name: isSpectator ? `[观众] ${displayName}` : displayName,
+      name: `${namePrefix}${displayName}`,
       ttl: "2h",
     });
 
     at.addGrant({
       roomJoin: true,
       room: `dse-speaking-${roomId}`,
-      canPublish: !isSpectator, // Spectators cannot publish
-      canSubscribe: true,       // Everyone can subscribe (receive audio/video)
+      canPublish: !isObserver, // Spectators and Markers cannot publish
+      canSubscribe: true,      // Everyone can subscribe (receive audio/video)
     });
 
     const token = await at.toJwt();
@@ -76,7 +79,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       token,
       url: process.env.NEXT_PUBLIC_LIVEKIT_URL,
-      isSpectator,
+      isSpectator: isObserver, // treat marker same as spectator for LiveKit
+      isMarker,
     });
   } catch (error) {
     console.error("LiveKit token error:", error);

@@ -131,6 +131,70 @@ export type Database = {
           },
         ]
       }
+      marker_scores: {
+        Row: {
+          id: string
+          room_id: string
+          marker_id: string
+          candidate_id: string
+          pronunciation_delivery: number | null
+          communication_strategies: number | null
+          vocabulary_language: number | null
+          ideas_organisation: number | null
+          comment: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          room_id: string
+          marker_id: string
+          candidate_id: string
+          pronunciation_delivery?: number | null
+          communication_strategies?: number | null
+          vocabulary_language?: number | null
+          ideas_organisation?: number | null
+          comment?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          marker_id?: string
+          candidate_id?: string
+          pronunciation_delivery?: number | null
+          communication_strategies?: number | null
+          vocabulary_language?: number | null
+          ideas_organisation?: number | null
+          comment?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marker_scores_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marker_scores_marker_id_fkey"
+            columns: ["marker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marker_scores_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           created_at: string
@@ -138,6 +202,7 @@ export type Database = {
           current_speaker_index: number | null
           host_id: string
           id: string
+          marker_questions: Json | null
           max_members: number
           name: string
           paper_id: string | null
@@ -153,6 +218,7 @@ export type Database = {
           current_speaker_index?: number | null
           host_id: string
           id?: string
+          marker_questions?: Json | null
           max_members?: number
           name: string
           paper_id?: string | null
@@ -168,6 +234,7 @@ export type Database = {
           current_speaker_index?: number | null
           host_id?: string
           id?: string
+          marker_questions?: Json | null
           max_members?: number
           name?: string
           paper_id?: string | null
@@ -337,6 +404,7 @@ export type Room = Tables<"rooms">
 export type Profile = Tables<"profiles">
 export type RoomMember = Tables<"room_members">
 export type PastPaper = Tables<"pastpaper_papers">
+export type MarkerScore = Tables<"marker_scores">
 export type RoomStatus = Database["public"]["Enums"]["room_status"]
 
 export const Constants = {
