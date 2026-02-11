@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
@@ -37,6 +37,7 @@ export default function WaitingRoomPage() {
   const [paper, setPaper] = useState<PastPaper | null>(null);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
 
   const fetchRoom = useCallback(async () => {
     const [{ data: roomData }, { data: memberData }] = await Promise.all([
@@ -51,7 +52,6 @@ export default function WaitingRoomPage() {
     if (roomData) {
       setRoom(roomData);
 
-      // Fetch paper
       if (roomData.paper_id) {
         const { data: paperData } = await supabase
           .from("pastpaper_papers")
@@ -60,24 +60,13 @@ export default function WaitingRoomPage() {
           .single();
         setPaper(paperData);
       }
-
-      // If room is in-session and user is already a member, redirect to session page
-      if (
-        roomData.status !== "waiting" &&
-        roomData.status !== "finished" &&
-        user?.id &&
-        memberData?.some((m: { user_id: string }) => m.user_id === user.id)
-      ) {
-        router.push(`/rooms/${roomId}/session`);
-        return;
-      }
     }
 
     if (memberData) {
       setMembers(memberData as unknown as MemberWithProfile[]);
     }
     setLoading(false);
-  }, [roomId, router, supabase, user?.id]);
+  }, [roomId, supabase]);
 
   useEffect(() => {
     fetchRoom();
@@ -99,30 +88,48 @@ export default function WaitingRoomPage() {
     };
   }, [roomId, fetchRoom, supabase]);
 
+  // Redirect to session if room already started and user is a member
+  useEffect(() => {
+    if (!room || !user?.id) return;
+    if (room.status !== "waiting" && room.status !== "finished") {
+      const isMemberCheck = members.some((m) => m.user_id === user.id);
+      if (isMemberCheck) {
+        router.push(`/rooms/${roomId}/session`);
+      }
+    }
+  }, [room, members, user?.id, roomId, router]);
+
   const isHost = user?.id === room?.host_id;
   const isMember = members.some((m) => m.user_id === user?.id);
-  const memberCount = members.length;
-  const readyVotes = room?.ready_votes ?? [];
+  const participants = members.filter((m) => m.role !== "spectator");
+  const memberCount = participants.length;
+  const readyVotes: string[] = Array.isArray(room?.ready_votes) ? room.ready_votes : [];
   const myVoteReady = user ? readyVotes.includes(user.id) : false;
-  const readyCount = readyVotes.filter((v) => members.some((m) => m.user_id === v)).length;
+  const readyCount = readyVotes.filter((v) => participants.some((m) => m.user_id === v)).length;
   const allReady = memberCount >= 2 && readyCount === memberCount;
 
-  // Auto-start when all members are ready
+  // Auto-start when all participants are ready (ANY member can trigger, not just host)
   useEffect(() => {
-    if (!allReady || starting || !isHost) return;
+    if (!allReady || startingRef.current || !user?.id) return;
+    // Only let one member trigger it (the host, or the first member alphabetically)
+    const triggerUserId = isHost ? room?.host_id : participants[0]?.user_id;
+    if (user.id !== triggerUserId) return;
+
+    startingRef.current = true;
+    setStarting(true);
 
     const autoStart = async () => {
-      setStarting(true);
       try {
-        const shuffledMembers = [...members].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < shuffledMembers.length; i++) {
+        // Shuffle speaking order for participants only
+        const shuffled = [...participants].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < shuffled.length; i++) {
           await supabase
             .from("room_members")
             .update({ speaking_order: i + 1 })
-            .eq("id", shuffledMembers[i].id);
+            .eq("id", shuffled[i].id);
         }
         const phaseEnd = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-        await supabase
+        const { error } = await supabase
           .from("rooms")
           .update({
             status: "preparing",
@@ -130,44 +137,55 @@ export default function WaitingRoomPage() {
             current_speaker_index: 0,
             ready_votes: [],
           })
-          .eq("id", roomId);
-        toast.success("全员准备就绪，练习开始！");
-        router.push(`/rooms/${roomId}/session`);
-      } catch {
+          .eq("id", roomId)
+          .eq("status", "waiting"); // optimistic lock — only if still waiting
+
+        if (error) {
+          console.error("Auto-start failed:", error);
+          toast.error("启动失败");
+        } else {
+          toast.success("全员准备就绪，练习开始！");
+          router.push(`/rooms/${roomId}/session`);
+        }
+      } catch (err) {
+        console.error("Auto-start error:", err);
         toast.error("启动失败");
       } finally {
         setStarting(false);
+        setTimeout(() => {
+          startingRef.current = false;
+        }, 3000);
       }
     };
 
     autoStart();
-  }, [allReady, starting, isHost, members, supabase, roomId, router]);
-
-  // Members (including spectators) redirect when room status changes to in-session
-  useEffect(() => {
-    if (room && room.status !== "waiting" && room.status !== "finished" && isMember) {
-      router.push(`/rooms/${roomId}/session`);
-    }
-  }, [room, roomId, router, isMember]);
+  }, [allReady, user?.id, isHost, room?.host_id, participants, supabase, roomId, router]);
 
   const handleToggleReady = async () => {
     if (!user || !room) return;
-    const currentVotes = room.ready_votes ?? [];
+    const currentVotes: string[] = Array.isArray(room.ready_votes) ? room.ready_votes : [];
 
+    let newVotes: string[];
     if (myVoteReady) {
-      // Cancel ready
-      const newVotes = currentVotes.filter((v) => v !== user.id);
-      await supabase
-        .from("rooms")
-        .update({ ready_votes: newVotes })
-        .eq("id", roomId);
+      newVotes = currentVotes.filter((v) => v !== user.id);
     } else {
-      // Vote ready
-      const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
-      await supabase
-        .from("rooms")
-        .update({ ready_votes: newVotes })
-        .eq("id", roomId);
+      newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
+    }
+
+    // Optimistic update — show immediately in UI
+    setRoom({ ...room, ready_votes: newVotes });
+
+    const { error } = await supabase
+      .from("rooms")
+      .update({ ready_votes: newVotes })
+      .eq("id", roomId);
+
+    if (error) {
+      console.error("Toggle ready failed:", error);
+      toast.error("操作失败，请重试");
+      // Revert optimistic update
+      setRoom({ ...room, ready_votes: currentVotes });
+    } else if (!myVoteReady) {
       toast.success("已准备");
     }
   };
@@ -178,9 +196,10 @@ export default function WaitingRoomPage() {
       await supabase.from("rooms").delete().eq("id", roomId);
       toast.success("房间已解散");
     } else {
-      // Remove ready vote when leaving
       if (room) {
-        const newVotes = (room.ready_votes ?? []).filter((v) => v !== user.id);
+        const newVotes = (Array.isArray(room.ready_votes) ? room.ready_votes : []).filter(
+          (v) => v !== user.id
+        );
         await supabase
           .from("rooms")
           .update({ ready_votes: newVotes })
@@ -286,7 +305,9 @@ export default function WaitingRoomPage() {
               <span>
                 计划于{" "}
                 <span className="font-medium text-neutral-700">
-                  {format(new Date(room.scheduled_at), "M月d日 EEEE HH:mm", { locale: zhCN })}
+                  {format(new Date(room.scheduled_at), "M月d日 EEEE HH:mm", {
+                    locale: zhCN,
+                  })}
                 </span>{" "}
                 开始
               </span>
@@ -316,16 +337,20 @@ export default function WaitingRoomPage() {
                 <div className="h-1.5 rounded-full bg-neutral-100 mb-4 overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
-                    style={{ width: `${(readyCount / memberCount) * 100}%` }}
+                    style={{
+                      width: `${(readyCount / memberCount) * 100}%`,
+                    }}
                   />
                 </div>
               )}
 
               <div className="space-y-2">
                 {Array.from({ length: room.max_members }).map((_, i) => {
-                  const member = members[i];
+                  const member = participants[i];
                   const isSlotHost = member?.user_id === room.host_id;
-                  const isReady = member ? readyVotes.includes(member.user_id) : false;
+                  const isReady = member
+                    ? readyVotes.includes(member.user_id)
+                    : false;
                   return (
                     <div
                       key={i}
@@ -361,11 +386,12 @@ export default function WaitingRoomPage() {
                               {isSlotHost && " · 房主"}
                             </p>
                           </div>
-                          {/* Ready indicator */}
                           {isReady ? (
                             <div className="flex items-center gap-1.5 text-emerald-600">
                               <Check className="h-4 w-4" />
-                              <span className="text-[12px] font-medium">已准备</span>
+                              <span className="text-[12px] font-medium">
+                                已准备
+                              </span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1.5 text-neutral-300">
@@ -389,7 +415,6 @@ export default function WaitingRoomPage() {
             {/* Actions */}
             <div className="flex gap-2">
               {isInSession && !isMember ? (
-                /* Room is in session — offer spectator join */
                 <Button
                   onClick={handleJoinAsSpectator}
                   className="h-10 flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[14px]"
@@ -399,7 +424,6 @@ export default function WaitingRoomPage() {
                 </Button>
               ) : isMember ? (
                 <>
-                  {/* Ready / Cancel button */}
                   <Button
                     onClick={handleToggleReady}
                     className={`flex-1 h-10 text-[14px] transition-all ${
