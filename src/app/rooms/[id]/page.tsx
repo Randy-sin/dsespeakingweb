@@ -48,13 +48,12 @@ export default function WaitingRoomPage() {
     if (roomData) {
       setRoom(roomData);
       // If room is in session, check if user is a member before redirecting
-      if (roomData.status !== "waiting" && roomData.status !== "finished") {
-        // Check membership — if user is already a member, redirect to session
+      if (roomData.status !== "waiting" && roomData.status !== "finished" && user?.id) {
         const { data: memberCheck } = await supabase
           .from("room_members")
           .select("user_id")
           .eq("room_id", roomId)
-          .eq("user_id", user?.id ?? "")
+          .eq("user_id", user.id)
           .maybeSingle();
         if (memberCheck) {
           router.push(`/rooms/${roomId}/session`);
@@ -82,7 +81,7 @@ export default function WaitingRoomPage() {
       setMembers(memberData as unknown as MemberWithProfile[]);
     }
     setLoading(false);
-  }, [roomId, router, supabase]);
+  }, [roomId, router, supabase, user?.id]);
 
   useEffect(() => {
     fetchRoom();
