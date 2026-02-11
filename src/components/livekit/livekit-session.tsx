@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,6 +178,32 @@ export function LiveKitSession({
     );
   }
 
+  // Audio optimisation: noise suppression + echo cancellation + auto gain
+  const roomOptions = useMemo(
+    () => ({
+      audioCaptureDefaults: {
+        autoGainControl: true,
+        echoCancellation: true,
+        noiseSuppression: true,
+        // Constrain sample rate for speech clarity
+        sampleRate: 48000,
+        channelCount: 1,
+      },
+      videoCaptureDefaults: {
+        resolution: { width: 640, height: 480, frameRate: 24 },
+      },
+      publishDefaults: {
+        // Use higher audio bitrate for clearer voice
+        audioBitrate: 32_000,
+        dtx: true,            // discontinuous transmission — save bandwidth when silent
+        red: true,            // redundant encoding — recover from packet loss
+      },
+      adaptiveStream: true,
+      dynacast: true,
+    }),
+    []
+  );
+
   if (token && url && lkComponents) {
     const {
       LiveKitRoom: LKRoom,
@@ -193,6 +219,7 @@ export function LiveKitSession({
           connect={true}
           audio={audioEnabled}
           video={videoEnabled}
+          options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
           style={{ height: "auto" }}
