@@ -17,6 +17,8 @@ import {
   Loader2,
   ArrowRight,
   Home,
+  Check,
+  Circle,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -85,10 +87,10 @@ export default function SessionPage() {
   }, [roomId, fetchData, supabase]);
 
   const { isExpired } = useCountdown(room?.current_phase_end_at ?? null);
-  const isHost = user?.id === room?.host_id;
 
+  // ---- Phase transition (any member can trigger when timer expires) ----
   useEffect(() => {
-    if (!isExpired || !isHost || !room || phaseTransitionRef.current) return;
+    if (!isExpired || !room || phaseTransitionRef.current) return;
 
     const transitionPhase = async () => {
       phaseTransitionRef.current = true;
@@ -97,15 +99,26 @@ export default function SessionPage() {
         const phaseEnd = new Date(Date.now() + 8 * 60 * 1000).toISOString();
         await supabase
           .from("rooms")
-          .update({ status: "discussing", current_phase_end_at: phaseEnd })
-          .eq("id", roomId);
+          .update({
+            status: "discussing",
+            current_phase_end_at: phaseEnd,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "preparing"); // optimistic lock
         toast("进入讨论阶段");
       } else if (room.status === "discussing") {
         const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
         await supabase
           .from("rooms")
-          .update({ status: "individual", current_phase_end_at: phaseEnd, current_speaker_index: 0 })
-          .eq("id", roomId);
+          .update({
+            status: "individual",
+            current_phase_end_at: phaseEnd,
+            current_speaker_index: 0,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "discussing");
         toast("进入个人回应阶段");
       } else if (room.status === "individual") {
         const nextIndex = (room.current_speaker_index ?? 0) + 1;
@@ -113,12 +126,21 @@ export default function SessionPage() {
           const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
           await supabase
             .from("rooms")
-            .update({ current_phase_end_at: phaseEnd, current_speaker_index: nextIndex })
+            .update({
+              current_phase_end_at: phaseEnd,
+              current_speaker_index: nextIndex,
+              skip_votes: [],
+            })
             .eq("id", roomId);
         } else {
           await supabase
             .from("rooms")
-            .update({ status: "finished", current_phase_end_at: null, current_speaker_index: null })
+            .update({
+              status: "finished",
+              current_phase_end_at: null,
+              current_speaker_index: null,
+              skip_votes: [],
+            })
             .eq("id", roomId);
           toast("练习完成");
         }
@@ -130,7 +152,79 @@ export default function SessionPage() {
     };
 
     transitionPhase();
-  }, [isExpired, isHost, room, members.length, roomId, supabase]);
+  }, [isExpired, room, members.length, roomId, supabase]);
+
+  // ---- Voting to skip current phase ----
+  const skipVotes = room?.skip_votes ?? [];
+  const myVoteSkip = user ? skipVotes.includes(user.id) : false;
+  const validSkipVotes = skipVotes.filter((v) =>
+    members.some((m) => m.user_id === v)
+  ).length;
+  const allVotedSkip = members.length >= 2 && validSkipVotes === members.length;
+
+  // Auto-execute skip when all voted
+  useEffect(() => {
+    if (!allVotedSkip || !room || phaseTransitionRef.current) return;
+
+    const executeSkip = async () => {
+      phaseTransitionRef.current = true;
+
+      if (room.status === "preparing") {
+        const phaseEnd = new Date(Date.now() + 8 * 60 * 1000).toISOString();
+        await supabase
+          .from("rooms")
+          .update({
+            status: "discussing",
+            current_phase_end_at: phaseEnd,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "preparing");
+        toast.success("全员同意，跳过准备阶段");
+      } else if (room.status === "discussing") {
+        const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
+        await supabase
+          .from("rooms")
+          .update({
+            status: "individual",
+            current_phase_end_at: phaseEnd,
+            current_speaker_index: 0,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "discussing");
+        toast.success("全员同意，跳过讨论阶段");
+      }
+
+      setTimeout(() => {
+        phaseTransitionRef.current = false;
+      }, 2000);
+    };
+
+    executeSkip();
+  }, [allVotedSkip, room, roomId, supabase]);
+
+  const handleToggleSkipVote = async () => {
+    if (!user || !room) return;
+    const currentVotes = room.skip_votes ?? [];
+
+    if (myVoteSkip) {
+      // Cancel vote
+      const newVotes = currentVotes.filter((v) => v !== user.id);
+      await supabase
+        .from("rooms")
+        .update({ skip_votes: newVotes })
+        .eq("id", roomId);
+    } else {
+      // Cast vote
+      const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
+      await supabase
+        .from("rooms")
+        .update({ skip_votes: newVotes })
+        .eq("id", roomId);
+      toast.success("已投票跳过");
+    }
+  };
 
   if (loading) {
     return (
@@ -159,6 +253,9 @@ export default function SessionPage() {
   const currentSpeaker = members[currentSpeakerIndex];
   const isCurrentSpeaker = user?.id === currentSpeaker?.user_id;
   const partBQuestions = (paper.part_b_questions as { question: string }[]) || [];
+
+  // Can vote to skip in preparing / discussing phases
+  const canVoteSkip = room.status === "preparing" || room.status === "discussing";
 
   return (
     <div className="min-h-screen bg-white">
@@ -353,6 +450,7 @@ export default function SessionPage() {
                     const isSpeaking =
                       room.status === "individual" && idx === currentSpeakerIndex;
                     const memberIsHost = member.user_id === room.host_id;
+                    const hasVotedSkip = canVoteSkip && skipVotes.includes(member.user_id);
                     return (
                       <div
                         key={member.id}
@@ -398,51 +496,79 @@ export default function SessionPage() {
                             speaking
                           </Badge>
                         )}
+                        {/* Skip vote indicator (only in skippable phases) */}
+                        {canVoteSkip && validSkipVotes > 0 && (
+                          hasVotedSkip ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-500" />
+                          ) : (
+                            <Circle className="h-3.5 w-3.5 text-neutral-200" />
+                          )
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Host Controls */}
-              {isHost && (
+              {/* Skip Phase Voting Controls (visible to all members) */}
+              {canVoteSkip && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                     Controls
                   </p>
+
+                  {/* Vote progress bar */}
+                  {validSkipVotes > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] text-neutral-400">
+                          跳过投票
+                        </span>
+                        <span className="text-[11px] text-neutral-500 font-medium tabular-nums">
+                          {validSkipVotes}/{members.length}
+                        </span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-amber-500 transition-all duration-500 ease-out"
+                          style={{
+                            width: `${(validSkipVotes / members.length) * 100}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full text-[13px] border-neutral-200 text-neutral-500 hover:text-neutral-900"
-                    onClick={async () => {
-                      if (room.status === "preparing") {
-                        const phaseEnd = new Date(
-                          Date.now() + 8 * 60 * 1000
-                        ).toISOString();
-                        await supabase
-                          .from("rooms")
-                          .update({ status: "discussing", current_phase_end_at: phaseEnd })
-                          .eq("id", roomId);
-                        toast("跳过准备阶段");
-                      } else if (room.status === "discussing") {
-                        const phaseEnd = new Date(
-                          Date.now() + 1 * 60 * 1000
-                        ).toISOString();
-                        await supabase
-                          .from("rooms")
-                          .update({
-                            status: "individual",
-                            current_phase_end_at: phaseEnd,
-                            current_speaker_index: 0,
-                          })
-                          .eq("id", roomId);
-                        toast("跳过讨论阶段");
-                      }
-                    }}
+                    className={`w-full text-[13px] transition-all ${
+                      myVoteSkip
+                        ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                        : "border-neutral-200 text-neutral-500 hover:text-neutral-900"
+                    }`}
+                    onClick={handleToggleSkipVote}
                   >
-                    <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-                    跳过当前阶段
+                    {myVoteSkip ? (
+                      <>
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                        已投票跳过
+                        {!allVotedSkip && (
+                          <span className="ml-1 text-[11px] opacity-70">
+                            ({validSkipVotes}/{members.length})
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
+                        跳过{room.status === "preparing" ? "准备" : "讨论"}阶段
+                      </>
+                    )}
                   </Button>
+                  <p className="text-[11px] text-neutral-300 mt-2 text-center">
+                    需要全部成员同意才能跳过
+                  </p>
                 </div>
               )}
             </div>

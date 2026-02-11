@@ -11,9 +11,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   Loader2,
-  Play,
   LogOut,
   CalendarDays,
+  Check,
+  Circle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -94,30 +95,73 @@ export default function WaitingRoomPage() {
   const isHost = user?.id === room?.host_id;
   const isMember = members.some((m) => m.user_id === user?.id);
   const memberCount = members.length;
-  const canStart = isHost && memberCount >= 2;
+  const readyVotes = room?.ready_votes ?? [];
+  const myVoteReady = user ? readyVotes.includes(user.id) : false;
+  const readyCount = readyVotes.filter((v) => members.some((m) => m.user_id === v)).length;
+  const allReady = memberCount >= 2 && readyCount === memberCount;
 
-  const handleStart = async () => {
-    if (!canStart) return;
-    setStarting(true);
-    try {
-      const shuffledMembers = [...members].sort(() => Math.random() - 0.5);
-      for (let i = 0; i < shuffledMembers.length; i++) {
+  // Auto-start when all members are ready
+  useEffect(() => {
+    if (!allReady || starting || !isHost) return;
+
+    const autoStart = async () => {
+      setStarting(true);
+      try {
+        const shuffledMembers = [...members].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < shuffledMembers.length; i++) {
+          await supabase
+            .from("room_members")
+            .update({ speaking_order: i + 1 })
+            .eq("id", shuffledMembers[i].id);
+        }
+        const phaseEnd = new Date(Date.now() + 10 * 60 * 1000).toISOString();
         await supabase
-          .from("room_members")
-          .update({ speaking_order: i + 1 })
-          .eq("id", shuffledMembers[i].id);
+          .from("rooms")
+          .update({
+            status: "preparing",
+            current_phase_end_at: phaseEnd,
+            current_speaker_index: 0,
+            ready_votes: [],
+          })
+          .eq("id", roomId);
+        toast.success("全员准备就绪，练习开始！");
+        router.push(`/rooms/${roomId}/session`);
+      } catch {
+        toast.error("启动失败");
+      } finally {
+        setStarting(false);
       }
-      const phaseEnd = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    };
+
+    autoStart();
+  }, [allReady, starting, isHost, members, supabase, roomId, router]);
+
+  // Non-host members also redirect when room status changes
+  useEffect(() => {
+    if (room && room.status !== "waiting" && room.status !== "finished") {
+      router.push(`/rooms/${roomId}/session`);
+    }
+  }, [room, roomId, router]);
+
+  const handleToggleReady = async () => {
+    if (!user || !room) return;
+    const currentVotes = room.ready_votes ?? [];
+
+    if (myVoteReady) {
+      // Cancel ready
+      const newVotes = currentVotes.filter((v) => v !== user.id);
       await supabase
         .from("rooms")
-        .update({ status: "preparing", current_phase_end_at: phaseEnd, current_speaker_index: 0 })
+        .update({ ready_votes: newVotes })
         .eq("id", roomId);
-      toast.success("练习开始");
-      router.push(`/rooms/${roomId}/session`);
-    } catch {
-      toast.error("启动失败");
-    } finally {
-      setStarting(false);
+    } else {
+      // Vote ready
+      const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
+      await supabase
+        .from("rooms")
+        .update({ ready_votes: newVotes })
+        .eq("id", roomId);
+      toast.success("已准备");
     }
   };
 
@@ -127,6 +171,14 @@ export default function WaitingRoomPage() {
       await supabase.from("rooms").delete().eq("id", roomId);
       toast.success("房间已解散");
     } else {
+      // Remove ready vote when leaving
+      if (room) {
+        const newVotes = (room.ready_votes ?? []).filter((v) => v !== user.id);
+        await supabase
+          .from("rooms")
+          .update({ ready_votes: newVotes })
+          .eq("id", roomId);
+      }
       await supabase
         .from("room_members")
         .delete()
@@ -220,19 +272,40 @@ export default function WaitingRoomPage() {
           {/* Members */}
           <div className="lg:col-span-3 space-y-6">
             <div>
-              <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-4">
-                Members
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[13px] text-neutral-400 uppercase tracking-wide">
+                  Members
+                </p>
+                {memberCount >= 2 && (
+                  <span className="text-[12px] text-neutral-400">
+                    {readyCount}/{memberCount} 已准备
+                  </span>
+                )}
+              </div>
+
+              {/* Ready progress bar */}
+              {memberCount >= 2 && (
+                <div className="h-1.5 rounded-full bg-neutral-100 mb-4 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
+                    style={{ width: `${(readyCount / memberCount) * 100}%` }}
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 {Array.from({ length: room.max_members }).map((_, i) => {
                   const member = members[i];
                   const isSlotHost = member?.user_id === room.host_id;
+                  const isReady = member ? readyVotes.includes(member.user_id) : false;
                   return (
                     <div
                       key={i}
                       className={`flex items-center gap-3 p-3.5 rounded-lg border transition-colors ${
                         member
-                          ? "border-neutral-200/60 bg-white"
+                          ? isReady
+                            ? "border-emerald-200 bg-emerald-50/50"
+                            : "border-neutral-200/60 bg-white"
                           : "border-dashed border-neutral-200 bg-neutral-50/50"
                       }`}
                     >
@@ -260,6 +333,18 @@ export default function WaitingRoomPage() {
                               {isSlotHost && " · 房主"}
                             </p>
                           </div>
+                          {/* Ready indicator */}
+                          {isReady ? (
+                            <div className="flex items-center gap-1.5 text-emerald-600">
+                              <Check className="h-4 w-4" />
+                              <span className="text-[12px] font-medium">已准备</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-neutral-300">
+                              <Circle className="h-4 w-4" />
+                              <span className="text-[12px]">等待中</span>
+                            </div>
+                          )}
                         </>
                       ) : (
                         <div className="flex items-center gap-3 text-neutral-400">
@@ -275,21 +360,34 @@ export default function WaitingRoomPage() {
 
             {/* Actions */}
             <div className="flex gap-2">
-              {isHost ? (
+              {isMember ? (
                 <>
+                  {/* Ready / Cancel button */}
                   <Button
-                    onClick={handleStart}
-                    className="flex-1 h-10 bg-neutral-900 hover:bg-neutral-800 text-white text-[14px]"
-                    disabled={!canStart || starting}
+                    onClick={handleToggleReady}
+                    className={`flex-1 h-10 text-[14px] transition-all ${
+                      myVoteReady
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        : memberCount < 2
+                          ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                          : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                    }`}
+                    disabled={memberCount < 2 || starting}
                   >
                     {starting ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Play className="mr-2 h-4 w-4" />
-                    )}
-                    {canStart
-                      ? "开始练习"
-                      : `还需 ${2 - memberCount} 人`}
+                    ) : myVoteReady ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : null}
+                    {starting
+                      ? "正在开始..."
+                      : memberCount < 2
+                        ? "至少需要 2 人"
+                        : myVoteReady
+                          ? allReady
+                            ? "全员准备就绪！"
+                            : `已准备 (${readyCount}/${memberCount})`
+                          : "准备好了"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -297,18 +395,9 @@ export default function WaitingRoomPage() {
                     className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
                   >
                     <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    解散
+                    {isHost ? "解散" : "离开"}
                   </Button>
                 </>
-              ) : isMember ? (
-                <Button
-                  variant="ghost"
-                  onClick={handleLeave}
-                  className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
-                >
-                  <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                  离开
-                </Button>
               ) : (
                 <Button
                   onClick={handleJoin}

@@ -135,7 +135,9 @@ export type Database = {
           max_members: number
           name: string
           paper_id: string | null
+          ready_votes: string[]
           scheduled_at: string | null
+          skip_votes: string[]
           status: Database["public"]["Enums"]["room_status"]
           updated_at: string
         }
@@ -148,7 +150,9 @@ export type Database = {
           max_members?: number
           name: string
           paper_id?: string | null
+          ready_votes?: string[]
           scheduled_at?: string | null
+          skip_votes?: string[]
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
         }
@@ -161,7 +165,9 @@ export type Database = {
           max_members?: number
           name?: string
           paper_id?: string | null
+          ready_votes?: string[]
           scheduled_at?: string | null
+          skip_votes?: string[]
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
         }
