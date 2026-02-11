@@ -4,15 +4,10 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
   Loader2,
   Wifi,
   WifiOff,
   AlertCircle,
-  Eye,
 } from "lucide-react";
 import type { RoomStatus } from "@/lib/supabase/types";
 
@@ -35,13 +30,18 @@ export function LiveKitSession({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
-  const [audioEnabled, setAudioEnabled] = useState(false);
-  const [videoEnabled, setVideoEnabled] = useState(false);
   const [lkComponents, setLkComponents] = useState<{
     LiveKitRoom: React.ComponentType<Record<string, unknown>>;
     RoomAudioRenderer: React.ComponentType;
     VideoConference: React.ComponentType;
   } | null>(null);
+  const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<{
+    roomStatus: RoomStatus;
+    currentSpeakerUserId?: string;
+    isSpectator: boolean;
+    userId?: string;
+    connected: boolean;
+  }> | null>(null);
   const hasAttemptedConnect = useRef(false);
 
   useEffect(() => {
@@ -55,6 +55,13 @@ export function LiveKitSession({
       })
       .catch(() => {});
     import("@livekit/components-styles").catch(() => {});
+
+    // Dynamically import MediaControls (which uses LiveKit hooks)
+    import("./media-controls")
+      .then((mod) => {
+        setMediaControlsComp(() => mod.MediaControls);
+      })
+      .catch(() => {});
   }, []);
 
   const fetchToken = useCallback(async () => {
@@ -105,26 +112,6 @@ export function LiveKitSession({
     }
   }, [roomStatus, token, fetchToken, isSpectator]);
 
-  useEffect(() => {
-    if (isSpectator) {
-      // Spectators never publish
-      setAudioEnabled(false);
-      setVideoEnabled(false);
-      return;
-    }
-    if (roomStatus === "preparing") {
-      setAudioEnabled(false);
-      setVideoEnabled(false);
-    } else if (roomStatus === "discussing") {
-      setAudioEnabled(true);
-      setVideoEnabled(true);
-    } else if (roomStatus === "individual") {
-      const isSpeaker = user?.id === currentSpeakerUserId;
-      setAudioEnabled(isSpeaker);
-      setVideoEnabled(true);
-    }
-  }, [roomStatus, currentSpeakerUserId, user?.id, isSpectator]);
-
   // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
   const roomOptions = useMemo(
     () => ({
@@ -152,9 +139,9 @@ export function LiveKitSession({
   if (roomStatus === "preparing" && !isSpectator) {
     return (
       <div className="text-center py-6">
-        <MicOff className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
+        <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
         <p className="text-[13px] text-neutral-500 mb-1">准备阶段</p>
-        <p className="text-[12px] text-neutral-400">讨论开始后自动开启</p>
+        <p className="text-[12px] text-neutral-400">讨论开始后自动开启音视频</p>
         <Button
           variant="ghost"
           size="sm"
@@ -231,8 +218,8 @@ export function LiveKitSession({
           serverUrl={url}
           token={token}
           connect={true}
-          audio={isSpectator ? false : audioEnabled}
-          video={isSpectator ? false : videoEnabled}
+          audio={isSpectator ? false : undefined}
+          video={isSpectator ? false : undefined}
           options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
@@ -244,60 +231,30 @@ export function LiveKitSession({
               <VConf />
             </div>
           </div>
-        </LKRoom>
-        <div className="flex items-center justify-center gap-1.5">
-          {isSpectator ? (
-            <div className="flex items-center gap-1.5">
-              <Eye className="h-3.5 w-3.5 text-neutral-400" />
-              <span className="text-[11px] text-neutral-400">观看模式</span>
-            </div>
-          ) : (
-            <>
-              <Button
-                variant={audioEnabled ? "default" : "outline"}
-                size="sm"
-                onClick={() => setAudioEnabled(!audioEnabled)}
-                className={`h-8 w-8 p-0 ${
-                  audioEnabled
-                    ? "bg-neutral-900 hover:bg-neutral-800"
-                    : "border-neutral-200 text-neutral-400"
-                }`}
-              >
-                {audioEnabled ? (
-                  <Mic className="h-3.5 w-3.5" />
-                ) : (
-                  <MicOff className="h-3.5 w-3.5" />
-                )}
-              </Button>
-              <Button
-                variant={videoEnabled ? "default" : "outline"}
-                size="sm"
-                onClick={() => setVideoEnabled(!videoEnabled)}
-                className={`h-8 w-8 p-0 ${
-                  videoEnabled
-                    ? "bg-neutral-900 hover:bg-neutral-800"
-                    : "border-neutral-200 text-neutral-400"
-                }`}
-              >
-                {videoEnabled ? (
-                  <Video className="h-3.5 w-3.5" />
-                ) : (
-                  <VideoOff className="h-3.5 w-3.5" />
-                )}
-              </Button>
-            </>
-          )}
-          <div className="flex items-center gap-1 ml-2">
-            <div
-              className={`w-1.5 h-1.5 rounded-full ${
-                connected ? "bg-neutral-900" : "bg-neutral-300"
-              }`}
-            />
-            <span className="text-[11px] text-neutral-400">
-              {connected ? "Connected" : "Connecting..."}
-            </span>
+          {/* Media controls INSIDE LiveKitRoom context so hooks work */}
+          <div className="mt-3">
+            {MediaControlsComp ? (
+              <MediaControlsComp
+                roomStatus={roomStatus}
+                currentSpeakerUserId={currentSpeakerUserId}
+                isSpectator={isSpectator}
+                userId={user?.id}
+                connected={connected}
+              />
+            ) : (
+              <div className="flex items-center justify-center gap-1">
+                <div
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    connected ? "bg-neutral-900" : "bg-neutral-300"
+                  }`}
+                />
+                <span className="text-[11px] text-neutral-400">
+                  {connected ? "Connected" : "Connecting..."}
+                </span>
+              </div>
+            )}
           </div>
-        </div>
+        </LKRoom>
       </div>
     );
   }

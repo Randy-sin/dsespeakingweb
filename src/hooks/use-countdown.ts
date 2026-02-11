@@ -3,12 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 export function useCountdown(targetDate: string | null) {
-  const [timeLeft, setTimeLeft] = useState<number>(() => {
-    if (!targetDate) return 0;
-    const diff = new Date(targetDate).getTime() - Date.now();
-    return Math.max(0, Math.floor(diff / 1000));
-  });
-  const initialized = useRef(false);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+  const prevTargetRef = useRef<string | null>(null);
 
   const calculateTimeLeft = useCallback(() => {
     if (!targetDate) return 0;
@@ -16,15 +12,19 @@ export function useCountdown(targetDate: string | null) {
     return Math.max(0, Math.floor(diff / 1000));
   }, [targetDate]);
 
-  useEffect(() => {
-    // Recalculate immediately when targetDate changes
-    const initial = calculateTimeLeft();
-    setTimeLeft(initial);
-    initialized.current = true;
+  // Synchronously update when targetDate changes to avoid stale-state issues
+  if (targetDate !== prevTargetRef.current) {
+    prevTargetRef.current = targetDate;
+    const fresh = calculateTimeLeft();
+    if (fresh !== timeLeft) {
+      setTimeLeft(fresh);
+    }
+  }
 
+  useEffect(() => {
+    setTimeLeft(calculateTimeLeft());
     const interval = setInterval(() => {
-      const remaining = calculateTimeLeft();
-      setTimeLeft(remaining);
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
     return () => clearInterval(interval);
   }, [calculateTimeLeft]);
@@ -35,8 +35,9 @@ export function useCountdown(targetDate: string | null) {
     .toString()
     .padStart(2, "0")}`;
 
-  // Only expired if we've initialized AND time has run out AND we have a target
-  const isExpired = initialized.current && timeLeft <= 0 && targetDate !== null;
+  // Compute isExpired directly from targetDate and Date.now() to avoid stale timeLeft
+  const isExpired =
+    targetDate !== null && new Date(targetDate).getTime() <= Date.now();
 
   const progress = targetDate
     ? Math.max(
