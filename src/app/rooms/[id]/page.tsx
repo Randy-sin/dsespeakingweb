@@ -39,28 +39,19 @@ export default function WaitingRoomPage() {
   const [starting, setStarting] = useState(false);
 
   const fetchRoom = useCallback(async () => {
-    const { data: roomData } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("id", roomId)
-      .single();
+    const [{ data: roomData }, { data: memberData }] = await Promise.all([
+      supabase.from("rooms").select("*").eq("id", roomId).single(),
+      supabase
+        .from("room_members")
+        .select("*, profiles(*)")
+        .eq("room_id", roomId)
+        .order("joined_at", { ascending: true }),
+    ]);
 
     if (roomData) {
       setRoom(roomData);
-      // If room is in session, check if user is a member before redirecting
-      if (roomData.status !== "waiting" && roomData.status !== "finished" && user?.id) {
-        const { data: memberCheck } = await supabase
-          .from("room_members")
-          .select("user_id")
-          .eq("room_id", roomId)
-          .eq("user_id", user.id)
-          .maybeSingle();
-        if (memberCheck) {
-          router.push(`/rooms/${roomId}/session`);
-          return;
-        }
-        // Otherwise, stay on this page and show spectator option
-      }
+
+      // Fetch paper
       if (roomData.paper_id) {
         const { data: paperData } = await supabase
           .from("pastpaper_papers")
@@ -69,13 +60,18 @@ export default function WaitingRoomPage() {
           .single();
         setPaper(paperData);
       }
-    }
 
-    const { data: memberData } = await supabase
-      .from("room_members")
-      .select("*, profiles(*)")
-      .eq("room_id", roomId)
-      .order("joined_at", { ascending: true });
+      // If room is in-session and user is already a member, redirect to session page
+      if (
+        roomData.status !== "waiting" &&
+        roomData.status !== "finished" &&
+        user?.id &&
+        memberData?.some((m: { user_id: string }) => m.user_id === user.id)
+      ) {
+        router.push(`/rooms/${roomId}/session`);
+        return;
+      }
+    }
 
     if (memberData) {
       setMembers(memberData as unknown as MemberWithProfile[]);
