@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Check,
   Circle,
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
@@ -46,9 +47,20 @@ export default function WaitingRoomPage() {
 
     if (roomData) {
       setRoom(roomData);
+      // If room is in session, check if user is a member before redirecting
       if (roomData.status !== "waiting" && roomData.status !== "finished") {
-        router.push(`/rooms/${roomId}/session`);
-        return;
+        // Check membership — if user is already a member, redirect to session
+        const { data: memberCheck } = await supabase
+          .from("room_members")
+          .select("user_id")
+          .eq("room_id", roomId)
+          .eq("user_id", user?.id ?? "")
+          .maybeSingle();
+        if (memberCheck) {
+          router.push(`/rooms/${roomId}/session`);
+          return;
+        }
+        // Otherwise, stay on this page and show spectator option
       }
       if (roomData.paper_id) {
         const { data: paperData } = await supabase
@@ -136,12 +148,12 @@ export default function WaitingRoomPage() {
     autoStart();
   }, [allReady, starting, isHost, members, supabase, roomId, router]);
 
-  // Non-host members also redirect when room status changes
+  // Members (including spectators) redirect when room status changes to in-session
   useEffect(() => {
-    if (room && room.status !== "waiting" && room.status !== "finished") {
+    if (room && room.status !== "waiting" && room.status !== "finished" && isMember) {
       router.push(`/rooms/${roomId}/session`);
     }
-  }, [room, roomId, router]);
+  }, [room, roomId, router, isMember]);
 
   const handleToggleReady = async () => {
     if (!user || !room) return;
@@ -196,9 +208,30 @@ export default function WaitingRoomPage() {
     }
     const { error } = await supabase
       .from("room_members")
-      .insert({ room_id: roomId, user_id: user.id });
+      .insert({ room_id: roomId, user_id: user.id, role: "participant" });
     if (error) toast.error("加入失败");
   };
+
+  const handleJoinAsSpectator = async () => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    const { error } = await supabase
+      .from("room_members")
+      .insert({ room_id: roomId, user_id: user.id, role: "spectator" });
+    if (error) {
+      toast.error("加入观看失败");
+      return;
+    }
+    toast.success("以观众身份加入");
+    router.push(`/rooms/${roomId}/session`);
+  };
+
+  const isInSession =
+    room?.status === "preparing" ||
+    room?.status === "discussing" ||
+    room?.status === "individual";
 
   if (loading) {
     return (
@@ -360,7 +393,16 @@ export default function WaitingRoomPage() {
 
             {/* Actions */}
             <div className="flex gap-2">
-              {isMember ? (
+              {isInSession && !isMember ? (
+                /* Room is in session — offer spectator join */
+                <Button
+                  onClick={handleJoinAsSpectator}
+                  className="h-10 flex-1 bg-blue-600 hover:bg-blue-700 text-white text-[14px]"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  以观众身份观看
+                </Button>
+              ) : isMember ? (
                 <>
                   {/* Ready / Cancel button */}
                   <Button

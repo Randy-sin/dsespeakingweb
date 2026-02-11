@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { RoomCard } from "@/components/room/room-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, RefreshCw, Loader2, Mic, Users, ArrowRight } from "lucide-react";
+import { Plus, Search, RefreshCw, Loader2, Mic, Users, ArrowRight, Eye } from "lucide-react";
 import Link from "next/link";
 import type { Room, Profile, RoomMember } from "@/lib/supabase/types";
 
@@ -29,7 +29,7 @@ export default function RoomsPage() {
       .select(
         `*, host:profiles!rooms_host_id_fkey(*), room_members(*, profiles(*))`
       )
-      .in("status", ["waiting", "preparing"])
+      .in("status", ["waiting", "preparing", "discussing", "individual"])
       .order("created_at", { ascending: false });
 
     if (!error && data) {
@@ -71,7 +71,7 @@ export default function RoomsPage() {
   );
 
   const waitingCount = rooms.filter((r) => r.status === "waiting").length;
-  const activeCount = rooms.filter((r) => r.status === "preparing").length;
+  const activeCount = rooms.filter((r) => r.status !== "waiting").length;
 
   return (
     <div className="min-h-screen bg-neutral-50/50">
@@ -121,6 +121,14 @@ export default function RoomsPage() {
                 </div>
                 <span>{activeCount} 进行中</span>
               </div>
+              {rooms.some((r) => r.status === "discussing" || r.status === "individual") && (
+                <div className="flex items-center gap-2 text-[12px] text-neutral-400">
+                  <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center">
+                    <Eye className="h-3.5 w-3.5 text-neutral-500" />
+                  </div>
+                  <span>可观看</span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">

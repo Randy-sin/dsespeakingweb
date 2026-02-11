@@ -90,6 +90,7 @@ export type Database = {
         Row: {
           id: string
           joined_at: string
+          role: string
           room_id: string
           speaking_order: number | null
           user_id: string
@@ -97,6 +98,7 @@ export type Database = {
         Insert: {
           id?: string
           joined_at?: string
+          role?: string
           room_id: string
           speaking_order?: number | null
           user_id: string
@@ -104,6 +106,7 @@ export type Database = {
         Update: {
           id?: string
           joined_at?: string
+          role?: string
           room_id?: string
           speaking_order?: number | null
           user_id?: string

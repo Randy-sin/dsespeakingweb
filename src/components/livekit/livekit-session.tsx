@@ -12,6 +12,7 @@ import {
   Wifi,
   WifiOff,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 import type { RoomStatus } from "@/lib/supabase/types";
 
@@ -19,12 +20,14 @@ interface LiveKitSessionProps {
   roomId: string;
   roomStatus: RoomStatus;
   currentSpeakerUserId?: string;
+  isSpectator?: boolean;
 }
 
 export function LiveKitSession({
   roomId,
   roomStatus,
   currentSpeakerUserId,
+  isSpectator = false,
 }: LiveKitSessionProps) {
   const { user } = useUser();
   const [token, setToken] = useState<string | null>(null);
@@ -86,8 +89,13 @@ export function LiveKitSession({
     }
   }, [user, roomId]);
 
+  // Auto-connect for spectators immediately, for participants when discussing starts
   useEffect(() => {
-    if (
+    if (isSpectator && !token && !hasAttemptedConnect.current) {
+      hasAttemptedConnect.current = true;
+      fetchToken();
+    } else if (
+      !isSpectator &&
       (roomStatus === "discussing" || roomStatus === "individual") &&
       !token &&
       !hasAttemptedConnect.current
@@ -95,9 +103,15 @@ export function LiveKitSession({
       hasAttemptedConnect.current = true;
       fetchToken();
     }
-  }, [roomStatus, token, fetchToken]);
+  }, [roomStatus, token, fetchToken, isSpectator]);
 
   useEffect(() => {
+    if (isSpectator) {
+      // Spectators never publish
+      setAudioEnabled(false);
+      setVideoEnabled(false);
+      return;
+    }
     if (roomStatus === "preparing") {
       setAudioEnabled(false);
       setVideoEnabled(false);
@@ -109,9 +123,9 @@ export function LiveKitSession({
       setAudioEnabled(isSpeaker);
       setVideoEnabled(true);
     }
-  }, [roomStatus, currentSpeakerUserId, user?.id]);
+  }, [roomStatus, currentSpeakerUserId, user?.id, isSpectator]);
 
-  if (roomStatus === "preparing") {
+  if (roomStatus === "preparing" && !isSpectator) {
     return (
       <div className="text-center py-6">
         <MicOff className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
@@ -151,7 +165,9 @@ export function LiveKitSession({
         <p className="text-[13px] text-neutral-500 mb-1">未连接</p>
         <p className="text-[12px] text-neutral-400 mb-3 px-2">{error}</p>
         <p className="text-[11px] text-neutral-300 mb-3">
-          可以正常练习，音视频需要配置 LiveKit 后使用
+          {isSpectator
+            ? "音视频需要配置 LiveKit 后观看"
+            : "可以正常练习，音视频需要配置 LiveKit 后使用"}
         </p>
         <Button
           variant="ghost"
@@ -185,7 +201,6 @@ export function LiveKitSession({
         autoGainControl: true,
         echoCancellation: true,
         noiseSuppression: true,
-        // Constrain sample rate for speech clarity
         sampleRate: 48000,
         channelCount: 1,
       },
@@ -193,10 +208,9 @@ export function LiveKitSession({
         resolution: { width: 640, height: 480, frameRate: 24 },
       },
       publishDefaults: {
-        // Use higher audio bitrate for clearer voice
         audioBitrate: 32_000,
-        dtx: true,            // discontinuous transmission — save bandwidth when silent
-        red: true,            // redundant encoding — recover from packet loss
+        dtx: true,
+        red: true,
       },
       adaptiveStream: true,
       dynacast: true,
@@ -217,8 +231,8 @@ export function LiveKitSession({
           serverUrl={url}
           token={token}
           connect={true}
-          audio={audioEnabled}
-          video={videoEnabled}
+          audio={isSpectator ? false : audioEnabled}
+          video={isSpectator ? false : videoEnabled}
           options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
@@ -232,38 +246,47 @@ export function LiveKitSession({
           </div>
         </LKRoom>
         <div className="flex items-center justify-center gap-1.5">
-          <Button
-            variant={audioEnabled ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAudioEnabled(!audioEnabled)}
-            className={`h-8 w-8 p-0 ${
-              audioEnabled
-                ? "bg-neutral-900 hover:bg-neutral-800"
-                : "border-neutral-200 text-neutral-400"
-            }`}
-          >
-            {audioEnabled ? (
-              <Mic className="h-3.5 w-3.5" />
-            ) : (
-              <MicOff className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Button
-            variant={videoEnabled ? "default" : "outline"}
-            size="sm"
-            onClick={() => setVideoEnabled(!videoEnabled)}
-            className={`h-8 w-8 p-0 ${
-              videoEnabled
-                ? "bg-neutral-900 hover:bg-neutral-800"
-                : "border-neutral-200 text-neutral-400"
-            }`}
-          >
-            {videoEnabled ? (
-              <Video className="h-3.5 w-3.5" />
-            ) : (
-              <VideoOff className="h-3.5 w-3.5" />
-            )}
-          </Button>
+          {isSpectator ? (
+            <div className="flex items-center gap-1.5">
+              <Eye className="h-3.5 w-3.5 text-neutral-400" />
+              <span className="text-[11px] text-neutral-400">观看模式</span>
+            </div>
+          ) : (
+            <>
+              <Button
+                variant={audioEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAudioEnabled(!audioEnabled)}
+                className={`h-8 w-8 p-0 ${
+                  audioEnabled
+                    ? "bg-neutral-900 hover:bg-neutral-800"
+                    : "border-neutral-200 text-neutral-400"
+                }`}
+              >
+                {audioEnabled ? (
+                  <Mic className="h-3.5 w-3.5" />
+                ) : (
+                  <MicOff className="h-3.5 w-3.5" />
+                )}
+              </Button>
+              <Button
+                variant={videoEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setVideoEnabled(!videoEnabled)}
+                className={`h-8 w-8 p-0 ${
+                  videoEnabled
+                    ? "bg-neutral-900 hover:bg-neutral-800"
+                    : "border-neutral-200 text-neutral-400"
+                }`}
+              >
+                {videoEnabled ? (
+                  <Video className="h-3.5 w-3.5" />
+                ) : (
+                  <VideoOff className="h-3.5 w-3.5" />
+                )}
+              </Button>
+            </>
+          )}
           <div className="flex items-center gap-1 ml-2">
             <div
               className={`w-1.5 h-1.5 rounded-full ${
@@ -282,7 +305,9 @@ export function LiveKitSession({
   return (
     <div className="text-center py-6">
       <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
-      <p className="text-[13px] text-neutral-400 mb-2">等待连接</p>
+      <p className="text-[13px] text-neutral-400 mb-2">
+        {isSpectator ? "连接观看" : "等待连接"}
+      </p>
       <Button
         variant="ghost"
         size="sm"

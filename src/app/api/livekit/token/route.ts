@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify user is a member of the room
+    // Verify user is a member of the room (participant or spectator)
     const { data: member } = await supabase
       .from("room_members")
       .select("*")
@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    const isSpectator = member.role === "spectator";
 
     // Get user profile for display name
     const { data: profile } = await supabase
@@ -54,17 +56,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const displayName = profile?.display_name || user.email || "Anonymous";
+
     const at = new AccessToken(apiKey, apiSecret, {
       identity: user.id,
-      name: profile?.display_name || user.email || "Anonymous",
+      name: isSpectator ? `[观众] ${displayName}` : displayName,
       ttl: "2h",
     });
 
     at.addGrant({
       roomJoin: true,
       room: `dse-speaking-${roomId}`,
-      canPublish: true,
-      canSubscribe: true,
+      canPublish: !isSpectator, // Spectators cannot publish
+      canSubscribe: true,       // Everyone can subscribe (receive audio/video)
     });
 
     const token = await at.toJwt();
@@ -72,6 +76,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       token,
       url: process.env.NEXT_PUBLIC_LIVEKIT_URL,
+      isSpectator,
     });
   } catch (error) {
     console.error("LiveKit token error:", error);

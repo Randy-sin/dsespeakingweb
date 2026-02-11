@@ -19,6 +19,8 @@ import {
   Home,
   Check,
   Circle,
+  Eye,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -34,11 +36,19 @@ export default function SessionPage() {
   const supabase = createClient();
 
   const [room, setRoom] = useState<Room | null>(null);
-  const [members, setMembers] = useState<MemberWithProfile[]>([]);
+  const [allMembers, setAllMembers] = useState<MemberWithProfile[]>([]);
   const [paper, setPaper] = useState<PastPaper | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const phaseTransitionRef = useRef(false);
+
+  // Separate participants from spectators
+  const participants = allMembers.filter((m) => m.role !== "spectator");
+  const spectators = allMembers.filter((m) => m.role === "spectator");
+
+  // Detect if current user is a spectator
+  const myMembership = allMembers.find((m) => m.user_id === user?.id);
+  const isSpectator = myMembership?.role === "spectator";
 
   const fetchData = useCallback(async () => {
     const { data: roomData } = await supabase
@@ -66,7 +76,7 @@ export default function SessionPage() {
       .order("speaking_order", { ascending: true });
 
     if (memberData) {
-      setMembers(memberData as unknown as MemberWithProfile[]);
+      setAllMembers(memberData as unknown as MemberWithProfile[]);
     }
     setLoading(false);
   }, [roomId, supabase]);
@@ -80,6 +90,11 @@ export default function SessionPage() {
         { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
         (payload) => setRoom(payload.new as Room)
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
+        () => fetchData()
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -88,9 +103,9 @@ export default function SessionPage() {
 
   const { isExpired } = useCountdown(room?.current_phase_end_at ?? null);
 
-  // ---- Phase transition (any member can trigger when timer expires) ----
+  // ---- Phase transition (any PARTICIPANT can trigger when timer expires) ----
   useEffect(() => {
-    if (!isExpired || !room || phaseTransitionRef.current) return;
+    if (!isExpired || !room || phaseTransitionRef.current || isSpectator) return;
 
     const transitionPhase = async () => {
       phaseTransitionRef.current = true;
@@ -105,7 +120,7 @@ export default function SessionPage() {
             skip_votes: [],
           })
           .eq("id", roomId)
-          .eq("status", "preparing"); // optimistic lock
+          .eq("status", "preparing");
         toast("进入讨论阶段");
       } else if (room.status === "discussing") {
         const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
@@ -122,7 +137,7 @@ export default function SessionPage() {
         toast("进入个人回应阶段");
       } else if (room.status === "individual") {
         const nextIndex = (room.current_speaker_index ?? 0) + 1;
-        if (nextIndex < members.length) {
+        if (nextIndex < participants.length) {
           const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
           await supabase
             .from("rooms")
@@ -152,19 +167,21 @@ export default function SessionPage() {
     };
 
     transitionPhase();
-  }, [isExpired, room, members.length, roomId, supabase]);
+  }, [isExpired, room, participants.length, roomId, supabase, isSpectator]);
 
-  // ---- Voting to skip current phase ----
+  // ---- Voting to skip current phase (participants only) ----
   const skipVotes = room?.skip_votes ?? [];
   const myVoteSkip = user ? skipVotes.includes(user.id) : false;
   const validSkipVotes = skipVotes.filter((v) =>
-    members.some((m) => m.user_id === v)
+    participants.some((m) => m.user_id === v)
   ).length;
-  const allVotedSkip = members.length >= 2 && validSkipVotes === members.length;
+  const allVotedSkip =
+    participants.length >= 2 && validSkipVotes === participants.length;
 
-  // Auto-execute skip when all voted
+  // Auto-execute skip when all participants voted
   useEffect(() => {
-    if (!allVotedSkip || !room || phaseTransitionRef.current) return;
+    if (!allVotedSkip || !room || phaseTransitionRef.current || isSpectator)
+      return;
 
     const executeSkip = async () => {
       phaseTransitionRef.current = true;
@@ -202,21 +219,19 @@ export default function SessionPage() {
     };
 
     executeSkip();
-  }, [allVotedSkip, room, roomId, supabase]);
+  }, [allVotedSkip, room, roomId, supabase, isSpectator]);
 
   const handleToggleSkipVote = async () => {
-    if (!user || !room) return;
+    if (!user || !room || isSpectator) return;
     const currentVotes = room.skip_votes ?? [];
 
     if (myVoteSkip) {
-      // Cancel vote
       const newVotes = currentVotes.filter((v) => v !== user.id);
       await supabase
         .from("rooms")
         .update({ skip_votes: newVotes })
         .eq("id", roomId);
     } else {
-      // Cast vote
       const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
       await supabase
         .from("rooms")
@@ -224,6 +239,17 @@ export default function SessionPage() {
         .eq("id", roomId);
       toast.success("已投票跳过");
     }
+  };
+
+  const handleLeaveSpectator = async () => {
+    if (!user) return;
+    await supabase
+      .from("room_members")
+      .delete()
+      .eq("room_id", roomId)
+      .eq("user_id", user.id);
+    toast.success("已退出观看");
+    router.push("/rooms");
   };
 
   if (loading) {
@@ -250,12 +276,14 @@ export default function SessionPage() {
   }
 
   const currentSpeakerIndex = room.current_speaker_index ?? 0;
-  const currentSpeaker = members[currentSpeakerIndex];
+  const currentSpeaker = participants[currentSpeakerIndex];
   const isCurrentSpeaker = user?.id === currentSpeaker?.user_id;
-  const partBQuestions = (paper.part_b_questions as { question: string }[]) || [];
+  const partBQuestions =
+    (paper.part_b_questions as { question: string }[]) || [];
 
-  // Can vote to skip in preparing / discussing phases
-  const canVoteSkip = room.status === "preparing" || room.status === "discussing";
+  const canVoteSkip =
+    !isSpectator &&
+    (room.status === "preparing" || room.status === "discussing");
 
   return (
     <div className="min-h-screen bg-white">
@@ -272,20 +300,48 @@ export default function SessionPage() {
             <Separator orientation="vertical" className="h-5 bg-neutral-200" />
             <PhaseIndicator currentPhase={room.status} />
           </div>
-          <TimerDisplay
-            targetDate={room.current_phase_end_at}
-            label={
-              room.status === "preparing"
-                ? "Prep"
-                : room.status === "discussing"
-                  ? "Discussion"
-                  : room.status === "individual"
-                    ? `Individual ${currentSpeakerIndex + 1}/${members.length}`
-                    : "Done"
-            }
-          />
+          <div className="flex items-center gap-3">
+            {isSpectator && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
+                <Eye className="h-3 w-3" />
+                观众模式
+              </span>
+            )}
+            <TimerDisplay
+              targetDate={room.current_phase_end_at}
+              label={
+                room.status === "preparing"
+                  ? "Prep"
+                  : room.status === "discussing"
+                    ? "Discussion"
+                    : room.status === "individual"
+                      ? `Individual ${currentSpeakerIndex + 1}/${participants.length}`
+                      : "Done"
+              }
+            />
+          </div>
         </div>
       </div>
+
+      {/* Spectator banner */}
+      {isSpectator && room.status !== "finished" && (
+        <div className="bg-blue-50/60 border-b border-blue-100/60">
+          <div className="max-w-7xl mx-auto px-5 py-2 flex items-center justify-between">
+            <p className="text-[12px] text-blue-600">
+              你正在以观众身份观看此练习。可以看到题目和听到讨论，但不能参与互动。
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[12px] text-blue-500 hover:text-blue-700 h-7"
+              onClick={handleLeaveSpectator}
+            >
+              <LogOut className="mr-1 h-3 w-3" />
+              退出观看
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-5 py-6">
         {/* Finished */}
@@ -298,7 +354,9 @@ export default function SessionPage() {
               练习完成
             </h2>
             <p className="text-[15px] text-neutral-400 mb-10 max-w-md mx-auto">
-              你完成了一次完整的 DSE Speaking 模拟练习。回顾讨论中的表现，持续进步。
+              {isSpectator
+                ? "你观看的 DSE Speaking 模拟练习已经结束。"
+                : "你完成了一次完整的 DSE Speaking 模拟练习。回顾讨论中的表现，持续进步。"}
             </p>
             <Link href="/rooms">
               <Button className="h-10 px-6 bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] rounded-full">
@@ -346,7 +404,8 @@ export default function SessionPage() {
                 </div>
 
                 {/* Discussion Questions */}
-                {(room.status === "preparing" || room.status === "discussing") && (
+                {(room.status === "preparing" ||
+                  room.status === "discussing") && (
                   <div>
                     <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                       Discussion Questions
@@ -388,19 +447,31 @@ export default function SessionPage() {
                         </Avatar>
                         <div>
                           <p className="text-[14px] font-medium text-neutral-900">
-                            {currentSpeaker?.profiles?.display_name || "Speaker"}
+                            {currentSpeaker?.profiles?.display_name ||
+                              "Speaker"}
                           </p>
                           <p className="text-[12px] text-neutral-400">
-                            {isCurrentSpeaker ? "轮到你了" : "正在回答"}
+                            {isCurrentSpeaker
+                              ? "轮到你了"
+                              : isSpectator
+                                ? "正在回答"
+                                : "正在回答"}
                           </p>
                         </div>
                       </div>
                       {partBQuestions[currentSpeakerIndex] && (
                         <p className="text-[14px] text-neutral-700 leading-relaxed bg-neutral-50 p-4 rounded border border-neutral-100">
-                          {typeof partBQuestions[currentSpeakerIndex] === "string"
+                          {typeof partBQuestions[currentSpeakerIndex] ===
+                          "string"
                             ? partBQuestions[currentSpeakerIndex]
-                            : (partBQuestions[currentSpeakerIndex] as { question: string })?.question ||
-                              JSON.stringify(partBQuestions[currentSpeakerIndex])}
+                            : (
+                                partBQuestions[currentSpeakerIndex] as {
+                                  question: string;
+                                }
+                              )?.question ||
+                              JSON.stringify(
+                                partBQuestions[currentSpeakerIndex]
+                              )}
                         </p>
                       )}
                     </div>
@@ -408,8 +479,8 @@ export default function SessionPage() {
                 )}
               </div>
 
-              {/* Notes */}
-              {room.status === "preparing" && (
+              {/* Notes (participants only) */}
+              {room.status === "preparing" && !isSpectator && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                     Notes
@@ -436,21 +507,24 @@ export default function SessionPage() {
                     roomId={roomId}
                     roomStatus={room.status}
                     currentSpeakerUserId={currentSpeaker?.user_id}
+                    isSpectator={isSpectator}
                   />
                 </div>
               </div>
 
-              {/* Members */}
+              {/* Participants */}
               <div>
                 <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
-                  Members ({members.length})
+                  Participants ({participants.length})
                 </p>
                 <div className="space-y-1">
-                  {members.map((member, idx) => {
+                  {participants.map((member, idx) => {
                     const isSpeaking =
-                      room.status === "individual" && idx === currentSpeakerIndex;
+                      room.status === "individual" &&
+                      idx === currentSpeakerIndex;
                     const memberIsHost = member.user_id === room.host_id;
-                    const hasVotedSkip = canVoteSkip && skipVotes.includes(member.user_id);
+                    const hasVotedSkip =
+                      canVoteSkip && skipVotes.includes(member.user_id);
                     return (
                       <div
                         key={member.id}
@@ -478,7 +552,8 @@ export default function SessionPage() {
                             {member.profiles?.display_name || "匿名"}
                             {member.user_id === user?.id && (
                               <span className="text-neutral-400 font-normal">
-                                {" "}(你)
+                                {" "}
+                                (你)
                               </span>
                             )}
                           </p>
@@ -496,21 +571,55 @@ export default function SessionPage() {
                             speaking
                           </Badge>
                         )}
-                        {/* Skip vote indicator (only in skippable phases) */}
-                        {canVoteSkip && validSkipVotes > 0 && (
-                          hasVotedSkip ? (
+                        {canVoteSkip &&
+                          validSkipVotes > 0 &&
+                          (hasVotedSkip ? (
                             <Check className="h-3.5 w-3.5 text-emerald-500" />
                           ) : (
                             <Circle className="h-3.5 w-3.5 text-neutral-200" />
-                          )
-                        )}
+                          ))}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Skip Phase Voting Controls (visible to all members) */}
+              {/* Spectators */}
+              {spectators.length > 0 && (
+                <div>
+                  <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <Eye className="h-3.5 w-3.5" />
+                    Spectators ({spectators.length})
+                  </p>
+                  <div className="space-y-1">
+                    {spectators.map((spec) => (
+                      <div
+                        key={spec.id}
+                        className="flex items-center gap-2.5 p-2 rounded-lg"
+                      >
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-[9px] font-medium bg-blue-50 text-blue-500">
+                            {spec.profiles?.display_name
+                              ?.slice(0, 2)
+                              ?.toUpperCase() || "??"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="text-[12px] text-neutral-500 truncate">
+                          {spec.profiles?.display_name || "匿名"}
+                          {spec.user_id === user?.id && (
+                            <span className="text-neutral-400 font-normal">
+                              {" "}
+                              (你)
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Skip Phase Voting Controls (participants only) */}
               {canVoteSkip && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
@@ -525,14 +634,14 @@ export default function SessionPage() {
                           跳过投票
                         </span>
                         <span className="text-[11px] text-neutral-500 font-medium tabular-nums">
-                          {validSkipVotes}/{members.length}
+                          {validSkipVotes}/{participants.length}
                         </span>
                       </div>
                       <div className="h-1.5 rounded-full bg-neutral-100 overflow-hidden">
                         <div
                           className="h-full rounded-full bg-amber-500 transition-all duration-500 ease-out"
                           style={{
-                            width: `${(validSkipVotes / members.length) * 100}%`,
+                            width: `${(validSkipVotes / participants.length) * 100}%`,
                           }}
                         />
                       </div>
@@ -555,19 +664,20 @@ export default function SessionPage() {
                         已投票跳过
                         {!allVotedSkip && (
                           <span className="ml-1 text-[11px] opacity-70">
-                            ({validSkipVotes}/{members.length})
+                            ({validSkipVotes}/{participants.length})
                           </span>
                         )}
                       </>
                     ) : (
                       <>
                         <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-                        跳过{room.status === "preparing" ? "准备" : "讨论"}阶段
+                        跳过
+                        {room.status === "preparing" ? "准备" : "讨论"}阶段
                       </>
                     )}
                   </Button>
                   <p className="text-[11px] text-neutral-300 mt-2 text-center">
-                    需要全部成员同意才能跳过
+                    需要全部参与者同意才能跳过
                   </p>
                 </div>
               )}
