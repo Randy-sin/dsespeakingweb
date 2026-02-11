@@ -44,6 +44,7 @@ export default function SessionPage() {
   const [paper, setPaper] = useState<PastPaper | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const phaseTransitionRef = useRef(false);
   const micsReadyRef = useRef(false);
 
@@ -341,7 +342,7 @@ export default function SessionPage() {
   const currentSpeaker = participants[currentSpeakerIndex];
   const isCurrentSpeaker = user?.id === currentSpeaker?.user_id;
   const partBQuestions =
-    (paper.part_b_questions as { question: string }[]) || [];
+    (paper.part_b_questions as { question?: string; text?: string }[]) || [];
 
   const canVoteSkip =
     !isSpectator &&
@@ -505,16 +506,64 @@ export default function SessionPage() {
                   Source: {paper.part_a_source}
                 </p>
 
-                {/* Article */}
+                {/* Article: show PDF images when available, else text */}
                 <div className="border border-neutral-200/60 rounded-lg p-6 mb-6">
-                  <div className="text-[14px] text-neutral-600 leading-[1.75] space-y-3">
-                    {paper.part_a_article?.map(
-                      (paragraph: string, idx: number) => (
-                        <p key={idx}>{paragraph}</p>
-                      )
-                    )}
-                  </div>
+                  {paper.page_images &&
+                  Array.isArray(paper.page_images) &&
+                  paper.page_images.length > 0 ? (
+                    <div className="space-y-4">
+                      {paper.page_images.map((url, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setLightboxImg(url)}
+                          className="block w-full text-left focus:outline-none focus:ring-2 focus:ring-neutral-300 rounded overflow-hidden"
+                        >
+                          <img
+                            src={url}
+                            alt={`Section ${idx + 1}`}
+                            className="w-full h-auto object-contain max-h-[70vh] cursor-zoom-in"
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[14px] text-neutral-600 leading-[1.75] space-y-3">
+                      {paper.part_a_article?.map(
+                        (paragraph: string, idx: number) => (
+                          <p key={idx}>{paragraph}</p>
+                        )
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {/* Lightbox */}
+                {lightboxImg && (
+                  <div
+                    className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4"
+                    onClick={() => setLightboxImg(null)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) =>
+                      e.key === "Escape" && setLightboxImg(null)
+                    }
+                  >
+                    <img
+                      src={lightboxImg}
+                      alt="放大"
+                      className="max-w-full max-h-[90vh] object-contain"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setLightboxImg(null)}
+                      className="absolute top-4 right-4 text-white/80 hover:text-white text-2xl"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
 
                 {/* Discussion Questions */}
                 {(room.status === "preparing" ||
@@ -575,14 +624,14 @@ export default function SessionPage() {
                           {typeof partBQuestions[currentSpeakerIndex] ===
                           "string"
                             ? partBQuestions[currentSpeakerIndex]
-                            : (
-                                partBQuestions[currentSpeakerIndex] as {
-                                  question: string;
-                                }
-                              )?.question ||
-                              JSON.stringify(
-                                partBQuestions[currentSpeakerIndex]
-                              )}
+                            : (() => {
+                                const q =
+                                  partBQuestions[currentSpeakerIndex] as {
+                                    question?: string;
+                                    text?: string;
+                                  };
+                                return q?.text ?? q?.question ?? JSON.stringify(q);
+                              })()}
                         </p>
                       )}
                     </div>
