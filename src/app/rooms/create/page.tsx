@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Shuffle, CalendarDays, Clock } from "lucide-react";
+import { ArrowLeft, Loader2, Shuffle, CalendarDays, Clock, Zap } from "lucide-react";
 import Link from "next/link";
 import type { PastPaper } from "@/lib/supabase/types";
 
@@ -50,8 +50,8 @@ function getTimeOptions(selectedDate: string) {
       if (isToday) {
         const slotTime = new Date(now);
         slotTime.setHours(h, m, 0, 0);
-        // Only show times at least 30 min from now
-        if (slotTime.getTime() < now.getTime() + 30 * 60 * 1000) continue;
+        // Only show future times (with a small 5-min buffer)
+        if (slotTime.getTime() < now.getTime() + 5 * 60 * 1000) continue;
       }
       const value = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
       const period = h < 12 ? "AM" : "PM";
@@ -70,7 +70,10 @@ export default function CreateRoomPage() {
   const [loading, setLoading] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(true);
 
-  // Schedule state
+  // Schedule mode: "now" (default) or "later"
+  const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
+
+  // Schedule state (only used when scheduleMode === "later")
   const dateOptions = useMemo(() => getDateOptions(), []);
   const [scheduledDate, setScheduledDate] = useState(dateOptions[0].value);
   const [scheduledTime, setScheduledTime] = useState("");
@@ -81,10 +84,10 @@ export default function CreateRoomPage() {
 
   // Auto-select first available time when date changes
   useEffect(() => {
-    if (timeOptions.length > 0 && !timeOptions.find((t) => t.value === scheduledTime)) {
+    if (scheduleMode === "later" && timeOptions.length > 0 && !timeOptions.find((t) => t.value === scheduledTime)) {
       setScheduledTime(timeOptions[0].value);
     }
-  }, [timeOptions, scheduledTime]);
+  }, [timeOptions, scheduledTime, scheduleMode]);
 
   const { user } = useUser();
   const router = useRouter();
@@ -109,7 +112,7 @@ export default function CreateRoomPage() {
       router.push("/login");
       return;
     }
-    if (!scheduledTime) {
+    if (scheduleMode === "later" && !scheduledTime) {
       toast.error("请选择开始时间");
       return;
     }
@@ -123,8 +126,11 @@ export default function CreateRoomPage() {
         selectedPaperId = paperId;
       }
 
-      // Build scheduled_at timestamp
-      const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
+      // "now" → use current time; "later" → use selected date+time
+      const scheduledAt =
+        scheduleMode === "now"
+          ? new Date().toISOString()
+          : new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
 
       const { data: room, error: roomError } = await supabase
         .from("rooms")
@@ -163,6 +169,7 @@ export default function CreateRoomPage() {
 
   // Preview scheduled datetime
   const scheduledPreview = useMemo(() => {
+    if (scheduleMode === "now") return null;
     if (!scheduledDate || !scheduledTime) return null;
     const d = new Date(`${scheduledDate}T${scheduledTime}:00`);
     const weekday = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
@@ -170,7 +177,7 @@ export default function CreateRoomPage() {
     const period = h < 12 ? "AM" : "PM";
     const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
     return `${d.getMonth() + 1}月${d.getDate()}日 周${weekday} ${displayH}:${String(d.getMinutes()).padStart(2, "0")} ${period}`;
-  }, [scheduledDate, scheduledTime]);
+  }, [scheduledDate, scheduledTime, scheduleMode]);
 
   return (
     <div className="min-h-screen bg-neutral-50/50">
@@ -188,7 +195,7 @@ export default function CreateRoomPage() {
           创建房间
         </h1>
         <p className="text-[14px] text-neutral-400 mb-10">
-          设置房间信息，选择练习时间，等待队友加入
+          设置房间信息，等待队友加入即可开始
         </p>
 
         <form onSubmit={handleCreate} className="space-y-6">
@@ -249,63 +256,103 @@ export default function CreateRoomPage() {
           {/* Schedule section */}
           <div className="bg-white rounded-2xl border border-neutral-100 p-5 space-y-4">
             <div className="flex items-center gap-2 mb-1">
-              <CalendarDays className="h-4 w-4 text-neutral-400" />
-              <Label className="text-[14px] font-medium text-neutral-900">计划开始时间</Label>
-            </div>
-            <p className="text-[12px] text-neutral-400 -mt-2">
-              选择你计划开始口语练习的日期和时间，方便队友按时加入
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              {/* Date select */}
-              <div className="space-y-1.5">
-                <Label className="text-[12px] text-neutral-400">日期</Label>
-                <Select value={scheduledDate} onValueChange={setScheduledDate}>
-                  <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
-                    {dateOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Time select */}
-              <div className="space-y-1.5">
-                <Label className="text-[12px] text-neutral-400">时间</Label>
-                <Select value={scheduledTime} onValueChange={setScheduledTime}>
-                  <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
-                    <SelectValue placeholder="选择时间" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
-                    {timeOptions.length > 0 ? (
-                      timeOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="px-2 py-3 text-[12px] text-neutral-400 text-center">
-                        今天已无可选时段，请选择其他日期
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Clock className="h-4 w-4 text-neutral-400" />
+              <Label className="text-[14px] font-medium text-neutral-900">开始时间</Label>
             </div>
 
-            {/* Preview */}
-            {scheduledPreview && (
-              <div className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3.5 py-2.5 mt-1">
-                <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-                <span className="text-[13px] text-neutral-600">
-                  计划于 <span className="font-medium text-neutral-900">{scheduledPreview}</span> 开始
-                </span>
-              </div>
+            {/* Now / Later toggle */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setScheduleMode("now")}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-all ${
+                  scheduleMode === "now"
+                    ? "border-neutral-900 bg-neutral-900 text-white"
+                    : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                立即开始
+              </button>
+              <button
+                type="button"
+                onClick={() => setScheduleMode("later")}
+                className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[13px] font-medium transition-all ${
+                  scheduleMode === "later"
+                    ? "border-neutral-900 bg-neutral-900 text-white"
+                    : "border-neutral-200 bg-white text-neutral-500 hover:border-neutral-300 hover:text-neutral-700"
+                }`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+                预约时间
+              </button>
+            </div>
+
+            {scheduleMode === "now" && (
+              <p className="text-[12px] text-neutral-400">
+                创建房间后立即等待队友加入，人齐即可开始
+              </p>
+            )}
+
+            {/* Date/Time pickers (only for "later" mode) */}
+            {scheduleMode === "later" && (
+              <>
+                <p className="text-[12px] text-neutral-400">
+                  选择日期和时间，方便队友按时加入
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Date select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[12px] text-neutral-400">日期</Label>
+                    <Select value={scheduledDate} onValueChange={setScheduledDate}>
+                      <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
+                        {dateOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Time select */}
+                  <div className="space-y-1.5">
+                    <Label className="text-[12px] text-neutral-400">时间</Label>
+                    <Select value={scheduledTime} onValueChange={setScheduledTime}>
+                      <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
+                        <SelectValue placeholder="选择时间" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
+                        {timeOptions.length > 0 ? (
+                          timeOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-2 py-3 text-[12px] text-neutral-400 text-center">
+                            今天已无可选时段，请选择其他日期
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Preview */}
+                {scheduledPreview && (
+                  <div className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3.5 py-2.5 mt-1">
+                    <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                    <span className="text-[13px] text-neutral-600">
+                      计划于 <span className="font-medium text-neutral-900">{scheduledPreview}</span> 开始
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -315,7 +362,7 @@ export default function CreateRoomPage() {
               练习流程
             </p>
             <div className="space-y-2 text-[13px] text-neutral-500">
-              <p>1. 等待 2-4 人加入后由房主启动</p>
+              <p>1. 等待 2-4 人加入后全员准备启动</p>
               <p>2. 准备阶段 — 10 分钟阅读文章和问题</p>
               <p>3. 小组讨论 — 8 分钟自由讨论</p>
               <p>4. 个人回应 — 每人 1 分钟回答跟进问题</p>
