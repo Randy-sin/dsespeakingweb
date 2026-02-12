@@ -10,6 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft,
   Loader2,
   LogOut,
@@ -19,6 +27,7 @@ import {
   Eye,
   Users,
   ClipboardCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
@@ -43,6 +52,7 @@ export default function WaitingRoomPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [noMarkerDialogOpen, setNoMarkerDialogOpen] = useState(false);
   const startingRef = useRef(false);
 
   const fetchRoom = useCallback(async () => {
@@ -228,57 +238,65 @@ export default function WaitingRoomPage() {
     }
   };
 
+  // Extracted start logic
+  const executeStart = useCallback(async () => {
+    if (startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
+
+    try {
+      const shuffled = [...participants].sort(() => Math.random() - 0.5);
+      for (let i = 0; i < shuffled.length; i++) {
+        await supabase
+          .from("room_members")
+          .update({ speaking_order: i + 1 })
+          .eq("id", shuffled[i].id);
+      }
+      const phaseEnd = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("rooms")
+        .update({
+          status: "preparing",
+          current_phase_end_at: phaseEnd,
+          current_speaker_index: 0,
+          ready_votes: [],
+          marker_questions: {},
+        })
+        .eq("id", roomId)
+        .eq("status", "waiting");
+
+      if (error) {
+        console.error("Auto-start failed:", error);
+        toast.error("啟動失敗");
+      } else {
+        toast.success("全員準備就緒，練習開始！");
+        router.push(`/rooms/${roomId}/session`);
+      }
+    } catch (err) {
+      console.error("Auto-start error:", err);
+      toast.error("啟動失敗");
+    } finally {
+      setStarting(false);
+      setTimeout(() => {
+        startingRef.current = false;
+      }, 3000);
+    }
+  }, [participants, supabase, roomId, router]);
+
   // Auto-start when all participants are ready
   useEffect(() => {
     if (!allReady || startingRef.current || !user?.id) return;
     const triggerUserId = isHost ? room?.host_id : participants[0]?.user_id;
     if (user.id !== triggerUserId) return;
 
-    startingRef.current = true;
-    setStarting(true);
+    if (!hasMarker) {
+      // No marker — show confirmation dialog instead of auto-starting
+      setNoMarkerDialogOpen(true);
+      return;
+    }
 
-    const autoStart = async () => {
-      try {
-        const shuffled = [...participants].sort(() => Math.random() - 0.5);
-        for (let i = 0; i < shuffled.length; i++) {
-          await supabase
-            .from("room_members")
-            .update({ speaking_order: i + 1 })
-            .eq("id", shuffled[i].id);
-        }
-        const phaseEnd = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-        const { error } = await supabase
-          .from("rooms")
-          .update({
-            status: "preparing",
-            current_phase_end_at: phaseEnd,
-            current_speaker_index: 0,
-            ready_votes: [],
-            marker_questions: {},
-          })
-          .eq("id", roomId)
-          .eq("status", "waiting");
-
-        if (error) {
-          console.error("Auto-start failed:", error);
-          toast.error("啟動失敗");
-        } else {
-          toast.success("全員準備就緒，練習開始！");
-          router.push(`/rooms/${roomId}/session`);
-        }
-      } catch (err) {
-        console.error("Auto-start error:", err);
-        toast.error("啟動失敗");
-      } finally {
-        setStarting(false);
-        setTimeout(() => {
-          startingRef.current = false;
-        }, 3000);
-      }
-    };
-
-    autoStart();
-  }, [allReady, user?.id, isHost, room?.host_id, participants, supabase, roomId, router]);
+    executeStart();
+  }, [allReady, user?.id, isHost, room?.host_id, participants, hasMarker, executeStart]);
 
   const handleToggleReady = async () => {
     if (!user || !room) return;
@@ -754,6 +772,41 @@ export default function WaitingRoomPage() {
           </div>
         </div>
       </div>
+
+      {/* No Marker confirmation dialog */}
+      <Dialog open={noMarkerDialogOpen} onOpenChange={setNoMarkerDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              {locale === "zh-Hant" ? "目前沒有 Marker" : "No Marker Present"}
+            </DialogTitle>
+            <DialogDescription>
+              {locale === "zh-Hant"
+                ? "所有參與者已準備就緒，但沒有 Marker（評分員）加入。沒有 Marker 將無法獲得評分和 Part B 考官提問體驗。是否要繼續開始練習？"
+                : "All participants are ready, but no Marker (examiner) has joined. Without a Marker you will not receive scoring or Part B examiner questions. Continue anyway?"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setNoMarkerDialogOpen(false)}
+              className="sm:flex-1"
+            >
+              {locale === "zh-Hant" ? "等待 Marker" : "Wait for Marker"}
+            </Button>
+            <Button
+              onClick={() => {
+                setNoMarkerDialogOpen(false);
+                executeStart();
+              }}
+              className="sm:flex-1 bg-neutral-900 hover:bg-neutral-800 text-white"
+            >
+              {locale === "zh-Hant" ? "繼續開始" : "Start Anyway"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
