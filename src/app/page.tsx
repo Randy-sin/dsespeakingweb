@@ -37,7 +37,7 @@ export default function HomePage() {
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 via-neutral-500 to-neutral-300 italic">
                     together.
                   </span>
-                </h1>
+          </h1>
 
                 {/* Subtext */}
                 <p className="animate-fade-up delay-200 text-[15px] sm:text-[18px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-10 max-w-lg">
