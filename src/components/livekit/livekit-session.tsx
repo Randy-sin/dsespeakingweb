@@ -301,11 +301,36 @@ export function LiveKitSession({
 
   if (loading) {
     return (
-      <div className="text-center py-6">
-        <Loader2 className="h-5 w-5 animate-spin text-neutral-300 mx-auto mb-2" />
-        <p className="text-[13px] text-neutral-400">
-          {t("common.connecting", "Connecting...")}
-        </p>
+      <div className="bg-neutral-950 rounded-xl overflow-hidden p-3" style={{ height: "320px" }}>
+        {/* Video skeleton grid */}
+        <div className="grid grid-cols-2 gap-2 h-full">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-neutral-800 rounded-lg animate-pulse relative overflow-hidden"
+            >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-neutral-700/50 to-transparent" />
+              {/* Avatar placeholder */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-neutral-700" />
+              </div>
+              {/* Name tag placeholder */}
+              <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                <div className="h-4 w-16 rounded bg-neutral-700" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Connecting text */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2 flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-white/80" />
+            <span className="text-[13px] text-white/80">
+              {t("common.connecting", "Connecting...")}
+            </span>
+          </div>
+        </div>
       </div>
     );
   }
