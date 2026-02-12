@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, ArrowLeft, CheckCircle2, RotateCw } from "lucide-react";
 import type { Provider } from "@supabase/supabase-js";
 
 interface AuthFormProps {
@@ -21,8 +21,21 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+
+  // Email verification state
+  const [emailSent, setEmailSent] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
   const router = useRouter();
   const supabase = createClient();
+
+  // Cooldown timer for resend button
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleOAuth = async (provider: Provider) => {
     setOauthLoading(provider);
@@ -38,13 +51,34 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   };
 
+  const handleResendVerification = useCallback(async () => {
+    if (resending || resendCooldown > 0 || !email) return;
+    setResending(true);
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      });
+      if (error) throw error;
+      toast.success("驗證郵件已重新發送");
+      setResendCooldown(60);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "發送失敗，請稍後再試";
+      toast.error(message);
+    } finally {
+      setResending(false);
+    }
+  }, [email, resending, resendCooldown, supabase.auth]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (mode === "register") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -54,18 +88,46 @@ export function AuthForm({ mode }: AuthFormProps) {
           },
         });
         if (error) throw error;
+
+        // Supabase returns a user with identities = [] if the email is already registered
+        // but unconfirmed. Check if we need email confirmation.
+        const needsConfirmation =
+          data.user && !data.session;
+
+        if (needsConfirmation) {
+          setEmailSent(true);
+          setResendCooldown(60);
+          return; // Don't redirect — show verification screen
+        }
+
+        // If session exists, user is auto-confirmed (e.g. email confirmation disabled)
         toast.success("註冊成功");
         router.push("/rooms");
+        router.refresh();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
-        if (error) throw error;
+
+        if (error) {
+          // Special handling: if user tries to login but hasn't confirmed email
+          if (
+            error.message.toLowerCase().includes("email not confirmed") ||
+            error.message.toLowerCase().includes("not confirmed")
+          ) {
+            setEmailSent(true);
+            setResendCooldown(0);
+            toast.error("請先驗證你的電郵地址");
+            return;
+          }
+          throw error;
+        }
+
         toast.success("登入成功");
         router.push("/rooms");
+        router.refresh();
       }
-      router.refresh();
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : "操作失敗，請重試";
@@ -75,6 +137,132 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   };
 
+  // ─── Email Verification Confirmation Screen ────────────────────────
+  if (emailSent) {
+    const emailDomain = email.split("@")[1] || "";
+    const mailProviderUrl = getMailProviderUrl(emailDomain);
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white px-5">
+        <div className="w-full max-w-sm text-center">
+          <div className="text-center mb-10">
+            <Link
+              href="/"
+              className="font-serif text-[18px] font-semibold text-neutral-900 tracking-tight"
+            >
+              DSE Speaking
+            </Link>
+          </div>
+
+          {/* Mail icon with animated ring */}
+          <div className="relative mx-auto w-20 h-20 mb-6">
+            <div className="absolute inset-0 rounded-full bg-emerald-50 animate-ping opacity-25" />
+            <div className="relative flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50">
+              <Mail className="h-8 w-8 text-emerald-600" />
+            </div>
+          </div>
+
+          <h1 className="font-serif text-[24px] font-semibold text-neutral-900 tracking-tight mb-2">
+            檢查你的電子郵件
+          </h1>
+          <p className="text-[14px] text-neutral-500 leading-relaxed mb-2">
+            我們已發送一封驗證郵件到
+          </p>
+          <p className="text-[15px] font-medium text-neutral-900 mb-6 break-all">
+            {email}
+          </p>
+
+          {/* Instructions */}
+          <div className="bg-neutral-50 rounded-xl p-5 mb-6 text-left space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+                <span className="text-[12px] font-semibold text-emerald-700">1</span>
+              </div>
+              <p className="text-[13px] text-neutral-600 leading-relaxed">
+                打開你的郵箱，找到來自 <span className="font-medium text-neutral-900">DSE Speaking</span> 的郵件
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+                <span className="text-[12px] font-semibold text-emerald-700">2</span>
+              </div>
+              <p className="text-[13px] text-neutral-600 leading-relaxed">
+                點擊郵件中的 <span className="font-medium text-neutral-900">確認連結</span> 完成驗證
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center mt-0.5">
+                <span className="text-[12px] font-semibold text-emerald-700">3</span>
+              </div>
+              <p className="text-[13px] text-neutral-600 leading-relaxed">
+                驗證完成後回來<Link href="/login" className="font-medium text-neutral-900 underline underline-offset-2">登入</Link>即可
+              </p>
+            </div>
+          </div>
+
+          {/* Spam notice */}
+          <div className="flex items-center justify-center gap-2 mb-6 px-4 py-2.5 rounded-lg bg-amber-50 border border-amber-100">
+            <CheckCircle2 className="h-4 w-4 text-amber-600 flex-shrink-0" />
+            <p className="text-[12px] text-amber-700">
+              找不到郵件？請檢查<span className="font-semibold">垃圾郵件</span>或<span className="font-semibold">促銷</span>資料夾
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="space-y-2.5">
+            {mailProviderUrl && (
+              <a
+                href={mailProviderUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Button
+                  type="button"
+                  className="w-full h-10 bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] rounded-lg"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  打開 {getMailProviderName(emailDomain)}
+                </Button>
+              </a>
+            )}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-10 text-[14px] border-neutral-200 hover:bg-neutral-50 rounded-lg"
+              disabled={resending || resendCooldown > 0}
+              onClick={handleResendVerification}
+            >
+              {resending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCw className="mr-2 h-4 w-4" />
+              )}
+              {resendCooldown > 0
+                ? `重新發送 (${resendCooldown}s)`
+                : "重新發送驗證郵件"}
+            </Button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setEmailSent(false);
+              setEmail("");
+              setPassword("");
+            }}
+            className="inline-flex items-center justify-center text-[13px] text-neutral-400 hover:text-neutral-900 mt-6 transition-colors"
+          >
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+            使用其他方式{mode === "register" ? "註冊" : "登入"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Normal Auth Form ──────────────────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-5">
       <div className="w-full max-w-sm">
@@ -227,4 +415,35 @@ export function AuthForm({ mode }: AuthFormProps) {
       </div>
     </div>
   );
+}
+
+// ─── Helpers: map email domain to webmail URL ───────────────────────
+
+function getMailProviderUrl(domain: string): string | null {
+  const d = domain.toLowerCase();
+  if (d === "gmail.com" || d === "googlemail.com") return "https://mail.google.com";
+  if (d === "outlook.com" || d === "hotmail.com" || d === "live.com" || d === "msn.com")
+    return "https://outlook.live.com";
+  if (d === "yahoo.com" || d === "yahoo.com.hk") return "https://mail.yahoo.com";
+  if (d === "icloud.com" || d === "me.com" || d === "mac.com")
+    return "https://www.icloud.com/mail";
+  if (d === "qq.com") return "https://mail.qq.com";
+  if (d === "163.com") return "https://mail.163.com";
+  if (d === "126.com") return "https://mail.126.com";
+  if (d === "protonmail.com" || d === "proton.me") return "https://mail.proton.me";
+  return null;
+}
+
+function getMailProviderName(domain: string): string {
+  const d = domain.toLowerCase();
+  if (d === "gmail.com" || d === "googlemail.com") return "Gmail";
+  if (d === "outlook.com" || d === "hotmail.com" || d === "live.com" || d === "msn.com")
+    return "Outlook";
+  if (d === "yahoo.com" || d === "yahoo.com.hk") return "Yahoo Mail";
+  if (d === "icloud.com" || d === "me.com" || d === "mac.com") return "iCloud Mail";
+  if (d === "qq.com") return "QQ 郵箱";
+  if (d === "163.com") return "163 郵箱";
+  if (d === "126.com") return "126 郵箱";
+  if (d === "protonmail.com" || d === "proton.me") return "Proton Mail";
+  return "郵箱";
 }
