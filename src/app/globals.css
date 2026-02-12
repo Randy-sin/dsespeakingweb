@@ -261,23 +261,37 @@
   display: none !important;
 }
 
-/* Force video grid to fill the entire container */
+/*
+ * Force the VideoConference component to fill its parent.
+ * The parent must have an explicit height (flex-1 min-h-0, or fixed px/vh).
+ */
 .lk-video-conference {
   height: 100% !important;
+  width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
-.lk-video-conference > .lk-grid-layout,
+/* The grid layout inside VideoConference must stretch to fill */
 .lk-video-conference .lk-grid-layout {
-  flex: 1 !important;
+  flex: 1 1 0% !important;
   min-height: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Also handle the focus-layout wrapper if present */
+.lk-video-conference .lk-focus-layout-wrapper {
+  height: 100% !important;
+  width: 100% !important;
+}
+.lk-video-conference .lk-focus-layout {
   height: 100% !important;
 }
 
 /* Make participant tiles fill grid cells properly */
 .lk-participant-tile {
-  border-radius: 12px !important;
+  border-radius: 10px !important;
   overflow: hidden !important;
   background: #1a1a1a !important;
 }

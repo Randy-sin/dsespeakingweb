@@ -348,7 +348,7 @@ export function LiveKitSession({
       );
 
     return (
-      <div className="space-y-3">
+      <div>
         <LKRoom
           serverUrl={url}
           token={token}
@@ -376,102 +376,106 @@ export function LiveKitSession({
         >
           <AudioRenderer />
 
-          {/* ── Video Container ── */}
-          <div
-            className={`bg-neutral-950 overflow-hidden relative ${
-              expandedView
-                ? isMobileViewport
-                  ? "fixed inset-0 z-50"
-                  : "fixed inset-3 z-50 rounded-2xl shadow-2xl ring-1 ring-white/10"
-                : "rounded-xl"
-            }`}
-            style={
-              expandedView
-                ? undefined
-                : {
-                    height: isMobileViewport
-                      ? isLandscape ? "55vh" : "35vh"
-                      : "320px",
-                  }
-            }
-          >
-            {/* Video grid fills entire container */}
-            <div className="absolute inset-0">
-              <VConf />
-            </div>
-
-            {/* ── Top overlay: minimal, non-intrusive ── */}
+          {/* ── Expanded (fullscreen) overlay ── */}
+          {expandedView && (
             <div
-              className="absolute left-0 right-0 z-20 flex items-center justify-between pointer-events-none"
-              style={{
-                top: expandedView && isMobileViewport
-                  ? "max(8px, env(safe-area-inset-top))"
-                  : "8px",
-                paddingLeft: expandedView && isMobileViewport
-                  ? "max(12px, env(safe-area-inset-left))"
-                  : "10px",
-                paddingRight: expandedView && isMobileViewport
-                  ? "max(12px, env(safe-area-inset-right))"
-                  : "10px",
-              }}
+              className={
+                isMobileViewport
+                  ? "fixed inset-0 z-50 bg-neutral-950 flex flex-col"
+                  : "fixed inset-3 z-50 bg-neutral-950 rounded-2xl shadow-2xl ring-1 ring-white/10 flex flex-col overflow-hidden"
+              }
+              style={{ height: isMobileViewport ? "100dvh" : undefined }}
             >
-              {/* Connection pill */}
-              <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 pointer-events-auto">
-                <div className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-400" : "bg-neutral-400 animate-pulse"}`} />
-                <span className="text-[10px] text-white/80 font-medium">
-                  {connected ? "LIVE" : "..."}
-                </span>
+              {/* Top bar */}
+              <div
+                className="flex items-center justify-between shrink-0 px-3 z-10"
+                style={{
+                  paddingTop: isMobileViewport
+                    ? "max(8px, env(safe-area-inset-top))"
+                    : "10px",
+                }}
+              >
+                <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1">
+                  <div className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-400" : "bg-neutral-400 animate-pulse"}`} />
+                  <span className="text-[10px] text-white/80 font-medium">
+                    {connected ? "LIVE" : "..."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasManualResize(true);
+                    setExpandedView(false);
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors"
+                >
+                  <Shrink className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-medium hidden sm:inline">
+                    {t("livekit.shrinkVideos", "Exit")}
+                  </span>
+                </button>
               </div>
 
-              {/* Expand / Shrink button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setHasManualResize(true);
-                  setExpandedView((v) => !v);
-                }}
-                className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors pointer-events-auto"
-              >
-                {expandedView ? (
-                  <>
-                    <Shrink className="h-3.5 w-3.5" />
-                    <span className="text-[11px] font-medium hidden sm:inline">
-                      {t("livekit.shrinkVideos", "Exit")}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Expand className="h-3.5 w-3.5" />
-                    <span className="text-[11px] font-medium hidden sm:inline">
-                      {t("livekit.expandVideos", "Expand")}
-                    </span>
-                  </>
-                )}
-              </button>
-            </div>
+              {/* Video grid — takes all remaining space */}
+              <div className="flex-1 min-h-0">
+                <VConf />
+              </div>
 
-            {/* ── Bottom floating control bar (only in expanded view) ── */}
-            {expandedView && (
+              {/* Bottom floating control bar */}
               <div
-                className="absolute left-0 right-0 z-20"
+                className="shrink-0 px-4 pb-3 pt-2 z-10"
                 style={{
-                  bottom: isMobileViewport
+                  paddingBottom: isMobileViewport
                     ? "max(12px, env(safe-area-inset-bottom))"
                     : "16px",
-                  paddingLeft: isMobileViewport
-                    ? "max(12px, env(safe-area-inset-left))"
-                    : "16px",
-                  paddingRight: isMobileViewport
-                    ? "max(12px, env(safe-area-inset-right))"
-                    : "16px",
                 }}
               >
-                <div className="mx-auto max-w-md rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 px-4 py-3 shadow-2xl">
+                <div className="mx-auto max-w-md rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 px-4 py-3">
                   {renderMediaControls(true)}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* ── Inline (non-expanded) video ── */}
+          {!expandedView && (
+            <div
+              className="bg-neutral-950 rounded-xl overflow-hidden relative"
+              style={{
+                height: isMobileViewport
+                  ? isLandscape ? "55vh" : "35vh"
+                  : "320px",
+              }}
+            >
+              {/* Top bar overlay */}
+              <div className="absolute top-2 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 pointer-events-auto">
+                  <div className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-400" : "bg-neutral-400 animate-pulse"}`} />
+                  <span className="text-[10px] text-white/80 font-medium">
+                    {connected ? "LIVE" : "..."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHasManualResize(true);
+                    setExpandedView(true);
+                  }}
+                  className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors pointer-events-auto"
+                >
+                  <Expand className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-medium hidden sm:inline">
+                    {t("livekit.expandVideos", "Expand")}
+                  </span>
+                </button>
+              </div>
+
+              {/* Video grid */}
+              <div className="h-full w-full">
+                <VConf />
+              </div>
+            </div>
+          )}
 
           {/* ── Controls below video (non-expanded only) ── */}
           {!expandedView && (
