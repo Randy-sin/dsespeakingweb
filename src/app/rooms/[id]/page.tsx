@@ -52,7 +52,6 @@ export default function WaitingRoomPage() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [switching, setSwitching] = useState(false);
-  const [noMarkerDialogOpen, setNoMarkerDialogOpen] = useState(false);
   const startingRef = useRef(false);
 
   const fetchRoom = useCallback(async () => {
@@ -156,6 +155,13 @@ export default function WaitingRoomPage() {
   const myVoteReady = user ? readyVotes.includes(user.id) : false;
   const readyCount = readyVotes.filter((v) => participants.some((m) => m.user_id === v)).length;
   const allReady = memberCount >= 2 && readyCount === memberCount;
+  const continueVotes: string[] = Array.isArray(room?.skip_votes) ? room.skip_votes : [];
+  const validContinueVotes = continueVotes.filter((v) =>
+    participants.some((m) => m.user_id === v)
+  ).length;
+  const myVoteContinue = user ? continueVotes.includes(user.id) : false;
+  const allVotedContinue = memberCount >= 2 && validContinueVotes === memberCount;
+  const showNoMarkerDialog = room?.status === "waiting" && allReady && !hasMarker;
   const isInSession =
     room?.status === "preparing" ||
     room?.status === "discussing" ||
@@ -222,7 +228,9 @@ export default function WaitingRoomPage() {
         // If switching away from participant, remove ready vote
         if (myRole === "participant" && role !== "participant" && room) {
           const newVotes = readyVotes.filter((v) => v !== user.id);
+          const newContinueVotes = continueVotes.filter((v) => v !== user.id);
           await supabase.from("rooms").update({ ready_votes: newVotes }).eq("id", roomId);
+          await supabase.from("rooms").update({ skip_votes: newContinueVotes }).eq("id", roomId);
         }
         const { error } = await supabase
           .from("room_members")
@@ -307,6 +315,7 @@ export default function WaitingRoomPage() {
           current_phase_end_at: phaseEnd,
           current_speaker_index: 0,
           ready_votes: [],
+          skip_votes: [],
           marker_questions: {},
         })
         .eq("id", roomId)
@@ -337,13 +346,52 @@ export default function WaitingRoomPage() {
     if (user.id !== triggerUserId) return;
 
     if (!hasMarker) {
-      // No marker — show confirmation dialog instead of auto-starting
-      setNoMarkerDialogOpen(true);
+      // No marker — require unanimous participant vote to continue.
+      if (!allVotedContinue) return;
+      executeStart();
       return;
     }
 
     executeStart();
-  }, [allReady, user?.id, isHost, room?.host_id, participants, hasMarker, executeStart]);
+  }, [
+    allReady,
+    allVotedContinue,
+    user?.id,
+    isHost,
+    room?.host_id,
+    participants,
+    hasMarker,
+    executeStart,
+  ]);
+
+  const handleToggleNoMarkerContinueVote = async () => {
+    if (!user || !room || myRole !== "participant") return;
+    const currentVotes: string[] = Array.isArray(room.skip_votes) ? room.skip_votes : [];
+
+    let newVotes: string[];
+    if (myVoteContinue) {
+      newVotes = currentVotes.filter((v) => v !== user.id);
+    } else {
+      newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
+    }
+
+    setRoom({ ...room, skip_votes: newVotes });
+    const { error } = await supabase
+      .from("rooms")
+      .update({ skip_votes: newVotes })
+      .eq("id", roomId)
+      .eq("status", "waiting");
+
+    if (error) {
+      toast.error(locale === "zh-Hant" ? "投票失敗，請重試" : "Vote failed, please retry");
+      setRoom({ ...room, skip_votes: currentVotes });
+      return;
+    }
+
+    if (!myVoteContinue) {
+      toast.success(locale === "zh-Hant" ? "已投票同意繼續" : "Voted to continue");
+    }
+  };
 
   const handleToggleReady = async () => {
     if (!user || !room) return;
@@ -382,9 +430,12 @@ export default function WaitingRoomPage() {
         const newVotes = (Array.isArray(room.ready_votes) ? room.ready_votes : []).filter(
           (v) => v !== user.id
         );
+        const newContinueVotes = (Array.isArray(room.skip_votes) ? room.skip_votes : []).filter(
+          (v) => v !== user.id
+        );
         await supabase
           .from("rooms")
-          .update({ ready_votes: newVotes })
+          .update({ ready_votes: newVotes, skip_votes: newContinueVotes })
           .eq("id", roomId);
       }
       await supabase
@@ -815,8 +866,8 @@ export default function WaitingRoomPage() {
         </div>
       </div>
 
-      {/* No Marker confirmation dialog */}
-      <Dialog open={noMarkerDialogOpen} onOpenChange={setNoMarkerDialogOpen}>
+      {/* No Marker confirmation dialog (shared for everyone) */}
+      <Dialog open={showNoMarkerDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -829,23 +880,45 @@ export default function WaitingRoomPage() {
                 : "All participants are ready, but no Marker (examiner) has joined. Without a Marker you will not receive scoring or Part B examiner questions. Continue anyway?"}
             </DialogDescription>
           </DialogHeader>
+          <div className="rounded-md border border-amber-200/70 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
+            {locale === "zh-Hant"
+              ? `目前同意票：${validContinueVotes}/${memberCount}（需全體參與者同意）`
+              : `Current votes: ${validContinueVotes}/${memberCount} (unanimous participants required)`}
+          </div>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setNoMarkerDialogOpen(false)}
-              className="sm:flex-1"
-            >
-              {locale === "zh-Hant" ? "等待 Marker" : "Wait for Marker"}
-            </Button>
-            <Button
-              onClick={() => {
-                setNoMarkerDialogOpen(false);
-                executeStart();
-              }}
-              className="sm:flex-1 bg-neutral-900 hover:bg-neutral-800 text-white"
-            >
-              {locale === "zh-Hant" ? "繼續開始" : "Start Anyway"}
-            </Button>
+            {myRole === "participant" ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (myVoteContinue) {
+                      handleToggleNoMarkerContinueVote();
+                    }
+                  }}
+                  className="sm:flex-1"
+                >
+                  {locale === "zh-Hant" ? "等待 Marker" : "Wait for Marker"}
+                </Button>
+                <Button
+                  onClick={handleToggleNoMarkerContinueVote}
+                  className="sm:flex-1 bg-neutral-900 hover:bg-neutral-800 text-white"
+                >
+                  {myVoteContinue
+                    ? locale === "zh-Hant"
+                      ? "已投票同意"
+                      : "Voted to continue"
+                    : locale === "zh-Hant"
+                    ? "投票同意繼續"
+                    : "Vote to continue"}
+                </Button>
+              </>
+            ) : (
+              <p className="text-[12px] text-neutral-500 w-full text-center py-1">
+                {locale === "zh-Hant"
+                  ? "只有參與者可以投票，請等待投票結果。"
+                  : "Only participants can vote. Please wait for the result."}
+              </p>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
