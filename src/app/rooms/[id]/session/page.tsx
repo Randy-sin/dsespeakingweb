@@ -376,7 +376,7 @@ export default function SessionPage() {
     participants.some((m) => m.user_id === v)
   ).length;
   const allVotedSkip =
-    participants.length >= 2 && validSkipVotes === participants.length;
+    participants.length >= 1 && validSkipVotes === participants.length;
 
   const executeSkipTransition = useCallback(async () => {
     if (!room || phaseTransitionRef.current || isObserver) return;
@@ -543,7 +543,7 @@ export default function SessionPage() {
       participants.some((m) => m.user_id === v)
     ).length;
     const canExecuteNow =
-      participants.length >= 2 && validNewVotes === participants.length;
+      participants.length >= 1 && validNewVotes === participants.length;
 
     if (canExecuteNow) {
       await executeSkipTransition();
