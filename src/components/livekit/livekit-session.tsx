@@ -347,7 +347,6 @@ export function LiveKitSession({
     } = lkComponents;
 
     const isObserver = isSpectator || isMarker;
-    const VideoGrid = DiscussionGridComp ?? VConf;
 
     const renderMediaControls = (isCompact: boolean) =>
       MediaControlsComp ? (
@@ -449,7 +448,7 @@ export function LiveKitSession({
 
               {/* Video grid — takes all remaining space */}
               <div className="flex-1 min-h-0">
-                <VideoGrid isObserver={isObserver} />
+                {DiscussionGridComp ? <DiscussionGridComp isObserver={isObserver} /> : <VConf />}
               </div>
 
               {/* Bottom floating control bar */}
@@ -502,7 +501,7 @@ export function LiveKitSession({
 
               {/* Video grid */}
               <div className="h-full w-full">
-                <VideoGrid isObserver={isObserver} />
+                {DiscussionGridComp ? <DiscussionGridComp isObserver={isObserver} /> : <VConf />}
               </div>
             </div>
           )}
