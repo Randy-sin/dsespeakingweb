@@ -307,6 +307,36 @@ export function LiveKitSession({
       VideoConference: VConf,
     } = lkComponents;
 
+    const renderMediaControls = (isCompact: boolean) =>
+      MediaControlsComp ? (
+        <MediaControlsComp
+          roomStatus={roomStatus}
+          currentSpeakerUserId={currentSpeakerUserId}
+          isSpectator={isSpectator}
+          isMarker={isMarker}
+          userId={user?.id}
+          connected={connected}
+          canAccessMediaDevices={canAccessMediaDevices}
+          waitingForMics={waitingForMics}
+          expectedParticipantCount={expectedParticipantCount}
+          onAllMicsReady={onAllMicsReady}
+          compact={isCompact}
+        />
+      ) : (
+        <div className="flex items-center justify-center gap-1">
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              connected ? "bg-emerald-400" : "bg-neutral-300 animate-pulse"
+            }`}
+          />
+          <span className={`text-[11px] ${isCompact ? "text-white/60" : "text-neutral-400"}`}>
+            {connected
+              ? t("common.connected", "Connected")
+              : t("common.connecting", "Connecting...")}
+          </span>
+        </div>
+      );
+
     return (
       <div className="space-y-3">
         <LKRoom
@@ -334,107 +364,111 @@ export function LiveKitSession({
           onDisconnected={() => setConnected(false)}
           style={{ height: "auto" }}
         >
-          <div className="space-y-3">
-            <AudioRenderer />
+          <AudioRenderer />
+
+          {/* ── Video Container ── */}
+          <div
+            className={`bg-neutral-950 overflow-hidden relative ${
+              expandedView
+                ? isMobileViewport
+                  ? "fixed inset-0 z-50"
+                  : "fixed inset-3 z-50 rounded-2xl shadow-2xl ring-1 ring-white/10"
+                : "rounded-xl"
+            }`}
+            style={
+              expandedView
+                ? undefined
+                : {
+                    height: isMobileViewport
+                      ? isLandscape ? "55vh" : "35vh"
+                      : "320px",
+                  }
+            }
+          >
+            {/* Video grid fills entire container */}
+            <div className="absolute inset-0">
+              <VConf />
+            </div>
+
+            {/* ── Top overlay: minimal, non-intrusive ── */}
             <div
-              className={`bg-neutral-950 overflow-hidden relative ${
-                expandedView
-                  ? isMobileViewport
-                    ? "fixed inset-0 z-50 rounded-none"
-                    : "fixed inset-4 z-50 rounded-xl shadow-2xl"
-                  : "rounded-lg"
-              }`}
-              style={
-                expandedView
-                  ? {
-                      height: isMobileViewport ? "100dvh" : "calc(100vh - 2rem)",
-                    }
-                  : isMobileViewport
-                    ? {
-                        height: isLandscape ? "60vh" : "40vh",
-                      }
-                    : undefined
-              }
+              className="absolute left-0 right-0 z-20 flex items-center justify-between pointer-events-none"
+              style={{
+                top: expandedView && isMobileViewport
+                  ? "max(8px, env(safe-area-inset-top))"
+                  : "8px",
+                paddingLeft: expandedView && isMobileViewport
+                  ? "max(12px, env(safe-area-inset-left))"
+                  : "10px",
+                paddingRight: expandedView && isMobileViewport
+                  ? "max(12px, env(safe-area-inset-right))"
+                  : "10px",
+              }}
             >
-              <Button
+              {/* Connection pill */}
+              <div className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-2.5 py-1 pointer-events-auto">
+                <div className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-emerald-400" : "bg-neutral-400 animate-pulse"}`} />
+                <span className="text-[10px] text-white/80 font-medium">
+                  {connected ? "LIVE" : "..."}
+                </span>
+              </div>
+
+              {/* Expand / Shrink button */}
+              <button
                 type="button"
-                variant="secondary"
-                size="sm"
-                className="absolute right-2 top-2 z-10 h-8 text-[11px] bg-black/55 text-white border-white/20 hover:bg-black/75 backdrop-blur-sm"
                 onClick={() => {
                   setHasManualResize(true);
                   setExpandedView((v) => !v);
                 }}
+                className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors pointer-events-auto"
               >
                 {expandedView ? (
                   <>
-                    <Shrink className="mr-1 h-3.5 w-3.5" />
-                    {t("livekit.shrinkVideos", "Exit expanded view")}
+                    <Shrink className="h-3.5 w-3.5" />
+                    <span className="text-[11px] font-medium hidden sm:inline">
+                      {t("livekit.shrinkVideos", "Exit")}
+                    </span>
                   </>
                 ) : (
                   <>
-                    <Expand className="mr-1 h-3.5 w-3.5" />
-                    {t("livekit.expandVideos", "Expand videos")}
+                    <Expand className="h-3.5 w-3.5" />
+                    <span className="text-[11px] font-medium hidden sm:inline">
+                      {t("livekit.expandVideos", "Expand")}
+                    </span>
                   </>
                 )}
-              </Button>
-              <VConf />
-              {expandedView && (
-                <>
-                  <div
-                    className="absolute left-3 z-10 rounded bg-black/55 px-2.5 py-1 text-[11px] text-white backdrop-blur-sm"
-                    style={{
-                      top: "max(8px, env(safe-area-inset-top))",
-                    }}
-                  >
-                    {t("livekit.fullViewTitle", "Expanded video view")}
-                  </div>
-                  {isMobileViewport && (
-                    <div
-                      className="absolute left-3 z-10 rounded bg-black/45 px-2.5 py-1 text-[10px] text-white/90 backdrop-blur-sm"
-                      style={{
-                        top: "calc(max(8px, env(safe-area-inset-top)) + 30px)",
-                      }}
-                    >
-                      {isLandscape
-                        ? t("livekit.landscapeHint", "Landscape optimized for gallery view")
-                        : t("livekit.portraitHint", "Rotate phone for wider gallery view")}
-                    </div>
-                  )}
-                </>
-              )}
+              </button>
             </div>
-          </div>
-          {/* Media controls INSIDE LiveKitRoom context so hooks work */}
-          <div className="mt-3">
-            {MediaControlsComp ? (
-              <MediaControlsComp
-                roomStatus={roomStatus}
-                currentSpeakerUserId={currentSpeakerUserId}
-                isSpectator={isSpectator}
-                isMarker={isMarker}
-                userId={user?.id}
-                connected={connected}
-                canAccessMediaDevices={canAccessMediaDevices}
-                waitingForMics={waitingForMics}
-                expectedParticipantCount={expectedParticipantCount}
-                onAllMicsReady={onAllMicsReady}
-              />
-            ) : (
-              <div className="flex items-center justify-center gap-1">
-                <div
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    connected ? "bg-neutral-900" : "bg-neutral-300"
-                  }`}
-                />
-                <span className="text-[11px] text-neutral-400">
-                  {connected
-                    ? t("common.connected", "Connected")
-                    : t("common.connecting", "Connecting...")}
-                </span>
+
+            {/* ── Bottom floating control bar (only in expanded view) ── */}
+            {expandedView && (
+              <div
+                className="absolute left-0 right-0 z-20"
+                style={{
+                  bottom: isMobileViewport
+                    ? "max(12px, env(safe-area-inset-bottom))"
+                    : "16px",
+                  paddingLeft: isMobileViewport
+                    ? "max(12px, env(safe-area-inset-left))"
+                    : "16px",
+                  paddingRight: isMobileViewport
+                    ? "max(12px, env(safe-area-inset-right))"
+                    : "16px",
+                }}
+              >
+                <div className="mx-auto max-w-md rounded-2xl bg-black/50 backdrop-blur-xl border border-white/10 px-4 py-3 shadow-2xl">
+                  {renderMediaControls(true)}
+                </div>
               </div>
             )}
           </div>
+
+          {/* ── Controls below video (non-expanded only) ── */}
+          {!expandedView && (
+            <div className="mt-3">
+              {renderMediaControls(false)}
+            </div>
+          )}
         </LKRoom>
       </div>
     );

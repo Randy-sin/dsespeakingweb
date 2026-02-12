@@ -251,6 +251,87 @@
 .delay-700 { animation-delay: 700ms; }
 .delay-800 { animation-delay: 800ms; }
 
+/* ── LiveKit Video Overrides ── */
+
+/* Hide LiveKit's built-in control bar — we use our own MediaControls */
+.lk-control-bar,
+.lk-chat,
+.lk-prejoin,
+[data-lk-theme] .lk-control-bar {
+  display: none !important;
+}
+
+/* Force video grid to fill the entire container */
+.lk-video-conference {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.lk-video-conference > .lk-grid-layout,
+.lk-video-conference .lk-grid-layout {
+  flex: 1 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+/* Make participant tiles fill grid cells properly */
+.lk-participant-tile {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: #1a1a1a !important;
+}
+
+.lk-participant-tile video {
+  object-fit: cover !important;
+}
+
+/* Clean up participant name display */
+.lk-participant-name {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.01em !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  background: rgba(0, 0, 0, 0.55) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Mic/connection indicators on tiles */
+.lk-participant-tile .lk-participant-metadata {
+  padding: 6px 8px !important;
+}
+
+/* Focus ring for active speaker */
+.lk-participant-tile[data-lk-speaking="true"] {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5),
+              0 0 20px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Grid gaps */
+.lk-grid-layout {
+  gap: 6px !important;
+  padding: 6px !important;
+}
+
+/* Mobile: tighter grid */
+@media (max-width: 1023px) {
+  .lk-grid-layout {
+    gap: 4px !important;
+    padding: 4px !important;
+  }
+
+  .lk-participant-tile {
+    border-radius: 8px !important;
+  }
+
+  .lk-participant-name {
+    font-size: 11px !important;
+    padding: 2px 6px !important;
+  }
+}
+
 /* ── Visual textures ── */
 .dot-grid {
   background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);

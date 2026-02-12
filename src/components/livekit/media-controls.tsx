@@ -25,6 +25,8 @@ interface MediaControlsProps {
   expectedParticipantCount?: number;
   /** Called when all participants have their mic enabled */
   onAllMicsReady?: () => void;
+  /** Compact mode for floating overlay bar (dark bg) */
+  compact?: boolean;
 }
 
 /**
@@ -42,6 +44,7 @@ export function MediaControls({
   waitingForMics = false,
   expectedParticipantCount = 0,
   onAllMicsReady,
+  compact = false,
 }: MediaControlsProps) {
   const { t } = useI18n();
   const room = useRoomContext();
@@ -207,27 +210,28 @@ export function MediaControls({
   }, [waitingForMics]);
 
   if (isSpectator) {
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-center gap-2">
-          <Eye className="h-3.5 w-3.5 text-neutral-400" />
-          <span className="text-[11px] text-neutral-500">
+    if (compact) {
+      return (
+        <div className="flex items-center justify-center gap-3">
+          <Eye className="h-4 w-4 text-white/50" />
+          <span className="text-[11px] text-white/70 font-medium">
             {t("livekit.watchMode", "View-only mode")}
           </span>
-          <div className="h-1 w-1 rounded-full bg-neutral-300" />
-          <span className="text-[11px] text-neutral-400">
-            {connected ? t("common.connected", "Connected") : t("common.connecting", "Connecting...")}
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-center text-[11px] text-neutral-500">
-            {t("livekit.micLocked", "Mic locked")}
-          </div>
-          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-center text-[11px] text-neutral-500">
-            {t("livekit.cameraLocked", "Camera locked")}
+          <div className="flex items-center gap-1.5 ml-1">
+            <div className={`h-1.5 w-1.5 rounded-full ${networkDotClass}`} />
+            <span className="text-[10px] text-white/50">{networkLabel}</span>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-1.5">
+      );
+    }
+    return (
+      <div className="flex items-center justify-center gap-3 py-1">
+        <Eye className="h-3.5 w-3.5 text-neutral-400" />
+        <span className="text-[12px] text-neutral-500 font-medium">
+          {t("livekit.watchMode", "View-only mode")}
+        </span>
+        <div className="h-3 w-px bg-neutral-200" />
+        <div className="flex items-center gap-1.5">
           <div className={`h-1.5 w-1.5 rounded-full ${networkDotClass}`} />
           <span className="text-[11px] text-neutral-400">{networkLabel}</span>
         </div>
@@ -254,90 +258,137 @@ export function MediaControls({
     }
   };
 
-  return (
-    <div className="space-y-2">
-      {/* Mic waiting status */}
-      {waitingForMics && (
-        <div className="text-center py-1">
-          <p className="text-[12px] text-amber-600 font-medium">
-            {t("livekit.micWaiting", "Waiting for microphones")}{" "}
+  // ── Compact mode: single-row layout for floating overlay bar ──
+  if (compact) {
+    return (
+      <div className="flex items-center justify-center gap-2">
+        {waitingForMics && (
+          <span className="text-[11px] text-amber-400 font-medium mr-1">
             {micReadyCount}/{expectedParticipantCount}
-          </p>
-        </div>
-      )}
+          </span>
+        )}
 
-      <div className="flex items-center justify-center gap-1.5">
-        <Button
-          variant={isMicrophoneEnabled ? "default" : "outline"}
-          size="sm"
+        {/* Mic button */}
+        <button
+          type="button"
           onClick={handleToggleMic}
           disabled={
             !canAccessMediaDevices ||
             (isMarker && roomStatus === "discussing") ||
             (isSpectator && roomStatus !== "free_discussion")
           }
-          className={`h-10 w-10 p-0 transition-all ${
+          className={`relative h-10 w-10 rounded-full flex items-center justify-center transition-all ${
             isMicrophoneEnabled
-              ? "bg-neutral-900 hover:bg-neutral-800 shadow-sm"
-              : isMarker && roomStatus === "discussing"
-                ? "border-neutral-200 text-neutral-300"
-                : waitingForMics
-                ? "border-amber-300 text-amber-500 animate-pulse"
-                : "border-neutral-200 text-neutral-400"
-          }`}
+              ? "bg-white/20 text-white hover:bg-white/30"
+              : "bg-red-500/80 text-white hover:bg-red-500/90"
+          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-400/60 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isMicrophoneEnabled ? (
-            <Mic className="h-3.5 w-3.5" />
+            <Mic className="h-4 w-4" />
           ) : (
-            <MicOff className="h-3.5 w-3.5" />
+            <MicOff className="h-4 w-4" />
           )}
-        </Button>
-        <Button
-          variant={isCameraEnabled ? "default" : "outline"}
-          size="sm"
+        </button>
+
+        {/* Camera button */}
+        <button
+          type="button"
           onClick={handleToggleCam}
           disabled={isMarker || isSpectator || !canAccessMediaDevices}
-          className={`h-10 w-10 p-0 ${
+          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
             isCameraEnabled
-              ? "bg-neutral-900 hover:bg-neutral-800 shadow-sm"
-              : "border-neutral-200 text-neutral-400"
-          }`}
+              ? "bg-white/20 text-white hover:bg-white/30"
+              : "bg-red-500/80 text-white hover:bg-red-500/90"
+          } disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isCameraEnabled ? (
-            <Video className="h-3.5 w-3.5" />
+            <Video className="h-4 w-4" />
           ) : (
-            <VideoOff className="h-3.5 w-3.5" />
+            <VideoOff className="h-4 w-4" />
           )}
-        </Button>
-        <div className="flex items-center gap-1 ml-2">
-          <div
-            className={`w-1.5 h-1.5 rounded-full ${connected ? networkDotClass : "bg-neutral-300"}`}
-          />
-          <span className="text-[11px] text-neutral-400">
+        </button>
+
+        {/* Divider */}
+        <div className="h-5 w-px bg-white/15 mx-0.5" />
+
+        {/* Network quality */}
+        <div className="flex items-center gap-1.5">
+          <div className={`h-1.5 w-1.5 rounded-full ${networkDotClass}`} />
+          <span className="text-[10px] text-white/50 hidden sm:inline">{networkLabel}</span>
+        </div>
+
+        {isMarker && (
+          <>
+            <div className="h-5 w-px bg-white/15 mx-0.5" />
+            <span className="text-[10px] text-white/40">Marker</span>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── Normal mode: below video controls ──
+  return (
+    <div className="space-y-2.5">
+      {waitingForMics && (
+        <div className="text-center">
+          <p className="text-[12px] text-amber-600 font-medium">
+            {t("livekit.micWaiting", "Waiting for microphones")}{" "}
+            <span className="tabular-nums">{micReadyCount}/{expectedParticipantCount}</span>
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center justify-center gap-2">
+        {/* Mic */}
+        <button
+          type="button"
+          onClick={handleToggleMic}
+          disabled={
+            !canAccessMediaDevices ||
+            (isMarker && roomStatus === "discussing") ||
+            (isSpectator && roomStatus !== "free_discussion")
+          }
+          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all border ${
+            isMicrophoneEnabled
+              ? "bg-neutral-900 border-neutral-900 text-white hover:bg-neutral-800"
+              : "bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300"
+          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-300 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          {isMicrophoneEnabled ? (
+            <Mic className="h-4 w-4" />
+          ) : (
+            <MicOff className="h-4 w-4" />
+          )}
+        </button>
+
+        {/* Camera */}
+        <button
+          type="button"
+          onClick={handleToggleCam}
+          disabled={isMarker || isSpectator || !canAccessMediaDevices}
+          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all border ${
+            isCameraEnabled
+              ? "bg-neutral-900 border-neutral-900 text-white hover:bg-neutral-800"
+              : "bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300"
+          } disabled:opacity-30 disabled:cursor-not-allowed`}
+        >
+          {isCameraEnabled ? (
+            <Video className="h-4 w-4" />
+          ) : (
+            <VideoOff className="h-4 w-4" />
+          )}
+        </button>
+
+        {/* Status pill */}
+        <div className="flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 ml-1">
+          <div className={`h-1.5 w-1.5 rounded-full ${connected ? networkDotClass : "bg-neutral-300 animate-pulse"}`} />
+          <span className="text-[11px] text-neutral-500 font-medium">
             {connected ? networkLabel : t("common.connecting", "Connecting...")}
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <div
-          className={`rounded-md border px-2 py-1.5 text-center ${
-            isMicrophoneEnabled
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-neutral-200 bg-neutral-50 text-neutral-500"
-          }`}
-        >
-          {isMicrophoneEnabled ? t("livekit.micOn", "Mic on") : t("livekit.micOff", "Mic off")}
-        </div>
-        <div
-          className={`rounded-md border px-2 py-1.5 text-center ${
-            isCameraEnabled
-              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-              : "border-neutral-200 bg-neutral-50 text-neutral-500"
-          }`}
-        >
-          {isCameraEnabled ? t("livekit.camOn", "Camera on") : t("livekit.camOff", "Camera off")}
-        </div>
-      </div>
+
       {!canAccessMediaDevices && (
         <p className="text-center text-[11px] text-amber-600">
           {t(
@@ -347,8 +398,8 @@ export function MediaControls({
         </p>
       )}
       {isMarker && (
-        <p className="text-center text-[11px] text-neutral-400">
-          Marker camera is disabled. Microphone is available.
+        <p className="text-center text-[10px] text-neutral-400">
+          {t("livekit.markerHint", "Marker: camera disabled, microphone available")}
         </p>
       )}
     </div>
