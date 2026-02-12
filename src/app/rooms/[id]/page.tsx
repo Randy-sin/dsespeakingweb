@@ -84,6 +84,33 @@ export default function WaitingRoomPage() {
     setLoading(false);
   }, [roomId, supabase]);
 
+  const ensureRoleSynced = useCallback(
+    async (expectedRole: RoleType) => {
+      if (!user?.id) return false;
+
+      // Mobile browsers may have delayed realtime delivery.
+      // Confirm role from DB before showing success state.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data, error } = await supabase
+          .from("room_members")
+          .select("role")
+          .eq("room_id", roomId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!error && data?.role === expectedRole) {
+          return true;
+        }
+
+        await fetchRoom();
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+
+      return false;
+    },
+    [fetchRoom, roomId, supabase, user?.id]
+  );
+
   useEffect(() => {
     fetchRoom();
     const channel = supabase
@@ -205,6 +232,16 @@ export default function WaitingRoomPage() {
         if (error) {
           toast.error("切換角色失敗");
         } else {
+          const synced = await ensureRoleSynced(role);
+          if (!synced) {
+            toast.error(
+              locale === "zh-Hant"
+                ? "角色尚未同步，請稍後重試"
+                : "Role update not synced yet. Please try again."
+            );
+            return;
+          }
+
           toast.success(
             locale === "zh-Hant"
               ? `已切換為${roleLabels[role]}`
@@ -223,6 +260,16 @@ export default function WaitingRoomPage() {
         if (error) {
           toast.error("加入失敗");
         } else {
+          const synced = await ensureRoleSynced(role);
+          if (!synced) {
+            toast.error(
+              locale === "zh-Hant"
+                ? "加入角色尚未同步，請稍後重試"
+                : "Join role not synced yet. Please try again."
+            );
+            return;
+          }
+
           toast.success(
             locale === "zh-Hant"
               ? `以${roleLabels[role]}身份加入`
