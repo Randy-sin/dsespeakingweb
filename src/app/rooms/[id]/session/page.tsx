@@ -377,42 +377,64 @@ export default function SessionPage() {
   const executeSkipTransition = useCallback(async () => {
     if (!room || phaseTransitionRef.current || isObserver) return;
     phaseTransitionRef.current = true;
+    try {
+      const { data: latestRoom, error: latestRoomError } = await supabase
+        .from("rooms")
+        .select("status")
+        .eq("id", roomId)
+        .single();
 
-    if (room.status === "preparing") {
-      await supabase
-        .from("rooms")
-        .update({
-          status: "discussing",
-          current_phase_end_at: null,
-          skip_votes: [],
-        })
-        .eq("id", roomId)
-        .eq("status", "preparing");
-      toast.success("全員同意，跳過準備階段 — 請開啟麥克風");
-    } else if (room.status === "discussing") {
-      const hasMarkerInRoom = allMembers.some((m) => m.role === "marker");
-      const phaseEnd = hasMarkerInRoom
-        ? null
-        : new Date(Date.now() + 1 * 60 * 1000).toISOString();
-      await supabase
-        .from("rooms")
-        .update({
-          status: "individual",
-          current_phase_end_at: phaseEnd,
-          current_speaker_index: 0,
-          skip_votes: [],
-          marker_questions: {},
-          part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
-          part_b_countdown_end_at: null,
-        })
-        .eq("id", roomId)
-        .eq("status", "discussing");
-      toast.success("全員同意，跳過討論階段");
+      if (latestRoomError || !latestRoom) {
+        toast.error("跳過失敗，請重試");
+        return;
+      }
+
+      if (latestRoom.status === "preparing") {
+        const { error } = await supabase
+          .from("rooms")
+          .update({
+            status: "discussing",
+            current_phase_end_at: null,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "preparing");
+
+        if (error) {
+          toast.error("跳過失敗，請重試");
+          return;
+        }
+        toast.success("全員同意，跳過準備階段 — 請開啟麥克風");
+      } else if (latestRoom.status === "discussing") {
+        const hasMarkerInRoom = allMembers.some((m) => m.role === "marker");
+        const phaseEnd = hasMarkerInRoom
+          ? null
+          : new Date(Date.now() + 1 * 60 * 1000).toISOString();
+        const { error } = await supabase
+          .from("rooms")
+          .update({
+            status: "individual",
+            current_phase_end_at: phaseEnd,
+            current_speaker_index: 0,
+            skip_votes: [],
+            marker_questions: {},
+            part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+            part_b_countdown_end_at: null,
+          })
+          .eq("id", roomId)
+          .eq("status", "discussing");
+
+        if (error) {
+          toast.error("跳過失敗，請重試");
+          return;
+        }
+        toast.success("全員同意，跳過討論階段");
+      }
+    } finally {
+      setTimeout(() => {
+        phaseTransitionRef.current = false;
+      }, 1200);
     }
-
-    setTimeout(() => {
-      phaseTransitionRef.current = false;
-    }, 1200);
   }, [room, isObserver, supabase, roomId, allMembers]);
 
   // Auto-execute skip when all participants voted
@@ -425,31 +447,83 @@ export default function SessionPage() {
 
   const handleToggleSkipVote = async () => {
     if (!user || !room || isObserver) return;
-    const currentVotes = room.skip_votes ?? [];
+    const shouldVoteSkip = !myVoteSkip;
 
-    if (myVoteSkip) {
-      const newVotes = currentVotes.filter((v) => v !== user.id);
-      await supabase
-        .from("rooms")
-        .update({ skip_votes: newVotes })
-        .eq("id", roomId);
-    } else {
-      const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
-      const validNewVotes = newVotes.filter((v) =>
-        participants.some((m) => m.user_id === v)
-      ).length;
-      const canExecuteNow =
-        participants.length >= 2 && validNewVotes === participants.length;
-
-      if (canExecuteNow) {
-        await executeSkipTransition();
-      } else {
-        await supabase
+    const persistMyVote = async (): Promise<string[] | null> => {
+      // Retry to avoid lost updates on mobile / high latency.
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: latestRoom, error: fetchErr } = await supabase
           .from("rooms")
-          .update({ skip_votes: newVotes })
+          .select("status, current_phase_end_at, skip_votes")
+          .eq("id", roomId)
+          .single();
+
+        if (fetchErr || !latestRoom) return null;
+
+        const status = latestRoom.status;
+        const isSkippable =
+          status === "preparing" ||
+          (status === "discussing" && latestRoom.current_phase_end_at !== null);
+
+        if (!isSkippable) {
+          toast.error("當前階段不可跳過");
+          return null;
+        }
+
+        const latestVotes = Array.isArray(latestRoom.skip_votes)
+          ? latestRoom.skip_votes
+          : [];
+
+        const deduped = Array.from(new Set(latestVotes));
+        const nextVotes = shouldVoteSkip
+          ? Array.from(new Set([...deduped, user.id]))
+          : deduped.filter((v) => v !== user.id);
+
+        const { error: writeErr } = await supabase
+          .from("rooms")
+          .update({ skip_votes: nextVotes })
           .eq("id", roomId);
-        toast.success("已投票跳過");
+
+        if (writeErr) continue;
+
+        const { data: verifyRoom, error: verifyErr } = await supabase
+          .from("rooms")
+          .select("skip_votes")
+          .eq("id", roomId)
+          .single();
+
+        if (verifyErr || !verifyRoom) continue;
+        const verifyVotes = Array.isArray(verifyRoom.skip_votes)
+          ? verifyRoom.skip_votes
+          : [];
+
+        const hasMyVote = verifyVotes.includes(user.id);
+        if (hasMyVote === shouldVoteSkip) {
+          return verifyVotes;
+        }
       }
+
+      return null;
+    };
+
+    const persistedVotes = await persistMyVote();
+    if (!persistedVotes) {
+      toast.error("投票同步失敗，請重試");
+      return;
+    }
+
+    if (!shouldVoteSkip) return;
+
+    const validNewVotes = persistedVotes.filter((v) =>
+      participants.some((m) => m.user_id === v)
+    ).length;
+    const canExecuteNow =
+      participants.length >= 2 && validNewVotes === participants.length;
+
+    if (canExecuteNow) {
+      await executeSkipTransition();
+    } else {
+      toast.success("已投票跳過");
     }
   };
 

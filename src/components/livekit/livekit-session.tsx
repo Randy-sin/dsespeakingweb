@@ -69,8 +69,6 @@ export function LiveKitSession({
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
-  const [SpectatorAudioOnlyEnforcerComp, setSpectatorAudioOnlyEnforcerComp] =
-    useState<React.ComponentType | null>(null);
   const hasAttemptedConnect = useRef(false);
   const refreshedForFreeDiscussion = useRef(false);
 
@@ -93,11 +91,6 @@ export function LiveKitSession({
       })
       .catch(() => {});
 
-    import("./spectator-audio-only-enforcer")
-      .then((mod) => {
-        setSpectatorAudioOnlyEnforcerComp(() => mod.SpectatorAudioOnlyEnforcer);
-      })
-      .catch(() => {});
   }, []);
 
   const fetchToken = useCallback(async () => {
@@ -276,7 +269,7 @@ export function LiveKitSession({
           connect={true}
           audio={
             isSpectator
-              ? roomStatus === "free_discussion"
+              ? false
               : isMarker
                 ? false
                 : preJoinMicOn
@@ -287,55 +280,41 @@ export function LiveKitSession({
           onDisconnected={() => setConnected(false)}
           style={{ height: "auto" }}
         >
-          {isSpectator &&
-            SpectatorAudioOnlyEnforcerComp &&
-            <SpectatorAudioOnlyEnforcerComp />}
           <div className="space-y-3">
             <AudioRenderer />
-            {!isSpectator ? (
-              <div
-                className={`bg-neutral-950 overflow-hidden relative ${
-                  expandedView
-                    ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
-                    : "rounded-lg aspect-video"
-                }`}
+            <div
+              className={`bg-neutral-950 overflow-hidden relative ${
+                expandedView
+                  ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
+                  : "rounded-lg aspect-video"
+              }`}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
+                onClick={() => setExpandedView((v) => !v)}
               >
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
-                  onClick={() => setExpandedView((v) => !v)}
-                >
-                  {expandedView ? (
-                    <>
-                      <Shrink className="mr-1 h-3.5 w-3.5" />
-                      {t("livekit.shrinkVideos", "Exit expanded view")}
-                    </>
-                  ) : (
-                    <>
-                      <Expand className="mr-1 h-3.5 w-3.5" />
-                      {t("livekit.expandVideos", "Expand videos")}
-                    </>
-                  )}
-                </Button>
-                <VConf />
-                {expandedView && (
-                  <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
-                    {t("livekit.fullViewTitle", "Expanded video view")}
-                  </div>
+                {expandedView ? (
+                  <>
+                    <Shrink className="mr-1 h-3.5 w-3.5" />
+                    {t("livekit.shrinkVideos", "Exit expanded view")}
+                  </>
+                ) : (
+                  <>
+                    <Expand className="mr-1 h-3.5 w-3.5" />
+                    {t("livekit.expandVideos", "Expand videos")}
+                  </>
                 )}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
-                <p className="text-[12px] text-neutral-500">
-                  {t(
-                    "livekit.spectatorAudioOnly",
-                    "Audio-only spectator mode: listening to session discussion."
-                  )}
-                </p>
-              </div>
-            )}
+              </Button>
+              <VConf />
+              {expandedView && (
+                <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
+                  {t("livekit.fullViewTitle", "Expanded video view")}
+                </div>
+              )}
+            </div>
           </div>
           {/* Media controls INSIDE LiveKitRoom context so hooks work */}
           <div className="mt-3">

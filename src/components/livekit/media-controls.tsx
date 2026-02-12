@@ -58,25 +58,16 @@ export function MediaControls({
     prevRoomStatus.current = roomStatus;
 
     if (isSpectator) {
-      if (roomStatus === "free_discussion") {
-        localParticipant.setCameraEnabled(false);
-      } else {
-        localParticipant.setMicrophoneEnabled(false);
-        localParticipant.setCameraEnabled(false);
-      }
+      localParticipant.setMicrophoneEnabled(false);
+      localParticipant.setCameraEnabled(false);
       return;
     }
 
     if (isMarker) {
-      if (roomStatus === "discussing" || roomStatus === "preparing") {
+      if (roomStatus === "preparing" && !hasAutoEnabled.current) {
+        hasAutoEnabled.current = true;
+        // Keep marker camera off, but allow microphone control.
         localParticipant.setMicrophoneEnabled(false);
-      } else if (
-        roomStatus === "individual" ||
-        roomStatus === "results" ||
-        roomStatus === "free_discussion" ||
-        roomStatus === "finished"
-      ) {
-        localParticipant.setMicrophoneEnabled(true);
       }
       localParticipant.setCameraEnabled(false);
       return;
@@ -188,7 +179,7 @@ export function MediaControls({
     }
   }, [waitingForMics]);
 
-  if (isSpectator && roomStatus !== "free_discussion") {
+  if (isSpectator) {
     return (
       <div className="flex items-center justify-center gap-1.5">
         <Eye className="h-3.5 w-3.5 text-neutral-400" />
@@ -212,8 +203,7 @@ export function MediaControls({
   }
 
   const handleToggleMic = async () => {
-    if (isMarker && roomStatus === "discussing") return;
-    if (isSpectator && roomStatus !== "free_discussion") return;
+    if (isSpectator) return;
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
@@ -298,14 +288,7 @@ export function MediaControls({
       </div>
       {isMarker && (
         <p className="text-center text-[11px] text-neutral-400">
-          {roomStatus === "discussing"
-            ? "Marker mic is muted during group discussion"
-            : "Marker mic is available in this phase"}
-        </p>
-      )}
-      {isSpectator && roomStatus === "free_discussion" && (
-        <p className="text-center text-[11px] text-neutral-400">
-          Free discussion mode: spectator can now use microphone.
+          Marker camera is disabled. Microphone is available.
         </p>
       )}
     </div>
