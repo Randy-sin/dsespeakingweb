@@ -458,20 +458,24 @@ export default function SessionPage() {
           .eq("id", roomId)
           .single();
 
-        if (fetchErr || !latestRoom) return null;
+        if (fetchErr || !latestRoom) {
+          // Network or RLS issue – wait briefly and retry
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
 
-        const status = latestRoom.status;
-        const isSkippable =
-          status === "preparing" ||
-          (status === "discussing" && latestRoom.current_phase_end_at !== null);
+        const status = latestRoom.status as string;
 
-        if (!isSkippable) {
-          toast.error("當前階段不可跳過");
+        // If room already moved past skippable phases, don't error —
+        // just tell the user the phase already advanced.
+        const skippablePhases = ["preparing", "discussing"];
+        if (!skippablePhases.includes(status)) {
+          toast.info("階段已切換，無需跳過");
           return null;
         }
 
         const latestVotes = Array.isArray(latestRoom.skip_votes)
-          ? latestRoom.skip_votes
+          ? (latestRoom.skip_votes as string[])
           : [];
 
         const deduped = Array.from(new Set(latestVotes));
@@ -484,23 +488,34 @@ export default function SessionPage() {
           .update({ skip_votes: nextVotes })
           .eq("id", roomId);
 
-        if (writeErr) continue;
+        if (writeErr) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
 
+        // Verify the write
         const { data: verifyRoom, error: verifyErr } = await supabase
           .from("rooms")
           .select("skip_votes")
           .eq("id", roomId)
           .single();
 
-        if (verifyErr || !verifyRoom) continue;
+        if (verifyErr || !verifyRoom) {
+          await new Promise((r) => setTimeout(r, 300));
+          continue;
+        }
+
         const verifyVotes = Array.isArray(verifyRoom.skip_votes)
-          ? verifyRoom.skip_votes
+          ? (verifyRoom.skip_votes as string[])
           : [];
 
         const hasMyVote = verifyVotes.includes(user.id);
         if (hasMyVote === shouldVoteSkip) {
           return verifyVotes;
         }
+
+        // Vote not persisted — wait and retry
+        await new Promise((r) => setTimeout(r, 400));
       }
 
       return null;
@@ -508,7 +523,13 @@ export default function SessionPage() {
 
     const persistedVotes = await persistMyVote();
     if (!persistedVotes) {
-      toast.error("投票同步失敗，請重試");
+      // Only show error if persistMyVote didn't already show a toast
+      if (
+        room.status === "preparing" ||
+        room.status === "discussing"
+      ) {
+        toast.error("投票同步失敗，請重試");
+      }
       return;
     }
 
@@ -599,8 +620,7 @@ export default function SessionPage() {
 
   const canVoteSkip =
     !isObserver &&
-    (room.status === "preparing" ||
-      (room.status === "discussing" && room.current_phase_end_at !== null));
+    (room.status === "preparing" || room.status === "discussing");
 
   // Marker-selected question for current speaker
   const markerQuestions = (room.marker_questions ?? {}) as Record<string, number>;

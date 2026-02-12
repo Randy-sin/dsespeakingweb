@@ -164,6 +164,7 @@ export function LiveKitSession({
     }
   }, [user, roomId, t]);
 
+  // Show pre-join dialog for participants (not observer) in preparing phase
   useEffect(() => {
     if (isSpectator || isMarker) return;
     if (roomStatus === "preparing" && !preJoinApproved && !token) {
@@ -171,37 +172,52 @@ export function LiveKitSession({
     }
   }, [isSpectator, isMarker, roomStatus, preJoinApproved, token]);
 
-  // Auto-connect observers immediately.
-  // Participants in active phases (discussing/individual/results/free_discussion)
-  // should not be blocked by pre-join approval.
+  // Track previous role to detect changes
+  const prevIsMarkerRef = useRef(isMarker);
+  const prevIsSpectatorRef = useRef(isSpectator);
+  const prevRoomStatusRef = useRef(roomStatus);
+
+  // Unified auto-connect logic.
+  // IMPORTANT: role detection (isMarker/isSpectator) may arrive AFTER initial
+  // mount because allMembers loads asynchronously. We must handle role changes.
   useEffect(() => {
+    const roleChanged =
+      prevIsMarkerRef.current !== isMarker ||
+      prevIsSpectatorRef.current !== isSpectator;
+    const statusChanged = prevRoomStatusRef.current !== roomStatus;
+
+    prevIsMarkerRef.current = isMarker;
+    prevIsSpectatorRef.current = isSpectator;
+    prevRoomStatusRef.current = roomStatus;
+
+    // Reset attempt flag when role or status changes so we can retry
+    if (roleChanged || statusChanged) {
+      hasAttemptedConnect.current = false;
+    }
+
+    // Don't proceed if already connected or in-flight
+    if (token || loading || hasAttemptedConnect.current) return;
+
+    // Observer (marker/spectator): always auto-connect immediately
+    if (isSpectator || isMarker) {
+      hasAttemptedConnect.current = true;
+      fetchToken();
+      return;
+    }
+
+    // Participant in preparing phase: needs pre-join approval
+    if (roomStatus === "preparing" && preJoinApproved) {
+      hasAttemptedConnect.current = true;
+      fetchToken();
+      return;
+    }
+
+    // Participant in active phases: auto-connect without pre-join
     if (
-      (isSpectator || isMarker) &&
-      !token &&
-      !loading &&
-      !hasAttemptedConnect.current
-    ) {
-      hasAttemptedConnect.current = true;
-      fetchToken();
-    } else if (
-      !isSpectator &&
-      !isMarker &&
-      roomStatus === "preparing" &&
-      preJoinApproved &&
-      !token &&
-      !hasAttemptedConnect.current
-    ) {
-      hasAttemptedConnect.current = true;
-      fetchToken();
-    } else if (
-      !isSpectator &&
-      !isMarker &&
-      (roomStatus === "discussing" ||
-        roomStatus === "individual" ||
-        roomStatus === "results" ||
-        roomStatus === "free_discussion") &&
-      !token &&
-      !hasAttemptedConnect.current
+      roomStatus === "discussing" ||
+      roomStatus === "individual" ||
+      roomStatus === "results" ||
+      roomStatus === "free_discussion"
     ) {
       hasAttemptedConnect.current = true;
       fetchToken();
@@ -215,12 +231,6 @@ export function LiveKitSession({
     isMarker,
     preJoinApproved,
   ]);
-
-  // If observer connection dropped (or token fetch failed), auto-allow retry on status changes.
-  useEffect(() => {
-    if (!isSpectator && !isMarker) return;
-    hasAttemptedConnect.current = false;
-  }, [isSpectator, isMarker, roomStatus]);
 
   // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
   const roomOptions = useMemo(
