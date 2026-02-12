@@ -337,7 +337,13 @@ export default function SessionPage() {
   // Note: For preparing→discussing, we allow ANY user (including marker) to trigger
   // to ensure reliable transition even if participants have connection issues.
   useEffect(() => {
-    if (!isExpired || !room || phaseTransitionRef.current) return;
+    if (!isExpired || !room) return;
+    
+    // Safety: if phaseTransitionRef is stuck for >5s, force reset
+    if (phaseTransitionRef.current) {
+      console.warn("Phase transition ref stuck, forcing reset");
+      phaseTransitionRef.current = false;
+    }
 
     // For preparing phase, allow anyone to trigger (more reliable)
     // For other phases, only participants can trigger
@@ -479,12 +485,11 @@ export default function SessionPage() {
 
   // ---- Auto-skip departed speaker in individual phase ----
   // When the current speaker has left, automatically advance to the next speaker
-  const autoSkipRef = useRef(false);
   useEffect(() => {
     if (
       !room ||
       room.status !== "individual" ||
-      autoSkipRef.current ||
+      phaseTransitionRef.current ||
       isObserver ||
       effectiveDisplayParticipants.length === 0
     ) {
@@ -496,7 +501,7 @@ export default function SessionPage() {
     if (!currentDisplay || !currentDisplay.hasLeft) return;
 
     // Current speaker has departed — find the next active speaker
-    autoSkipRef.current = true;
+    phaseTransitionRef.current = true;
 
     const advancePastDeparted = async () => {
       let nextIdx = currentIdx + 1;
@@ -546,13 +551,15 @@ export default function SessionPage() {
       }
 
       setTimeout(() => {
-        autoSkipRef.current = false;
+        phaseTransitionRef.current = false;
       }, 2000);
     };
 
     // Short delay to prevent race conditions with other transitions
     const timeout = setTimeout(advancePastDeparted, 500);
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+    };
   }, [
     room,
     effectiveDisplayParticipants,
