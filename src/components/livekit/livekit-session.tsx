@@ -125,12 +125,8 @@ export function LiveKitSession({
     };
   }, []);
 
-  useEffect(() => {
-    // Mobile-first AV UX: default to expanded so users can see everyone.
-    if (isMobileViewport && !hasManualResize) {
-      setExpandedView(true);
-    }
-  }, [isMobileViewport, hasManualResize]);
+  // Removed: Mobile auto-expand was hiding the question content.
+  // Users should see the paper/questions first, then manually expand video if needed.
 
   const fetchToken = useCallback(async () => {
     if (!user || !roomId) return;
