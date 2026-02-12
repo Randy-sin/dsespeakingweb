@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { formatDistanceToNow, format, isToday, isTomorrow } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { zhTW } from "date-fns/locale";
 import { ArrowRight, Users, CalendarDays, Eye, ClipboardCheck } from "lucide-react";
 import type { Room, Profile, RoomMember } from "@/lib/supabase/types";
 
@@ -54,7 +54,7 @@ export function RoomCard({ room }: RoomCardProps) {
     if (room.status === "waiting") {
       // Join as participant
       if (isFull) {
-        toast.error("房间已满");
+        toast.error("房間已滿");
         return;
       }
       const { error } = await supabase.from("room_members").insert({
@@ -63,7 +63,7 @@ export function RoomCard({ room }: RoomCardProps) {
         role: "participant",
       });
       if (error) {
-        toast.error("加入房间失败");
+        toast.error("加入房間失敗");
         return;
       }
       router.push(`/rooms/${room.id}`);
@@ -75,7 +75,7 @@ export function RoomCard({ room }: RoomCardProps) {
         role: "spectator",
       });
       if (error) {
-        toast.error("加入观看失败");
+        toast.error("加入觀看失敗");
         return;
       }
       router.push(`/rooms/${room.id}/session`);
@@ -92,22 +92,22 @@ export function RoomCard({ room }: RoomCardProps) {
       dot: "bg-emerald-500",
     },
     preparing: {
-      label: "准备中",
+      label: "準備中",
       color: "text-amber-600 bg-amber-50 border-amber-100",
       dot: "bg-amber-500",
     },
     discussing: {
-      label: "讨论中",
+      label: "討論中",
       color: "text-blue-600 bg-blue-50 border-blue-100",
       dot: "bg-blue-500",
     },
     individual: {
-      label: "回应中",
+      label: "回應中",
       color: "text-violet-600 bg-violet-50 border-violet-100",
       dot: "bg-violet-500",
     },
     finished: {
-      label: "已结束",
+      label: "已結束",
       color: "text-neutral-500 bg-neutral-100 border-neutral-200",
       dot: "bg-neutral-400",
     },
@@ -135,7 +135,7 @@ export function RoomCard({ room }: RoomCardProps) {
         <span className="text-[11px] text-neutral-300">
           {formatDistanceToNow(new Date(room.created_at), {
             addSuffix: true,
-            locale: zhCN,
+            locale: zhTW,
           })}
         </span>
       </div>
@@ -156,7 +156,7 @@ export function RoomCard({ room }: RoomCardProps) {
                 ? "今天"
                 : isTomorrow(d)
                   ? "明天"
-                  : format(d, "M/d", { locale: zhCN });
+                  : format(d, "M/d", { locale: zhTW });
               return `${prefix} ${format(d, "HH:mm")}`;
             })()}
           </span>
@@ -244,16 +244,16 @@ export function RoomCard({ room }: RoomCardProps) {
         >
           {isMember || isHost ? (
             <>
-              进入
+              進入
               <ArrowRight className="ml-1 h-3 w-3" />
             </>
           ) : isInSession ? (
             <>
               <Eye className="mr-1 h-3 w-3" />
-              观看
+              觀看
             </>
           ) : isFull ? (
-            "已满"
+            "已滿"
           ) : (
             "加入"
           )}

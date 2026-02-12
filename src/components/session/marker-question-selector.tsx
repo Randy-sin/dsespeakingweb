@@ -58,7 +58,7 @@ export function MarkerQuestionSelector({
 
     if (error) {
       console.error("Select question error:", error);
-      toast.error("选择问题失败");
+      toast.error("選擇問題失敗");
       return;
     }
 
@@ -71,7 +71,7 @@ export function MarkerQuestionSelector({
 
   const handleStartCountdown = async () => {
     if (!hasSelected) {
-      toast.error("请先选择题目");
+      toast.error("請先選擇題目");
       return;
     }
 
@@ -88,11 +88,11 @@ export function MarkerQuestionSelector({
 
     if (error) {
       console.error("Start countdown error:", error);
-      toast.error("开始倒数失败");
+      toast.error("開始倒數失敗");
       return;
     }
 
-    toast.success("3-2-1 倒数开始");
+    toast.success("3-2-1 倒數開始");
   };
 
   return (

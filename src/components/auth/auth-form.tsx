@@ -54,7 +54,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           },
         });
         if (error) throw error;
-        toast.success("注册成功");
+        toast.success("註冊成功");
         router.push("/rooms");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -62,13 +62,13 @@ export function AuthForm({ mode }: AuthFormProps) {
           password,
         });
         if (error) throw error;
-        toast.success("登录成功");
+        toast.success("登入成功");
         router.push("/rooms");
       }
       router.refresh();
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "操作失败，请重试";
+        error instanceof Error ? error.message : "操作失敗，請重試";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -92,8 +92,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         </h1>
         <p className="text-[14px] text-neutral-400 text-center mb-8">
           {mode === "login"
-            ? "登录你的账号继续练习"
-            : "注册账号开始 DSE Speaking 练习"}
+            ? "登入你的帳號繼續練習"
+            : "註冊帳號開始 DSE Speaking 練習"}
         </p>
 
         {/* OAuth Buttons */}
@@ -152,7 +152,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 htmlFor="displayName"
                 className="text-[13px] text-neutral-500"
               >
-                昵称
+                暱稱
               </Label>
               <Input
                 id="displayName"
@@ -166,7 +166,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           )}
           <div className="space-y-1.5">
             <Label htmlFor="email" className="text-[13px] text-neutral-500">
-              邮箱
+              電郵
             </Label>
             <Input
               id="email"
@@ -180,7 +180,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-[13px] text-neutral-500">
-              密码
+              密碼
             </Label>
             <Input
               id="password"
@@ -200,26 +200,26 @@ export function AuthForm({ mode }: AuthFormProps) {
             disabled={loading}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {mode === "login" ? "登录" : "注册"}
+            {mode === "login" ? "登入" : "註冊"}
           </Button>
         </form>
 
         <p className="text-[13px] text-neutral-400 text-center mt-6">
           {mode === "login" ? (
             <>
-              还没有账号？{" "}
+              還沒有帳號？{" "}
               <Link
                 href="/register"
                 className="text-neutral-900 hover:underline"
               >
-                注册
+                註冊
               </Link>
             </>
           ) : (
             <>
-              已有账号？{" "}
+              已有帳號？{" "}
               <Link href="/login" className="text-neutral-900 hover:underline">
-                登录
+                登入
               </Link>
             </>
           )}

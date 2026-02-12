@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     const displayName = profile?.display_name || user.email || "Anonymous";
-    const namePrefix = isMarker ? "[Marker] " : isSpectator ? "[观众] " : "";
+    const namePrefix = isMarker ? "[Marker] " : isSpectator ? "[觀眾] " : "";
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: user.id,

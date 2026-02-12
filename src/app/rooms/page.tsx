@@ -109,13 +109,13 @@ export default function RoomsPage() {
                 )}
               </div>
               <p className="text-[13px] sm:text-[14px] text-neutral-400">
-                加入一个练习房间，或创建你自己的。实时匹配，随时开始。
+                加入一個練習房間，或建立你自己的。即時配對，隨時開始。
               </p>
             </div>
             <Link href="/rooms/create" className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] min-h-11 rounded-full px-6 shadow-sm shadow-neutral-900/10 transition-all hover:shadow-md hover:shadow-neutral-900/15 hover:-translate-y-0.5">
                 <Plus className="mr-1.5 h-3.5 w-3.5" />
-                创建房间
+                建立房間
               </Button>
             </Link>
           </div>
@@ -133,14 +133,14 @@ export default function RoomsPage() {
                 <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
                   <Mic className="h-3.5 w-3.5 text-neutral-500" />
                 </div>
-                <span>{activeCount} 进行中</span>
+                <span>{activeCount} 進行中</span>
               </div>
               {rooms.some((r) => r.status === "discussing" || r.status === "individual") && (
                 <div className="col-span-2 sm:col-span-1 flex min-h-11 items-center gap-2 rounded-xl border border-neutral-100 bg-neutral-50 px-3 text-[12px] text-neutral-500">
                   <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
                     <Eye className="h-3.5 w-3.5 text-neutral-500" />
                   </div>
-                  <span>可观看</span>
+                  <span>可觀看</span>
                 </div>
               )}
             </div>
@@ -149,7 +149,7 @@ export default function RoomsPage() {
               <div className="relative flex-1 sm:w-64">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-300" />
                 <Input
-                  placeholder="搜索房间或主持人..."
+                  placeholder="搜尋房間或主持人..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-10 min-h-11 text-[14px] border-neutral-200 rounded-xl bg-neutral-50 focus-visible:ring-neutral-300 focus-visible:bg-white"
@@ -177,7 +177,7 @@ export default function RoomsPage() {
                 <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
               </div>
             </div>
-            <p className="text-[13px] text-neutral-400 mt-4">加载中...</p>
+            <p className="text-[13px] text-neutral-400 mt-4">載入中...</p>
           </div>
         ) : filteredRooms.length === 0 ? (
           /* ── Rich Empty State ── */
@@ -198,18 +198,18 @@ export default function RoomsPage() {
             </div>
 
             <h3 className="font-serif text-[22px] font-semibold text-neutral-900 tracking-tight mb-2">
-              {search ? "没有匹配的房间" : "暂时没有开放的房间"}
+              {search ? "沒有匹配的房間" : "暫時沒有開放的房間"}
             </h3>
             <p className="text-[14px] text-neutral-400 mb-8 max-w-xs text-center leading-relaxed">
               {search
-                ? "试试其他关键词，或创建一个新房间"
-                : "成为第一个创建练习房间的人，邀请伙伴一起练习 DSE Speaking"}
+                ? "試試其他關鍵詞，或建立一個新房間"
+                : "成為第一個建立練習房間的人，邀請夥伴一起練習 DSE Speaking"}
             </p>
 
             {!search && (
               <Link href="/rooms/create">
                 <Button className="h-11 px-7 text-[14px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                  创建练习房间
+                  建立練習房間
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -222,9 +222,9 @@ export default function RoomsPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {[
-                  { title: "创建房间", desc: "选择真题，设置房间" },
-                  { title: "等待队友", desc: "分享链接，等人加入" },
-                  { title: "开始练习", desc: "4人到齐，一键开始" },
+                  { title: "建立房間", desc: "選擇真題，設定房間" },
+                  { title: "等待隊友", desc: "分享連結，等人加入" },
+                  { title: "開始練習", desc: "4 人到齊，一鍵開始" },
                 ].map((tip, i) => (
                   <div key={tip.title} className="bg-white rounded-xl border border-neutral-100 p-4 text-center">
                     <div className="w-7 h-7 rounded-full bg-neutral-900 text-white text-[11px] font-bold flex items-center justify-center mx-auto mb-2.5">
@@ -252,7 +252,7 @@ export default function RoomsPage() {
             </div>
             {filteredRooms.length >= 6 && (
               <p className="text-[12px] text-neutral-300 text-center mt-8">
-                显示全部 {filteredRooms.length} 个房间
+                顯示全部 {filteredRooms.length} 個房間
               </p>
             )}
           </>

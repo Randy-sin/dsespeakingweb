@@ -36,14 +36,14 @@ export default function HomePage() {
 
             {/* Subtext */}
             <p className="animate-fade-up delay-200 text-[15px] sm:text-[19px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-12 max-w-xl">
-              找到队友，选择历年真题，完整模拟 DSE Speaking 考试。从准备阅读、小组讨论到个人回应，全流程在线练习。
+              找到隊友，選擇歷年真題，完整模擬 DSE Speaking 考試。從準備閱讀、小組討論到個人回應，全流程線上練習。
             </p>
 
             {/* CTA */}
             <div className="animate-fade-up delay-300 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
               <Link href="/rooms" className="w-full sm:w-auto">
                 <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                  开始练习
+                  開始練習
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -52,7 +52,7 @@ export default function HomePage() {
                   variant="outline"
                   className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
                 >
-                  浏览房间
+                  瀏覽房間
                 </Button>
               </Link>
             </div>
@@ -60,10 +60,10 @@ export default function HomePage() {
             {/* Quick stats */}
             <div className="animate-fade-up delay-500 grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-neutral-100">
               {[
-                { value: "228", label: "历年真题" },
-                { value: "2012–2023", label: "年份覆盖" },
-                { value: "4 人", label: "小组讨论" },
-                { value: "19 min", label: "完整模拟" },
+                { value: "228", label: "歷年真題" },
+                { value: "2012–2023", label: "年份涵蓋" },
+                { value: "4 人", label: "小組討論" },
+                { value: "19 min", label: "完整模擬" },
               ].map((stat) => (
                 <div key={stat.label}>
                   <p className="text-[22px] sm:text-[26px] font-serif font-semibold text-neutral-900 tabular-nums tracking-tight">
@@ -105,7 +105,7 @@ export default function HomePage() {
             How it works
           </p>
           <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-neutral-900 tracking-tight leading-[1.1]">
-            三个阶段，<br className="sm:hidden" />一次完整模拟
+            三個階段，<br className="sm:hidden" />一次完整模擬
           </h2>
         </div>
 
@@ -115,27 +115,27 @@ export default function HomePage() {
               num: "01",
               icon: BookOpen,
               title: "Preparation",
-              zh: "准备阶段",
+              zh: "準備階段",
               time: "10 min",
-              desc: "阅读文章与讨论问题，在笔记区整理要点。如同真实考试，安静准备。",
+              desc: "閱讀文章與討論問題，在筆記區整理要點。如同真實考試，安靜準備。",
               gradient: "from-amber-50 to-orange-50/50",
             },
             {
               num: "02",
               icon: MessageSquare,
               title: "Group Discussion",
-              zh: "小组讨论",
+              zh: "小組討論",
               time: "8 min",
-              desc: "四人围绕三个引导问题展开自由讨论，语音视频实时沟通，模拟面对面交流。",
+              desc: "四人圍繞三個引導問題展開自由討論，語音視訊即時溝通，模擬面對面交流。",
               gradient: "from-sky-50 to-blue-50/50",
             },
             {
               num: "03",
               icon: User,
               title: "Individual Response",
-              zh: "个人回应",
+              zh: "個人回應",
               time: "1 min each",
-              desc: "轮流回答考官的跟进问题，展示独立思考和临场表达能力。",
+              desc: "輪流回答考官的跟進問題，展示獨立思考和臨場表達能力。",
               gradient: "from-violet-50 to-purple-50/50",
             },
           ].map((item) => (
@@ -181,7 +181,7 @@ export default function HomePage() {
               Features
             </p>
             <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-white tracking-tight leading-[1.1]">
-              为 DSE 口试而生
+              為 DSE 口試而生
             </h2>
           </div>
 
@@ -197,10 +197,10 @@ export default function HomePage() {
                 </span>
               </div>
               <h3 className="font-serif text-[22px] font-semibold text-white tracking-tight mb-2">
-                历年真题库
+                歷年真題庫
               </h3>
               <p className="text-[14px] text-neutral-400 leading-relaxed max-w-md">
-                完整收录 2012–2023 年 DSE Speaking 真题。每份试卷包含阅读材料、三个讨论问题和多个个人回应题目，还原考场真实体验。
+                完整收錄 2012–2023 年 DSE Speaking 真題。每份試卷包含閱讀材料、三個討論問題和多個個人回應題目，還原考場真實體驗。
               </p>
             </div>
 
@@ -210,10 +210,10 @@ export default function HomePage() {
                 <Mic className="h-5 w-5 text-neutral-400" />
               </div>
               <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                实时音视频
+                即時音視訊
               </h3>
               <p className="text-[14px] text-neutral-400 leading-relaxed">
-                WebRTC 驱动的高清音视频。讨论阶段自动开启麦克风，如同面对面交流。
+                WebRTC 驅動的高畫質音視訊。討論階段自動開啟麥克風，如同面對面交流。
               </p>
             </div>
 
@@ -223,10 +223,10 @@ export default function HomePage() {
                 <Clock className="h-5 w-5 text-neutral-400" />
               </div>
               <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                自动计时
+                自動計時
               </h3>
               <p className="text-[14px] text-neutral-400 leading-relaxed">
-                严格按考试时间分配，阶段到时自动切换。练习节奏完全对标真实考试。
+                嚴格按考試時間分配，階段到時自動切換。練習節奏完全對標真實考試。
               </p>
             </div>
 
@@ -236,10 +236,10 @@ export default function HomePage() {
                 <Users className="h-5 w-5 text-neutral-400" />
               </div>
               <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                在线组队
+                線上組隊
               </h3>
               <p className="text-[14px] text-neutral-400 leading-relaxed">
-                创建或加入房间，等待 3–4 人即可开始。随时找到练习伙伴。
+                建立或加入房間，等待 3–4 人即可開始。隨時找到練習夥伴。
               </p>
             </div>
 
@@ -249,7 +249,7 @@ export default function HomePage() {
                 Assessment Criteria
               </p>
               <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-5">
-                评分标准
+                評分標準
               </h3>
               <div className="space-y-3">
                 {[
@@ -285,12 +285,12 @@ export default function HomePage() {
             Ready to practice?
           </h2>
           <p className="text-[16px] sm:text-[18px] text-neutral-400 mb-10 max-w-md mx-auto leading-relaxed">
-            加入平台，找到练习伙伴，<br className="hidden sm:block" />一起为 DSE Speaking 做准备。
+            加入平台，找到練習夥伴，<br className="hidden sm:block" />一起為 DSE Speaking 做準備。
           </p>
           <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-4">
             <Link href="/register" className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                免费注册
+                免費註冊
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
@@ -299,7 +299,7 @@ export default function HomePage() {
                 variant="outline"
                 className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
               >
-                浏览房间
+                瀏覽房間
               </Button>
             </Link>
           </div>

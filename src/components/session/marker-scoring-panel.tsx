@@ -124,7 +124,7 @@ export function MarkerScoringPanel({
 
       if (error) {
         console.error("Save score error:", error);
-        toast.error("评分保存失败");
+        toast.error("評分儲存失敗");
       }
       setSaving(false);
     },

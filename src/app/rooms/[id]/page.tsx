@@ -21,7 +21,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
+import { zhTW } from "date-fns/locale";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
@@ -175,7 +175,7 @@ export default function WaitingRoomPage() {
         return;
       }
       if (role === "marker" && hasMarker && markerMember?.user_id !== user.id) {
-        toast.error("已有 Marker，每个房间只允许一位");
+        toast.error("已有 Marker，每個房間只允許一位");
         setSwitching(false);
         return;
       }
@@ -193,7 +193,7 @@ export default function WaitingRoomPage() {
           .eq("room_id", roomId)
           .eq("user_id", user.id);
         if (error) {
-          toast.error("切换角色失败");
+          toast.error("切換角色失敗");
         } else {
           toast.success(
             locale === "zh-Hant"
@@ -211,7 +211,7 @@ export default function WaitingRoomPage() {
           .from("room_members")
           .insert({ room_id: roomId, user_id: user.id, role });
         if (error) {
-          toast.error("加入失败");
+          toast.error("加入失敗");
         } else {
           toast.success(
             locale === "zh-Hant"
@@ -261,14 +261,14 @@ export default function WaitingRoomPage() {
 
         if (error) {
           console.error("Auto-start failed:", error);
-          toast.error("启动失败");
+          toast.error("啟動失敗");
         } else {
-          toast.success("全员准备就绪，练习开始！");
+          toast.success("全員準備就緒，練習開始！");
           router.push(`/rooms/${roomId}/session`);
         }
       } catch (err) {
         console.error("Auto-start error:", err);
-        toast.error("启动失败");
+        toast.error("啟動失敗");
       } finally {
         setStarting(false);
         setTimeout(() => {
@@ -300,10 +300,10 @@ export default function WaitingRoomPage() {
 
     if (error) {
       console.error("Toggle ready failed:", error);
-      toast.error("操作失败，请重试");
+      toast.error("操作失敗，請重試");
       setRoom({ ...room, ready_votes: currentVotes });
     } else if (!myVoteReady) {
-      toast.success("已准备");
+      toast.success("已準備");
     }
   };
 
@@ -311,7 +311,7 @@ export default function WaitingRoomPage() {
     if (!user) return;
     if (isHost) {
       await supabase.from("rooms").delete().eq("id", roomId);
-      toast.success("房间已解散");
+      toast.success("房間已解散");
     } else {
       if (room) {
         const newVotes = (Array.isArray(room.ready_votes) ? room.ready_votes : []).filter(
@@ -327,7 +327,7 @@ export default function WaitingRoomPage() {
         .delete()
         .eq("room_id", roomId)
         .eq("user_id", user.id);
-      toast.success("已离开房间");
+      toast.success("已離開房間");
     }
     router.push("/rooms");
   };
@@ -348,9 +348,9 @@ export default function WaitingRoomPage() {
       <div className="min-h-screen bg-white">
         <Navbar />
         <div className="max-w-lg mx-auto px-5 py-24 text-center">
-          <p className="text-[15px] text-neutral-900 mb-1">房间不存在</p>
+          <p className="text-[15px] text-neutral-900 mb-1">房間不存在</p>
           <p className="text-[13px] text-neutral-400 mb-6">
-            这个房间可能已经被解散了
+            這個房間可能已經被解散了
           </p>
           <Link href="/rooms">
             <Button className="bg-neutral-900 hover:bg-neutral-800 text-white text-[13px] h-9 rounded-full px-5">
@@ -428,17 +428,17 @@ export default function WaitingRoomPage() {
             <div className="flex items-center gap-2 text-[14px] text-neutral-500 mt-1">
               <CalendarDays className="h-3.5 w-3.5 text-neutral-400" />
               <span>
-                计划于{" "}
+                計劃於{" "}
                 <span className="font-medium text-neutral-700">
                   {format(new Date(room.scheduled_at), "M月d日 EEEE HH:mm", {
-                    locale: zhCN,
+                    locale: zhTW,
                   })}
                 </span>{" "}
-                开始
+                開始
               </span>
             </div>
           ) : (
-            <p className="text-[14px] text-neutral-400">等待队友加入...</p>
+            <p className="text-[14px] text-neutral-400">等待隊友加入...</p>
           )}
         </div>
 
@@ -492,7 +492,7 @@ export default function WaitingRoomPage() {
                 </p>
                 {memberCount >= 2 && (
                   <span className="text-[12px] text-neutral-400">
-                    {readyCount}/{memberCount} 已准备
+                    {readyCount}/{memberCount} 已準備
                   </span>
                 )}
               </div>
@@ -555,7 +555,7 @@ export default function WaitingRoomPage() {
                             <div className="flex items-center gap-1.5 text-emerald-600">
                               <Check className="h-4 w-4" />
                               <span className="text-[12px] font-medium">
-                                已准备
+                                已準備
                               </span>
                             </div>
                           ) : (
@@ -657,14 +657,14 @@ export default function WaitingRoomPage() {
                       <Check className="mr-2 h-4 w-4" />
                     ) : null}
                     {starting
-                      ? "正在开始..."
+                    ? "正在開始..."
                       : memberCount < 2
                         ? "至少需要 2 人"
                         : myVoteReady
                           ? allReady
-                            ? "全员准备就绪！"
-                            : `已准备 (${readyCount}/${memberCount})`
-                          : "准备好了"}
+                            ? "全員準備就緒！"
+                            : `已準備 (${readyCount}/${memberCount})`
+                          : "準備好了"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -672,7 +672,7 @@ export default function WaitingRoomPage() {
                     className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
                   >
                     <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    {isHost ? "解散" : "离开"}
+                    {isHost ? "解散" : "離開"}
                   </Button>
                 </>
               ) : isMember ? (
@@ -682,7 +682,7 @@ export default function WaitingRoomPage() {
                       onClick={() => router.push(`/rooms/${roomId}/session`)}
                       className="flex-1 h-10 text-[14px] bg-neutral-900 hover:bg-neutral-800 text-white"
                     >
-                      进入练习
+                      進入練習
                     </Button>
                   ) : (
                     <p className="text-[13px] text-neutral-400 py-2">
@@ -701,7 +701,7 @@ export default function WaitingRoomPage() {
                     className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
                   >
                     <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    {isHost ? "解散" : "离开"}
+                    {isHost ? "解散" : "離開"}
                   </Button>
                 </>
               ) : (
@@ -749,7 +749,7 @@ export default function WaitingRoomPage() {
                 </div>
               </div>
             ) : (
-              <p className="text-[13px] text-neutral-400">未选择题目</p>
+              <p className="text-[13px] text-neutral-400">未選擇題目</p>
             )}
           </div>
         </div>

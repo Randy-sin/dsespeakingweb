@@ -30,10 +30,10 @@ function getDateOptions() {
     const weekday = ["日", "一", "二", "三", "四", "五", "六"][d.getDay()];
     const label =
       i === 0
-        ? `今天 (${d.getMonth() + 1}/${d.getDate()} 周${weekday})`
+        ? `今天 (${d.getMonth() + 1}/${d.getDate()} 週${weekday})`
         : i === 1
-          ? `明天 (${d.getMonth() + 1}/${d.getDate()} 周${weekday})`
-          : `${d.getMonth() + 1}月${d.getDate()}日 周${weekday}`;
+          ? `明天 (${d.getMonth() + 1}/${d.getDate()} 週${weekday})`
+          : `${d.getMonth() + 1}月${d.getDate()}日 週${weekday}`;
     options.push({ value, label });
   }
   return options;
@@ -113,7 +113,7 @@ export default function CreateRoomPage() {
       return;
     }
     if (scheduleMode === "later" && !scheduledTime) {
-      toast.error("请选择开始时间");
+      toast.error("請選擇開始時間");
       return;
     }
     setLoading(true);
@@ -135,7 +135,7 @@ export default function CreateRoomPage() {
       const { data: room, error: roomError } = await supabase
         .from("rooms")
         .insert({
-          name: name || `${user.email?.split("@")[0] || "User"}的练习房`,
+          name: name || `${user.email?.split("@")[0] || "User"}的練習房`,
           host_id: user.id,
           paper_id: selectedPaperId,
           scheduled_at: scheduledAt,
@@ -147,11 +147,11 @@ export default function CreateRoomPage() {
         .from("room_members")
         .insert({ room_id: room.id, user_id: user.id, speaking_order: 1 });
       if (memberError) throw memberError;
-      toast.success("房间已创建");
+      toast.success("房間已建立");
       router.push(`/rooms/${room.id}`);
     } catch (error) {
       console.error(error);
-      toast.error("创建失败，请重试");
+      toast.error("建立失敗，請重試");
     } finally {
       setLoading(false);
     }
@@ -176,7 +176,7 @@ export default function CreateRoomPage() {
     const h = d.getHours();
     const period = h < 12 ? "AM" : "PM";
     const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return `${d.getMonth() + 1}月${d.getDate()}日 周${weekday} ${displayH}:${String(d.getMinutes()).padStart(2, "0")} ${period}`;
+    return `${d.getMonth() + 1}月${d.getDate()}日 週${weekday} ${displayH}:${String(d.getMinutes()).padStart(2, "0")} ${period}`;
   }, [scheduledDate, scheduledTime, scheduleMode]);
 
   return (
@@ -192,19 +192,19 @@ export default function CreateRoomPage() {
         </Link>
 
         <h1 className="font-serif text-[32px] font-semibold text-neutral-900 tracking-tight mb-2">
-          创建房间
+          建立房間
         </h1>
         <p className="text-[14px] text-neutral-400 mb-10">
-          设置房间信息，等待队友加入即可开始
+          設定房間資訊，等待隊友加入即可開始
         </p>
 
         <form onSubmit={handleCreate} className="space-y-6">
           {/* Room name */}
           <div className="bg-white rounded-2xl border border-neutral-100 p-5 space-y-5">
             <div className="space-y-1.5">
-              <Label className="text-[13px] text-neutral-500">房间名称</Label>
+              <Label className="text-[13px] text-neutral-500">房間名稱</Label>
               <Input
-                placeholder="给你的房间起个名字"
+                placeholder="給你的房間起個名字"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="h-10 text-[14px] border-neutral-200 focus-visible:ring-neutral-400 rounded-lg"
@@ -213,22 +213,22 @@ export default function CreateRoomPage() {
 
             {/* Paper select */}
             <div className="space-y-1.5">
-              <Label className="text-[13px] text-neutral-500">题目</Label>
+              <Label className="text-[13px] text-neutral-500">題目</Label>
               {loadingPapers ? (
                 <div className="flex items-center gap-2 text-[13px] text-neutral-400 h-10">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  加载中...
+                  載入中...
                 </div>
               ) : (
                 <Select value={paperId} onValueChange={setPaperId}>
                   <SelectTrigger className="w-full h-10 text-[14px] border-neutral-200 rounded-lg">
-                    <SelectValue placeholder="选择一个题目" />
+                    <SelectValue placeholder="選擇一個題目" />
                   </SelectTrigger>
                   <SelectContent position="popper" className="max-h-80 w-[var(--radix-select-trigger-width)]">
                     <SelectItem value="random">
                       <div className="flex items-center gap-2">
                         <Shuffle className="h-3.5 w-3.5" />
-                        随机题目
+                        隨機題目
                       </div>
                     </SelectItem>
                     {Object.entries(papersByYear)
@@ -257,7 +257,7 @@ export default function CreateRoomPage() {
           <div className="bg-white rounded-2xl border border-neutral-100 p-5 space-y-4">
             <div className="flex items-center gap-2 mb-1">
               <Clock className="h-4 w-4 text-neutral-400" />
-              <Label className="text-[14px] font-medium text-neutral-900">开始时间</Label>
+              <Label className="text-[14px] font-medium text-neutral-900">開始時間</Label>
             </div>
 
             {/* Now / Later toggle */}
@@ -272,7 +272,7 @@ export default function CreateRoomPage() {
                 }`}
               >
                 <Zap className="h-3.5 w-3.5" />
-                立即开始
+                立即開始
               </button>
               <button
                 type="button"
@@ -284,13 +284,13 @@ export default function CreateRoomPage() {
                 }`}
               >
                 <CalendarDays className="h-3.5 w-3.5" />
-                预约时间
+                預約時間
               </button>
             </div>
 
             {scheduleMode === "now" && (
               <p className="text-[12px] text-neutral-400">
-                创建房间后立即等待队友加入，人齐即可开始
+                建立房間後立即等待隊友加入，人齊即可開始
               </p>
             )}
 
@@ -298,7 +298,7 @@ export default function CreateRoomPage() {
             {scheduleMode === "later" && (
               <>
                 <p className="text-[12px] text-neutral-400">
-                  选择日期和时间，方便队友按时加入
+                  選擇日期和時間，方便隊友準時加入
                 </p>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -321,10 +321,10 @@ export default function CreateRoomPage() {
 
                   {/* Time select */}
                   <div className="space-y-1.5">
-                    <Label className="text-[12px] text-neutral-400">时间</Label>
+                    <Label className="text-[12px] text-neutral-400">時間</Label>
                     <Select value={scheduledTime} onValueChange={setScheduledTime}>
                       <SelectTrigger className="w-full h-10 text-[13px] border-neutral-200 rounded-lg">
-                        <SelectValue placeholder="选择时间" />
+                        <SelectValue placeholder="選擇時間" />
                       </SelectTrigger>
                       <SelectContent position="popper" className="max-h-72 w-[var(--radix-select-trigger-width)]">
                         {timeOptions.length > 0 ? (
@@ -335,7 +335,7 @@ export default function CreateRoomPage() {
                           ))
                         ) : (
                           <div className="px-2 py-3 text-[12px] text-neutral-400 text-center">
-                            今天已无可选时段，请选择其他日期
+                            今天已無可選時段，請選擇其他日期
                           </div>
                         )}
                       </SelectContent>
@@ -348,7 +348,7 @@ export default function CreateRoomPage() {
                   <div className="flex items-center gap-2 bg-neutral-50 rounded-lg px-3.5 py-2.5 mt-1">
                     <Clock className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
                     <span className="text-[13px] text-neutral-600">
-                      计划于 <span className="font-medium text-neutral-900">{scheduledPreview}</span> 开始
+                      計劃於 <span className="font-medium text-neutral-900">{scheduledPreview}</span> 開始
                     </span>
                   </div>
                 )}
@@ -359,13 +359,13 @@ export default function CreateRoomPage() {
           {/* Flow info */}
           <div className="bg-white rounded-2xl border border-neutral-100 p-5">
             <p className="text-[13px] font-medium text-neutral-900 mb-3">
-              练习流程
+              練習流程
             </p>
             <div className="space-y-2 text-[13px] text-neutral-500">
-              <p>1. 等待 2-4 人加入后全员准备启动</p>
-              <p>2. 准备阶段 — 10 分钟阅读文章和问题</p>
-              <p>3. 小组讨论 — 8 分钟自由讨论</p>
-              <p>4. 个人回应 — 每人 1 分钟回答跟进问题</p>
+              <p>1. 等待 2-4 人加入後全員準備啟動</p>
+              <p>2. 準備階段 — 10 分鐘閱讀文章和問題</p>
+              <p>3. 小組討論 — 8 分鐘自由討論</p>
+              <p>4. 個人回應 — 每人 1 分鐘回答跟進問題</p>
             </div>
           </div>
 
@@ -375,7 +375,7 @@ export default function CreateRoomPage() {
             disabled={loading}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            创建房间
+            建立房間
           </Button>
         </form>
       </div>

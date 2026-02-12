@@ -225,7 +225,7 @@ export default function SessionPage() {
       .eq("status", "discussing")
       .is("current_phase_end_at", null);
 
-    toast.success("讨论即将开始");
+    toast.success("討論即將開始");
   }, [isObserver, room, roomId, supabase]);
 
   // Part B: countdown(3-2-1) -> answering(60s)
@@ -287,7 +287,7 @@ export default function SessionPage() {
           })
           .eq("id", roomId)
           .eq("status", "preparing");
-        toast("进入讨论阶段 — 请开启麦克风");
+        toast("進入討論階段 — 請開啟麥克風");
       } else if (room.status === "discussing") {
         const hasMarkerInRoom =
           allMembers.some((m) => m.role === "marker");
@@ -307,7 +307,7 @@ export default function SessionPage() {
           })
           .eq("id", roomId)
           .eq("status", "discussing");
-        toast("进入个人回应阶段");
+        toast("進入個人回應階段");
       } else if (room.status === "individual") {
         // Only transition automatically when the current answering window is active.
         if (partBSubphase !== "answering") {
@@ -344,7 +344,7 @@ export default function SessionPage() {
               part_b_countdown_end_at: null,
             })
             .eq("id", roomId);
-          toast("进入结果公布阶段");
+          toast("進入結果公布階段");
         }
       }
 
@@ -374,55 +374,54 @@ export default function SessionPage() {
   const allVotedSkip =
     participants.length >= 2 && validSkipVotes === participants.length;
 
+  const executeSkipTransition = useCallback(async () => {
+    if (!room || phaseTransitionRef.current || isObserver) return;
+    phaseTransitionRef.current = true;
+
+    if (room.status === "preparing") {
+      await supabase
+        .from("rooms")
+        .update({
+          status: "discussing",
+          current_phase_end_at: null,
+          skip_votes: [],
+        })
+        .eq("id", roomId)
+        .eq("status", "preparing");
+      toast.success("全員同意，跳過準備階段 — 請開啟麥克風");
+    } else if (room.status === "discussing") {
+      const hasMarkerInRoom = allMembers.some((m) => m.role === "marker");
+      const phaseEnd = hasMarkerInRoom
+        ? null
+        : new Date(Date.now() + 1 * 60 * 1000).toISOString();
+      await supabase
+        .from("rooms")
+        .update({
+          status: "individual",
+          current_phase_end_at: phaseEnd,
+          current_speaker_index: 0,
+          skip_votes: [],
+          marker_questions: {},
+          part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+          part_b_countdown_end_at: null,
+        })
+        .eq("id", roomId)
+        .eq("status", "discussing");
+      toast.success("全員同意，跳過討論階段");
+    }
+
+    setTimeout(() => {
+      phaseTransitionRef.current = false;
+    }, 1200);
+  }, [room, isObserver, supabase, roomId, allMembers]);
+
   // Auto-execute skip when all participants voted
   useEffect(() => {
-    if (!allVotedSkip || !room || phaseTransitionRef.current || isObserver)
+    if (!allVotedSkip || !room || phaseTransitionRef.current || isObserver) {
       return;
-
-    const executeSkip = async () => {
-      phaseTransitionRef.current = true;
-
-      if (room.status === "preparing") {
-        // Skip to discussing: set current_phase_end_at = null (wait for mics)
-        await supabase
-          .from("rooms")
-          .update({
-            status: "discussing",
-            current_phase_end_at: null, // Timer NOT started — wait for mics
-            skip_votes: [],
-          })
-          .eq("id", roomId)
-          .eq("status", "preparing");
-        toast.success("全员同意，跳过准备阶段 — 请开启麦克风");
-      } else if (room.status === "discussing") {
-        const hasMarkerInRoom =
-          allMembers.some((m) => m.role === "marker");
-        const phaseEnd = hasMarkerInRoom
-          ? null
-          : new Date(Date.now() + 1 * 60 * 1000).toISOString();
-        await supabase
-          .from("rooms")
-          .update({
-            status: "individual",
-            current_phase_end_at: phaseEnd,
-            current_speaker_index: 0,
-            skip_votes: [],
-            marker_questions: {},
-            part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
-            part_b_countdown_end_at: null,
-          })
-          .eq("id", roomId)
-          .eq("status", "discussing");
-        toast.success("全员同意，跳过讨论阶段");
-      }
-
-      setTimeout(() => {
-        phaseTransitionRef.current = false;
-      }, 2000);
-    };
-
-    executeSkip();
-  }, [allVotedSkip, room, roomId, supabase, isObserver, allMembers]);
+    }
+    executeSkipTransition();
+  }, [allVotedSkip, room, isObserver, executeSkipTransition]);
 
   const handleToggleSkipVote = async () => {
     if (!user || !room || isObserver) return;
@@ -436,11 +435,21 @@ export default function SessionPage() {
         .eq("id", roomId);
     } else {
       const newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
-      await supabase
-        .from("rooms")
-        .update({ skip_votes: newVotes })
-        .eq("id", roomId);
-      toast.success("已投票跳过");
+      const validNewVotes = newVotes.filter((v) =>
+        participants.some((m) => m.user_id === v)
+      ).length;
+      const canExecuteNow =
+        participants.length >= 2 && validNewVotes === participants.length;
+
+      if (canExecuteNow) {
+        await executeSkipTransition();
+      } else {
+        await supabase
+          .from("rooms")
+          .update({ skip_votes: newVotes })
+          .eq("id", roomId);
+        toast.success("已投票跳過");
+      }
     }
   };
 
@@ -451,7 +460,7 @@ export default function SessionPage() {
       .delete()
       .eq("room_id", roomId)
       .eq("user_id", user.id);
-    toast.success("已退出观看");
+    toast.success("已退出觀看");
     router.push("/rooms");
   };
 
@@ -467,7 +476,7 @@ export default function SessionPage() {
       })
       .eq("id", roomId)
       .eq("status", "results");
-    toast.success("进入自由讨论");
+    toast.success("進入自由討論");
   };
 
   const handleFinishSession = async () => {
@@ -482,7 +491,7 @@ export default function SessionPage() {
         part_b_countdown_end_at: null,
       })
       .eq("id", roomId);
-    toast.success("会话已结束");
+    toast.success("會話已結束");
   };
 
   if (loading) {
@@ -497,7 +506,7 @@ export default function SessionPage() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-[14px] text-neutral-400 mb-4">房间或题目不存在</p>
+          <p className="text-[14px] text-neutral-400 mb-4">房間或題目不存在</p>
           <Link href="/rooms">
             <Button className="bg-neutral-900 hover:bg-neutral-800 text-white text-[13px] h-9 rounded-full px-5">
               返回
@@ -606,7 +615,7 @@ export default function SessionPage() {
             {isSpectator && (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-100">
                 <Eye className="h-3 w-3" />
-                观众模式
+                觀眾模式
               </span>
             )}
             {isMarker && (
@@ -719,7 +728,7 @@ export default function SessionPage() {
                 Marker Feedback
               </h2>
               <p className="text-[14px] text-neutral-500 mt-2">
-                所有人均可查看评分与评语。Marker 现在可以开麦给口头建议。
+                所有人均可查看評分與評語。Marker 現在可以開麥給口頭建議。
               </p>
             </div>
 
@@ -812,14 +821,14 @@ export default function SessionPage() {
               Session Complete
             </p>
             <h2 className="font-serif text-[32px] font-semibold text-neutral-900 tracking-tight mb-3">
-              练习完成
+              練習完成
             </h2>
             <p className="text-[15px] text-neutral-400 mb-10 max-w-md mx-auto">
               {isMarker
-                ? "练习已结束。你可以在下方完成评分。"
+                ? "練習已結束。你可以在下方完成評分。"
                 : isSpectator
-                ? "你观看的 DSE Speaking 模拟练习已经结束。"
-                : "你完成了一次完整的 DSE Speaking 模拟练习。回顾讨论中的表现，持续进步。"}
+                ? "你觀看的 DSE Speaking 模擬練習已經結束。"
+                : "你完成了一次完整的 DSE Speaking 模擬練習。回顧討論中的表現，持續進步。"}
             </p>
 
             {/* Marker scoring panel after finish */}
@@ -853,7 +862,7 @@ export default function SessionPage() {
                     Free Discussion
                   </p>
                   <p className="text-[14px] text-emerald-800">
-                    自由讨论阶段已开启。所有角色都可开麦交流，房间无时间限制。
+                    自由討論階段已開啟。所有角色都可開麥交流，房間無時間限制。
                   </p>
                 </div>
               )}
@@ -1087,7 +1096,7 @@ export default function SessionPage() {
                           <ClipboardCheck className="h-6 w-6 text-violet-300 mx-auto mb-2" />
                           <p className="text-[14px] text-neutral-500 font-medium">
                             {partBSubphase === "countdown"
-                              ? "3-2-1 倒数中，题目即将显示..."
+                              ? "3-2-1 倒數中，題目即將顯示..."
                               : t(
                                   "session.waitingMarkerQuestion",
                                   "Waiting for Marker to select a question..."
@@ -1095,7 +1104,7 @@ export default function SessionPage() {
                           </p>
                           <p className="text-[12px] text-neutral-400 mt-1">
                             {partBSubphase === "countdown"
-                              ? "请当前考生准备回答。"
+                              ? "請當前考生準備回答。"
                               : t(
                                   "session.markerSelectingQuestion",
                                   "Marker is selecting a question for the current candidate"
@@ -1141,7 +1150,7 @@ export default function SessionPage() {
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="整理你的观点、要点和关键词..."
+                    placeholder="整理你的觀點、要點和關鍵詞..."
                     className="min-h-[140px] resize-y text-[14px] border-neutral-200 focus-visible:ring-neutral-400"
                   />
                 </div>
@@ -1328,7 +1337,7 @@ export default function SessionPage() {
                     <div className="mb-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-[11px] text-neutral-400">
-                          跳过投票
+                          跳過投票
                         </span>
                         <span className="text-[11px] text-neutral-500 font-medium tabular-nums">
                           {validSkipVotes}/{participants.length}
@@ -1358,7 +1367,7 @@ export default function SessionPage() {
                     {myVoteSkip ? (
                       <>
                         <Check className="mr-1.5 h-3.5 w-3.5" />
-                        已投票跳过
+                        已投票跳過
                         {!allVotedSkip && (
                           <span className="ml-1 text-[11px] opacity-70">
                             ({validSkipVotes}/{participants.length})
@@ -1368,13 +1377,13 @@ export default function SessionPage() {
                     ) : (
                       <>
                         <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-                        跳过
-                        {room.status === "preparing" ? "准备" : "讨论"}阶段
+                        跳過
+                        {room.status === "preparing" ? "準備" : "討論"}階段
                       </>
                     )}
                   </Button>
                   <p className="text-[11px] text-neutral-300 mt-2 text-center">
-                    需要全部参与者同意才能跳过
+                    需要全部參與者同意才能跳過
                   </p>
                 </div>
               )}

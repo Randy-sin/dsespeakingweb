@@ -116,11 +116,11 @@ export function MediaControls({
 
     const localMicOn = localParticipant.isMicrophoneEnabled;
 
-    // Filter remote participants: exclude observers (prefixed with [观众] or [Marker])
+    // Filter remote participants: exclude observers (prefixed with [觀眾] or [Marker])
     const remoteNonSpectators = Array.from(
       room.remoteParticipants.values()
     ).filter(
-      (p) => !p.name?.includes("[观众]") && !p.name?.includes("[Marker]")
+      (p) => !p.name?.includes("[觀眾]") && !p.name?.includes("[Marker]")
     );
 
     const remoteMicsOn = remoteNonSpectators.filter(
