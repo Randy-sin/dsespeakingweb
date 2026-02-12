@@ -58,6 +58,9 @@ export function LiveKitSession({
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [expandedView, setExpandedView] = useState(false);
+  const [hasManualResize, setHasManualResize] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isLandscape, setIsLandscape] = useState(false);
   const [preJoinOpen, setPreJoinOpen] = useState(false);
   const [preJoinApproved, setPreJoinApproved] = useState(false);
   const [preJoinMicOn, setPreJoinMicOn] = useState(true);
@@ -92,6 +95,30 @@ export function LiveKitSession({
       .catch(() => {});
 
   }, []);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobileViewport(w < 1024);
+      setIsLandscape(w > h);
+    };
+
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    window.addEventListener("orientationchange", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      window.removeEventListener("orientationchange", updateViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    // Mobile-first AV UX: default to expanded so users can see everyone.
+    if (isMobileViewport && !hasManualResize) {
+      setExpandedView(true);
+    }
+  }, [isMobileViewport, hasManualResize]);
 
   const fetchToken = useCallback(async () => {
     if (!user || !roomId) return;
@@ -285,16 +312,32 @@ export function LiveKitSession({
             <div
               className={`bg-neutral-950 overflow-hidden relative ${
                 expandedView
-                  ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
-                  : "rounded-lg aspect-video"
+                  ? isMobileViewport
+                    ? "fixed inset-0 z-50 rounded-none"
+                    : "fixed inset-4 z-50 rounded-xl shadow-2xl"
+                  : "rounded-lg"
               }`}
+              style={
+                expandedView
+                  ? {
+                      height: isMobileViewport ? "100dvh" : "calc(100vh - 2rem)",
+                    }
+                  : isMobileViewport
+                    ? {
+                        height: isLandscape ? "60vh" : "40vh",
+                      }
+                    : undefined
+              }
             >
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
-                onClick={() => setExpandedView((v) => !v)}
+                className="absolute right-2 top-2 z-10 h-8 text-[11px] bg-black/55 text-white border-white/20 hover:bg-black/75 backdrop-blur-sm"
+                onClick={() => {
+                  setHasManualResize(true);
+                  setExpandedView((v) => !v);
+                }}
               >
                 {expandedView ? (
                   <>
@@ -310,9 +353,28 @@ export function LiveKitSession({
               </Button>
               <VConf />
               {expandedView && (
-                <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
-                  {t("livekit.fullViewTitle", "Expanded video view")}
-                </div>
+                <>
+                  <div
+                    className="absolute left-3 z-10 rounded bg-black/55 px-2.5 py-1 text-[11px] text-white backdrop-blur-sm"
+                    style={{
+                      top: "max(8px, env(safe-area-inset-top))",
+                    }}
+                  >
+                    {t("livekit.fullViewTitle", "Expanded video view")}
+                  </div>
+                  {isMobileViewport && (
+                    <div
+                      className="absolute left-3 z-10 rounded bg-black/45 px-2.5 py-1 text-[10px] text-white/90 backdrop-blur-sm"
+                      style={{
+                        top: "calc(max(8px, env(safe-area-inset-top)) + 30px)",
+                      }}
+                    >
+                      {isLandscape
+                        ? t("livekit.landscapeHint", "Landscape optimized for gallery view")
+                        : t("livekit.portraitHint", "Rotate phone for wider gallery view")}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>

@@ -5,7 +5,7 @@ import {
   useLocalParticipant,
   useRoomContext,
 } from "@livekit/components-react";
-import { RoomEvent } from "livekit-client";
+import { ConnectionQuality, RoomEvent } from "livekit-client";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Mic, MicOff, Video, VideoOff, Eye } from "lucide-react";
@@ -49,6 +49,24 @@ export function MediaControls({
   const hasAutoEnabled = useRef(false);
   const hasCalledAllMicsReady = useRef(false);
   const [micReadyCount, setMicReadyCount] = useState(0);
+
+  const localNetworkQuality = localParticipant.connectionQuality ?? ConnectionQuality.Unknown;
+  const networkLabel =
+    localNetworkQuality === ConnectionQuality.Excellent
+      ? t("livekit.networkExcellent", "Network: excellent")
+      : localNetworkQuality === ConnectionQuality.Good
+        ? t("livekit.networkGood", "Network: good")
+        : localNetworkQuality === ConnectionQuality.Poor
+          ? t("livekit.networkPoor", "Network: weak")
+          : t("livekit.networkUnknown", "Network: checking");
+  const networkDotClass =
+    localNetworkQuality === ConnectionQuality.Excellent
+      ? "bg-emerald-500"
+      : localNetworkQuality === ConnectionQuality.Good
+        ? "bg-amber-500"
+        : localNetworkQuality === ConnectionQuality.Poor
+          ? "bg-rose-500"
+          : "bg-neutral-300";
 
   // Auto-toggle audio/video based on room phase changes
   useEffect(() => {
@@ -181,22 +199,28 @@ export function MediaControls({
 
   if (isSpectator) {
     return (
-      <div className="flex items-center justify-center gap-1.5">
-        <Eye className="h-3.5 w-3.5 text-neutral-400" />
-        <span className="text-[11px] text-neutral-400">
-          {t("livekit.watchMode", "View-only mode")}
-        </span>
-        <div className="flex items-center gap-1 ml-2">
-          <div
-            className={`w-1.5 h-1.5 rounded-full ${
-              connected ? "bg-neutral-900" : "bg-neutral-300"
-            }`}
-          />
-          <span className="text-[11px] text-neutral-400">
-            {connected
-              ? t("common.connected", "Connected")
-              : t("common.connecting", "Connecting...")}
+      <div className="space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <Eye className="h-3.5 w-3.5 text-neutral-400" />
+          <span className="text-[11px] text-neutral-500">
+            {t("livekit.watchMode", "View-only mode")}
           </span>
+          <div className="h-1 w-1 rounded-full bg-neutral-300" />
+          <span className="text-[11px] text-neutral-400">
+            {connected ? t("common.connected", "Connected") : t("common.connecting", "Connecting...")}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-center text-[11px] text-neutral-500">
+            {t("livekit.micLocked", "Mic locked")}
+          </div>
+          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2 py-1.5 text-center text-[11px] text-neutral-500">
+            {t("livekit.cameraLocked", "Camera locked")}
+          </div>
+        </div>
+        <div className="flex items-center justify-center gap-1.5">
+          <div className={`h-1.5 w-1.5 rounded-full ${networkDotClass}`} />
+          <span className="text-[11px] text-neutral-400">{networkLabel}</span>
         </div>
       </div>
     );
@@ -240,9 +264,9 @@ export function MediaControls({
             (isMarker && roomStatus === "discussing") ||
             (isSpectator && roomStatus !== "free_discussion")
           }
-          className={`h-8 w-8 p-0 transition-all ${
+          className={`h-10 w-10 p-0 transition-all ${
             isMicrophoneEnabled
-              ? "bg-neutral-900 hover:bg-neutral-800"
+              ? "bg-neutral-900 hover:bg-neutral-800 shadow-sm"
               : isMarker && roomStatus === "discussing"
                 ? "border-neutral-200 text-neutral-300"
                 : waitingForMics
@@ -261,9 +285,9 @@ export function MediaControls({
           size="sm"
           onClick={handleToggleCam}
           disabled={isMarker || isSpectator}
-          className={`h-8 w-8 p-0 ${
+          className={`h-10 w-10 p-0 ${
             isCameraEnabled
-              ? "bg-neutral-900 hover:bg-neutral-800"
+              ? "bg-neutral-900 hover:bg-neutral-800 shadow-sm"
               : "border-neutral-200 text-neutral-400"
           }`}
         >
@@ -275,15 +299,31 @@ export function MediaControls({
         </Button>
         <div className="flex items-center gap-1 ml-2">
           <div
-            className={`w-1.5 h-1.5 rounded-full ${
-              connected ? "bg-neutral-900" : "bg-neutral-300"
-            }`}
+            className={`w-1.5 h-1.5 rounded-full ${connected ? networkDotClass : "bg-neutral-300"}`}
           />
           <span className="text-[11px] text-neutral-400">
-            {connected
-              ? t("common.connected", "Connected")
-              : t("common.connecting", "Connecting...")}
+            {connected ? networkLabel : t("common.connecting", "Connecting...")}
           </span>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2 text-[11px]">
+        <div
+          className={`rounded-md border px-2 py-1.5 text-center ${
+            isMicrophoneEnabled
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-neutral-200 bg-neutral-50 text-neutral-500"
+          }`}
+        >
+          {isMicrophoneEnabled ? t("livekit.micOn", "Mic on") : t("livekit.micOff", "Mic off")}
+        </div>
+        <div
+          className={`rounded-md border px-2 py-1.5 text-center ${
+            isCameraEnabled
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-neutral-200 bg-neutral-50 text-neutral-500"
+          }`}
+        >
+          {isCameraEnabled ? t("livekit.camOn", "Camera on") : t("livekit.camOff", "Camera off")}
         </div>
       </div>
       {isMarker && (
