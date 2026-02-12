@@ -58,7 +58,6 @@ export function LiveKitSession({
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [expandedView, setExpandedView] = useState(false);
-  const [hasManualResize, setHasManualResize] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isLandscape, setIsLandscape] = useState(false);
   const [preJoinOpen, setPreJoinOpen] = useState(false);
@@ -69,15 +68,11 @@ export function LiveKitSession({
     LiveKitRoom: React.ComponentType<Record<string, unknown>>;
     RoomAudioRenderer: React.ComponentType;
     VideoConference: React.ComponentType;
-    GridLayout: React.ComponentType<Record<string, unknown>>;
-    ParticipantTile: React.ComponentType<Record<string, unknown>>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    useTracks: any;
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [SpectatorGridComp, setSpectatorGridComp] = useState<React.ComponentType<any> | null>(null);
+  const [DiscussionGridComp, setDiscussionGridComp] = useState<React.ComponentType<any> | null>(null);
   const hasAttemptedConnect = useRef(false);
   const [canAccessMediaDevices, setCanAccessMediaDevices] = useState(true);
 
@@ -88,10 +83,6 @@ export function LiveKitSession({
           LiveKitRoom: mod.LiveKitRoom as unknown as React.ComponentType<Record<string, unknown>>,
           RoomAudioRenderer: mod.RoomAudioRenderer,
           VideoConference: mod.VideoConference as unknown as React.ComponentType,
-          // Also load GridLayout + ParticipantTile for spectator view
-          GridLayout: mod.GridLayout as unknown as React.ComponentType<Record<string, unknown>>,
-          ParticipantTile: mod.ParticipantTile as unknown as React.ComponentType<Record<string, unknown>>,
-          useTracks: mod.useTracks,
         });
       })
       .catch(() => {});
@@ -104,10 +95,10 @@ export function LiveKitSession({
       })
       .catch(() => {});
 
-    // Dynamically import SpectatorGrid
-    import("./spectator-grid")
+    // Dynamically import DiscussionGrid
+    import("./discussion-grid")
       .then((mod) => {
-        setSpectatorGridComp(() => mod.SpectatorGrid);
+        setDiscussionGridComp(() => mod.DiscussionGrid);
       })
       .catch(() => {});
 
@@ -355,9 +346,8 @@ export function LiveKitSession({
       VideoConference: VConf,
     } = lkComponents;
 
-    // Use SpectatorGrid for observers (spectator/marker) for reliable remote track rendering
     const isObserver = isSpectator || isMarker;
-    const VideoGrid = isObserver && SpectatorGridComp ? SpectatorGridComp : VConf;
+    const VideoGrid = DiscussionGridComp ?? VConf;
 
     const renderMediaControls = (isCompact: boolean) =>
       MediaControlsComp ? (
@@ -446,7 +436,6 @@ export function LiveKitSession({
                 <button
                   type="button"
                   onClick={() => {
-                    setHasManualResize(true);
                     setExpandedView(false);
                   }}
                   className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors"
@@ -460,7 +449,7 @@ export function LiveKitSession({
 
               {/* Video grid — takes all remaining space */}
               <div className="flex-1 min-h-0">
-                <VideoGrid />
+                <VideoGrid isObserver={isObserver} />
               </div>
 
               {/* Bottom floating control bar */}
@@ -500,7 +489,6 @@ export function LiveKitSession({
                 <button
                   type="button"
                   onClick={() => {
-                    setHasManualResize(true);
                     setExpandedView(true);
                   }}
                   className="flex items-center gap-1.5 rounded-full bg-black/40 backdrop-blur-md px-3 py-1.5 text-white/90 hover:bg-black/60 transition-colors pointer-events-auto"
@@ -514,7 +502,7 @@ export function LiveKitSession({
 
               {/* Video grid */}
               <div className="h-full w-full">
-                <VideoGrid />
+                <VideoGrid isObserver={isObserver} />
               </div>
             </div>
           )}
