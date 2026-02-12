@@ -732,7 +732,7 @@ export default function WaitingRoomPage() {
             </div>
           </div>
 
-          {/* Topic Preview */}
+          {/* Topic Preview — only show topic name, hide specific questions */}
           <div className="lg:col-span-2">
             <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-4">
               Topic
@@ -743,31 +743,26 @@ export default function WaitingRoomPage() {
                   <p className="text-[12px] text-neutral-400 mb-1">
                     {paper.year} · {paper.paper_number}
                   </p>
-                  <p className="text-[14px] font-medium text-neutral-900">
+                  <p className="text-[15px] font-medium text-neutral-900 leading-relaxed">
                     {paper.topic}
                   </p>
                 </div>
                 <Separator className="bg-neutral-100" />
-                <div>
-                  <p className="text-[12px] text-neutral-400 mb-1">
-                    {paper.part_a_title}
+                <div className="flex items-center gap-3 py-2">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center">
+                    <Eye className="h-4 w-4 text-neutral-400" />
+                  </div>
+                  <p className="text-[13px] text-neutral-400 leading-relaxed">
+                    {locale === "zh-Hant"
+                      ? "具體討論題目將在練習開始後的準備階段顯示"
+                      : "Discussion questions will be revealed during the preparation phase"}
                   </p>
-                  <p className="text-[11px] text-neutral-400 mb-3">
-                    Source: {paper.part_a_source}
-                  </p>
-                  <ol className="text-[13px] text-neutral-600 space-y-2 list-decimal list-inside">
-                    {paper.part_a_discussion_points?.map(
-                      (point: string, idx: number) => (
-                        <li key={idx} className="leading-relaxed">
-                          {point}
-                        </li>
-                      )
-                    )}
-                  </ol>
                 </div>
               </div>
             ) : (
-              <p className="text-[13px] text-neutral-400">未選擇題目</p>
+              <p className="text-[13px] text-neutral-400">
+                {locale === "zh-Hant" ? "未選擇題目" : "No topic selected"}
+              </p>
             )}
           </div>
         </div>
