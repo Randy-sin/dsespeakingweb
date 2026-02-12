@@ -10,7 +10,7 @@ export function PromoVideo() {
   const [playing, setPlaying] = useState(false);
   const [hasStarted, setHasStarted] = useState(false);
   const [showControls, setShowControls] = useState(false);
-  const hideTimer = useRef<ReturnType<typeof setTimeout>>();
+  const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Sync play state with actual video element
   useEffect(() => {
