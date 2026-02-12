@@ -42,3 +42,6 @@ next-env.d.ts
 
 # upload checkpoint
 data/.upload_done.json
+
+# Claude Code MCP config (contains secrets)
+.mcp.json
