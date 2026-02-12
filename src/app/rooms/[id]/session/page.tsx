@@ -205,47 +205,61 @@ export default function SessionPage() {
     setLoading(false);
   }, [roomId, supabase]);
 
+  // Ref to hold the broadcast channel so handlers can send without destroying it
+  const broadcastRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     fetchData();
-    
-    // Throttle fetchData to prevent excessive calls
-    let fetchThrottle: ReturnType<typeof setTimeout> | null = null;
-    const throttledFetch = () => {
-      if (fetchThrottle) return;
-      fetchThrottle = setTimeout(() => {
-        fetchData();
-        fetchThrottle = null;
-      }, 300); // 300ms throttle
-    };
-    
-    const channel = supabase
-      .channel(`session-${roomId}`)
+
+    // ── 1. Postgres Realtime (backup) ──
+    const pgChannel = supabase
+      .channel(`pg-session-${roomId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
-        (payload) => setRoom(payload.new as Room)
+        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+        () => fetchData()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
-        throttledFetch
+        () => fetchData()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "marker_scores", filter: `room_id=eq.${roomId}` },
-        throttledFetch
+        () => fetchData()
       )
-      .on("broadcast", { event: "skip_update" }, (payload) => {
-        // Instant skip vote update via broadcast
-        const newSkipVotes = payload?.payload?.skip_votes;
-        if (newSkipVotes && Array.isArray(newSkipVotes)) {
-          setRoom((prev) => prev ? { ...prev, skip_votes: newSkipVotes } : null);
-        }
+      .subscribe();
+
+    // ── 2. Broadcast channel (instant updates) ──
+    const bc = supabase
+      .channel(`bc-session-${roomId}`, {
+        config: { broadcast: { self: false } },
+      })
+      .on("broadcast", { event: "room_sync" }, (payload) => {
+        const data = payload?.payload;
+        if (!data) return;
+        setRoom((prev) => {
+          if (!prev) return null;
+          const updated = { ...prev };
+          if (data.skip_votes !== undefined) updated.skip_votes = data.skip_votes;
+          if (data.status !== undefined) updated.status = data.status;
+          return updated;
+        });
       })
       .subscribe();
+    broadcastRef.current = bc;
+
+    // ── 3. Polling fallback (safety net) ──
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 5000);
+
     return () => {
-      supabase.removeChannel(channel);
-      if (fetchThrottle) clearTimeout(fetchThrottle);
+      supabase.removeChannel(pgChannel);
+      supabase.removeChannel(bc);
+      broadcastRef.current = null;
+      clearInterval(pollInterval);
     };
   }, [roomId, fetchData, supabase]);
 
@@ -763,15 +777,12 @@ export default function SessionPage() {
       return;
     }
 
-    // Broadcast to all clients for instant update
-    const broadcastChannel = supabase.channel(`session-${roomId}`);
-    await broadcastChannel.subscribe();
-    await broadcastChannel.send({
+    // Broadcast via persistent channel — never create/destroy
+    broadcastRef.current?.send({
       type: "broadcast",
-      event: "skip_update",
+      event: "room_sync",
       payload: { skip_votes: persistedVotes },
     });
-    supabase.removeChannel(broadcastChannel);
 
     if (!shouldVoteSkip) return;
 

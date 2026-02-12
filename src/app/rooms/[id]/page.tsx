@@ -152,71 +152,64 @@ export default function WaitingRoomPage() {
     [fetchRoom, roomId, supabase, user?.id]
   );
 
+  // Ref to hold the broadcast channel so handlers can send without destroying it
+  const broadcastRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
   useEffect(() => {
     fetchRoom();
-    
-    // Throttle fetchRoom to prevent excessive calls
-    let fetchThrottle: ReturnType<typeof setTimeout> | null = null;
-    const throttledFetch = () => {
-      if (fetchThrottle) return;
-      fetchThrottle = setTimeout(() => {
-        fetchRoom();
-        fetchThrottle = null;
-      }, 300); // 300ms throttle
-    };
-    
-    const channel = supabase
-      .channel(`room-${roomId}`)
+
+    // ── 1. Postgres Realtime (backup) ──
+    const pgChannel = supabase
+      .channel(`pg-room-${roomId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
-        (payload) => {
-          // Direct update for rooms - faster than fetchRoom()
-          setRoom(payload.new as Room);
-        }
+        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+        () => fetchRoom()
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
-        throttledFetch
+        () => fetchRoom()
       )
       .subscribe();
 
-    // Listen for real-time broadcasts (nudge + ready state)
-    const broadcastChannel = supabase
-      .channel(`room-broadcast-${roomId}`)
+    // ── 2. Broadcast channel (instant updates) ──
+    // Single channel for ALL broadcast events — never destroy while mounted
+    const bc = supabase
+      .channel(`bc-${roomId}`, {
+        config: { broadcast: { self: false } },
+      })
       .on("broadcast", { event: "nudge" }, (payload) => {
-        // Only show to non-host participants who haven't readied up
-        const fromHost = payload?.payload?.from === room?.host_id;
-        if (fromHost && user?.id && user.id !== room?.host_id) {
-          toast("房主提醒你準備就緒！", {
-            icon: "🔔",
-            duration: 5000,
-          });
-        }
+        toast("房主提醒你準備就緒！", { icon: "🔔", duration: 5000 });
       })
-      .on("broadcast", { event: "ready_update" }, (payload) => {
-        // Instant ready state update via broadcast
-        const newReadyVotes = payload?.payload?.ready_votes;
-        if (newReadyVotes && Array.isArray(newReadyVotes)) {
-          setRoom((prev) => prev ? { ...prev, ready_votes: newReadyVotes } : null);
-        }
-      })
-      .on("broadcast", { event: "skip_update" }, (payload) => {
-        // Instant skip vote update via broadcast
-        const newSkipVotes = payload?.payload?.skip_votes;
-        if (newSkipVotes && Array.isArray(newSkipVotes)) {
-          setRoom((prev) => prev ? { ...prev, skip_votes: newSkipVotes } : null);
-        }
+      .on("broadcast", { event: "room_sync" }, (payload) => {
+        // Instant room state sync (ready_votes, skip_votes, etc.)
+        const data = payload?.payload;
+        if (!data) return;
+        setRoom((prev) => {
+          if (!prev) return null;
+          const updated = { ...prev };
+          if (data.ready_votes !== undefined) updated.ready_votes = data.ready_votes;
+          if (data.skip_votes !== undefined) updated.skip_votes = data.skip_votes;
+          if (data.status !== undefined) updated.status = data.status;
+          return updated;
+        });
       })
       .subscribe();
+    broadcastRef.current = bc;
+
+    // ── 3. Polling fallback (ensures data is fresh even if Realtime fails) ──
+    const pollInterval = setInterval(() => {
+      fetchRoom();
+    }, 5000); // Poll every 5s as safety net
 
     return () => {
-      supabase.removeChannel(channel);
-      supabase.removeChannel(broadcastChannel);
-      if (fetchThrottle) clearTimeout(fetchThrottle);
+      supabase.removeChannel(pgChannel);
+      supabase.removeChannel(bc);
+      broadcastRef.current = null;
+      clearInterval(pollInterval);
     };
-  }, [roomId, fetchRoom, supabase, user?.id, room?.host_id]);
+  }, [roomId, fetchRoom, supabase]);
 
   // Redirect to session if room already started and user is a member
   useEffect(() => {
@@ -495,15 +488,12 @@ export default function WaitingRoomPage() {
       return;
     }
 
-    // Broadcast to all clients for instant update
-    const channel = supabase.channel(`room-broadcast-${roomId}`);
-    await channel.subscribe();
-    await channel.send({
+    // Broadcast via persistent channel
+    broadcastRef.current?.send({
       type: "broadcast",
-      event: "skip_update",
+      event: "room_sync",
       payload: { skip_votes: newVotes },
     });
-    supabase.removeChannel(channel);
 
     if (!myVoteContinue) {
       toast.success(locale === "zh-Hant" ? "已投票同意繼續" : "Voted to continue");
@@ -534,15 +524,12 @@ export default function WaitingRoomPage() {
       toast.error("操作失敗，請重試");
       setRoom({ ...room, ready_votes: currentVotes });
     } else {
-      // Broadcast to all clients for instant update
-      const channel = supabase.channel(`room-broadcast-${roomId}`);
-      await channel.subscribe();
-      await channel.send({
+      // Broadcast via persistent channel — never create/destroy
+      broadcastRef.current?.send({
         type: "broadcast",
-        event: "ready_update",
+        event: "room_sync",
         payload: { ready_votes: newVotes },
       });
-      supabase.removeChannel(channel);
       
       if (!myVoteReady) {
         toast.success("已準備");
@@ -616,15 +603,12 @@ export default function WaitingRoomPage() {
     if (!isHost || nudgeCooldown) return;
     setNudgeCooldown(true);
 
-    // Broadcast a nudge event via Supabase Realtime
-    const channel = supabase.channel(`nudge-${roomId}`);
-    await channel.subscribe();
-    await channel.send({
+    // Broadcast via persistent channel
+    broadcastRef.current?.send({
       type: "broadcast",
       event: "nudge",
       payload: { from: user?.id },
     });
-    supabase.removeChannel(channel);
 
     toast.success(
       locale === "zh-Hant" ? "已提醒未準備的成員" : "Reminded unready members"
