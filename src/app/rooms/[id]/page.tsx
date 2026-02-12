@@ -29,6 +29,8 @@ import {
   Users,
   ClipboardCheck,
   AlertTriangle,
+  UserX,
+  Bell,
 } from "lucide-react";
 import { format } from "date-fns";
 import { zhTW } from "date-fns/locale";
@@ -132,10 +134,27 @@ export default function WaitingRoomPage() {
         () => fetchRoom()
       )
       .subscribe();
+
+    // Listen for nudge broadcasts from host
+    const nudgeChannel = supabase
+      .channel(`nudge-${roomId}`)
+      .on("broadcast", { event: "nudge" }, (payload) => {
+        // Only show to non-host participants who haven't readied up
+        const fromHost = payload?.payload?.from === room?.host_id;
+        if (fromHost && user?.id && user.id !== room?.host_id) {
+          toast("房主提醒你準備就緒！", {
+            icon: "🔔",
+            duration: 5000,
+          });
+        }
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(nudgeChannel);
     };
-  }, [roomId, fetchRoom, supabase]);
+  }, [roomId, fetchRoom, supabase, user?.id, room?.host_id]);
 
   // Redirect to session if room already started and user is a member
   useEffect(() => {
@@ -147,6 +166,23 @@ export default function WaitingRoomPage() {
       }
     }
   }, [room, members, user?.id, roomId, router]);
+
+  // Detect if current user was kicked (was a member, now not found in members list)
+  const wasMemberRef = useRef(false);
+  useEffect(() => {
+    if (!user?.id || loading) return;
+    const isMemberNow = members.some((m) => m.user_id === user.id);
+    if (wasMemberRef.current && !isMemberNow && room) {
+      // User was in the room but now isn't — they were kicked
+      toast.error(
+        locale === "zh-Hant"
+          ? "你已被房主移出房間"
+          : "You have been removed from the room"
+      );
+      router.push("/rooms");
+    }
+    wasMemberRef.current = isMemberNow;
+  }, [members, user?.id, loading, room, locale, router]);
 
   // Derived state
   const isHost = user?.id === room?.host_id;
@@ -455,6 +491,62 @@ export default function WaitingRoomPage() {
     router.push("/rooms");
   };
 
+  // ---- Host: Kick member ----
+  const handleKick = async (targetUserId: string, targetName: string) => {
+    if (!user || !isHost || targetUserId === user.id) return;
+
+    // Remove from votes
+    if (room) {
+      const newReadyVotes = readyVotes.filter((v) => v !== targetUserId);
+      const newContinueVotes = continueVotes.filter((v) => v !== targetUserId);
+      await supabase
+        .from("rooms")
+        .update({ ready_votes: newReadyVotes, skip_votes: newContinueVotes })
+        .eq("id", roomId);
+    }
+
+    const { error } = await supabase
+      .from("room_members")
+      .delete()
+      .eq("room_id", roomId)
+      .eq("user_id", targetUserId);
+
+    if (error) {
+      toast.error(locale === "zh-Hant" ? "移除失敗" : "Failed to remove");
+    } else {
+      toast.success(
+        locale === "zh-Hant"
+          ? `已將 ${targetName} 移出房間`
+          : `Removed ${targetName} from room`
+      );
+      await fetchRoom();
+    }
+  };
+
+  // ---- Host: Nudge unready participants ----
+  const [nudgeCooldown, setNudgeCooldown] = useState(false);
+  const handleNudge = async () => {
+    if (!isHost || nudgeCooldown) return;
+    setNudgeCooldown(true);
+
+    // Broadcast a nudge event via Supabase Realtime
+    const channel = supabase.channel(`nudge-${roomId}`);
+    await channel.subscribe();
+    await channel.send({
+      type: "broadcast",
+      event: "nudge",
+      payload: { from: user?.id },
+    });
+    supabase.removeChannel(channel);
+
+    toast.success(
+      locale === "zh-Hant" ? "已提醒未準備的成員" : "Reminded unready members"
+    );
+
+    // 15s cooldown to prevent spam
+    setTimeout(() => setNudgeCooldown(false), 15000);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white">
@@ -674,19 +766,37 @@ export default function WaitingRoomPage() {
                               {isSlotHost && " · 房主"}
                             </p>
                           </div>
-                          {isReady ? (
-                            <div className="flex items-center gap-1.5 text-emerald-600">
-                              <Check className="h-4 w-4" />
-                              <span className="text-[12px] font-medium">
-                                已準備
-                              </span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 text-neutral-300">
-                              <Circle className="h-4 w-4" />
-                              <span className="text-[12px]">等待中</span>
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {isReady ? (
+                              <div className="flex items-center gap-1.5 text-emerald-600">
+                                <Check className="h-4 w-4" />
+                                <span className="text-[12px] font-medium">
+                                  已準備
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-neutral-300">
+                                <Circle className="h-4 w-4" />
+                                <span className="text-[12px]">等待中</span>
+                              </div>
+                            )}
+                            {/* Host kick button */}
+                            {isHost && !isSlotHost && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleKick(
+                                    member.user_id,
+                                    member.profiles?.display_name || "匿名"
+                                  )
+                                }
+                                className="p-1.5 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                title={locale === "zh-Hant" ? "移出房間" : "Remove"}
+                              >
+                                <UserX className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </>
                       ) : (
                         <div className="flex items-center gap-3 text-neutral-400">
@@ -730,7 +840,24 @@ export default function WaitingRoomPage() {
                         {markerMember.user_id === room.host_id && " · 房主"}
                       </p>
                     </div>
-                    <ClipboardCheck className="h-4 w-4 text-violet-500" />
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="h-4 w-4 text-violet-500" />
+                      {isHost && markerMember.user_id !== room.host_id && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleKick(
+                              markerMember.user_id,
+                              markerMember.profiles?.display_name || "Marker"
+                            )
+                          }
+                          className="p-1.5 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title={locale === "zh-Hant" ? "移出房間" : "Remove"}
+                        >
+                          <UserX className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </>
                 ) : (
                   <div className="flex items-center gap-3 text-neutral-400">
@@ -747,93 +874,156 @@ export default function WaitingRoomPage() {
               </div>
             </div>
 
-            {/* Spectators count */}
+            {/* Spectators */}
             {spectators.length > 0 && (
-              <div className="flex items-center gap-2 text-[12px] text-neutral-400">
-                <Eye className="h-3.5 w-3.5" />
-                <span>
+              <div>
+                <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                   {locale === "zh-Hant"
-                    ? `${spectators.length} 位觀眾`
-                    : `${spectators.length} spectator(s)`}
-                </span>
+                    ? `觀眾 (${spectators.length})`
+                    : `Spectators (${spectators.length})`}
+                </p>
+                <div className="space-y-1.5">
+                  {spectators.map((spec) => {
+                    const isSpecHost = spec.user_id === room.host_id;
+                    return (
+                      <div
+                        key={spec.id}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-neutral-100 bg-neutral-50/50"
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="text-[10px] font-medium bg-blue-50 text-blue-600">
+                            {spec.profiles?.display_name
+                              ?.slice(0, 2)
+                              ?.toUpperCase() || "??"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] text-neutral-700 truncate">
+                            {spec.profiles?.display_name || "匿名"}
+                            {isSpecHost && (
+                              <span className="text-[11px] text-neutral-400 ml-1">· 房主</span>
+                            )}
+                          </p>
+                        </div>
+                        <Eye className="h-3 w-3 text-neutral-300" />
+                        {isHost && !isSpecHost && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleKick(
+                                spec.user_id,
+                                spec.profiles?.display_name || "匿名"
+                              )
+                            }
+                            className="p-1.5 rounded-md text-neutral-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title={locale === "zh-Hant" ? "移出房間" : "Remove"}
+                          >
+                            <UserX className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex gap-2">
-              {isMember && myRole === "participant" ? (
-                <>
-                  <Button
-                    onClick={handleToggleReady}
-                    className={`flex-1 h-10 text-[14px] transition-all ${
-                      myVoteReady
-                        ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                        : memberCount < 2
-                          ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
-                          : "bg-neutral-900 hover:bg-neutral-800 text-white"
-                    }`}
-                    disabled={memberCount < 2 || starting}
-                  >
-                    {starting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : myVoteReady ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : null}
-                    {starting
-                    ? "正在開始..."
-                      : memberCount < 2
-                        ? "至少需要 2 人"
-                        : myVoteReady
-                          ? allReady
-                            ? "全員準備就緒！"
-                            : `已準備 (${readyCount}/${memberCount})`
-                          : "準備好了"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={handleLeave}
-                    className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
-                  >
-                    <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    {isHost ? "解散" : "離開"}
-                  </Button>
-                </>
-              ) : isMember ? (
-                <>
-                  {isInSession ? (
-                    <Button
-                      onClick={() => router.push(`/rooms/${roomId}/session`)}
-                      className="flex-1 h-10 text-[14px] bg-neutral-900 hover:bg-neutral-800 text-white"
-                    >
-                      進入練習
-                    </Button>
-                  ) : (
-                    <p className="text-[13px] text-neutral-400 py-2">
-                      {myRole === "marker"
-                        ? locale === "zh-Hant"
-                          ? "等待參與者準備就緒後自動開始"
-                          : "Waiting for participants to get ready..."
-                        : locale === "zh-Hant"
-                        ? "等待練習開始..."
-                        : "Waiting for session to start..."}
-                    </p>
-                  )}
-                  <Button
-                    variant="ghost"
-                    onClick={handleLeave}
-                    className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
-                  >
-                    <LogOut className="mr-1.5 h-3.5 w-3.5" />
-                    {isHost ? "解散" : "離開"}
-                  </Button>
-                </>
-              ) : (
-                <p className="text-[13px] text-neutral-400 py-2">
-                  {locale === "zh-Hant"
-                    ? "選擇上方角色加入房間"
-                    : "Choose a role above to join"}
-                </p>
+            <div className="flex flex-col gap-2">
+              {/* Host nudge button — show when there are unready participants */}
+              {isHost && memberCount >= 2 && readyCount < memberCount && (
+                <Button
+                  variant="outline"
+                  onClick={handleNudge}
+                  disabled={nudgeCooldown}
+                  className="h-9 text-[13px] border-amber-200 text-amber-600 hover:bg-amber-50 hover:text-amber-700 w-full"
+                >
+                  <Bell className="mr-1.5 h-3.5 w-3.5" />
+                  {nudgeCooldown
+                    ? locale === "zh-Hant"
+                      ? "已提醒（冷卻中）"
+                      : "Reminded (cooldown)"
+                    : locale === "zh-Hant"
+                    ? `提醒準備 (${memberCount - readyCount} 人未準備)`
+                    : `Remind (${memberCount - readyCount} unready)`}
+                </Button>
               )}
+
+              <div className="flex gap-2">
+                {isMember && myRole === "participant" ? (
+                  <>
+                    <Button
+                      onClick={handleToggleReady}
+                      className={`flex-1 h-10 text-[14px] transition-all ${
+                        myVoteReady
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                          : memberCount < 2
+                            ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                            : "bg-neutral-900 hover:bg-neutral-800 text-white"
+                      }`}
+                      disabled={memberCount < 2 || starting}
+                    >
+                      {starting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : myVoteReady ? (
+                        <Check className="mr-2 h-4 w-4" />
+                      ) : null}
+                      {starting
+                      ? "正在開始..."
+                        : memberCount < 2
+                          ? "至少需要 2 人"
+                          : myVoteReady
+                            ? allReady
+                              ? "全員準備就緒！"
+                              : `已準備 (${readyCount}/${memberCount})`
+                            : "準備好了"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={handleLeave}
+                      className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
+                    >
+                      <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                      {isHost ? "解散" : "離開"}
+                    </Button>
+                  </>
+                ) : isMember ? (
+                  <>
+                    {isInSession ? (
+                      <Button
+                        onClick={() => router.push(`/rooms/${roomId}/session`)}
+                        className="flex-1 h-10 text-[14px] bg-neutral-900 hover:bg-neutral-800 text-white"
+                      >
+                        進入練習
+                      </Button>
+                    ) : (
+                      <p className="text-[13px] text-neutral-400 py-2">
+                        {myRole === "marker"
+                          ? locale === "zh-Hant"
+                            ? "等待參與者準備就緒後自動開始"
+                            : "Waiting for participants to get ready..."
+                          : locale === "zh-Hant"
+                          ? "等待練習開始..."
+                          : "Waiting for session to start..."}
+                      </p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      onClick={handleLeave}
+                      className="h-10 text-[13px] text-neutral-400 hover:text-neutral-900"
+                    >
+                      <LogOut className="mr-1.5 h-3.5 w-3.5" />
+                      {isHost ? "解散" : "離開"}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-[13px] text-neutral-400 py-2">
+                    {locale === "zh-Hant"
+                      ? "選擇上方角色加入房間"
+                      : "Choose a role above to join"}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
