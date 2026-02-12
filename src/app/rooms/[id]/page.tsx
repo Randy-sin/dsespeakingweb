@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
+import { useHeartbeat } from "@/hooks/use-heartbeat";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,9 @@ export default function WaitingRoomPage() {
   const { user } = useUser();
   const { t, locale } = useI18n();
   const supabase = createClient();
+
+  // Keep membership alive with heartbeat
+  useHeartbeat(roomId, user?.id);
 
   const [room, setRoom] = useState<Room | null>(null);
   const [members, setMembers] = useState<MemberWithProfile[]>([]);

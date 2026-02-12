@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
+import { useHeartbeat } from "@/hooks/use-heartbeat";
 import { useI18n } from "@/components/providers/i18n-provider";
 import { useCountdown } from "@/hooks/use-countdown";
 import { PhaseIndicator } from "@/components/session/phase-indicator";
@@ -73,6 +74,9 @@ export default function SessionPage() {
   const { user } = useUser();
   const { t } = useI18n();
   const supabase = createClient();
+
+  // Keep membership alive with heartbeat
+  useHeartbeat(roomId, user?.id);
 
   const [room, setRoom] = useState<Room | null>(null);
   const [allMembers, setAllMembers] = useState<MemberWithProfile[]>([]);
