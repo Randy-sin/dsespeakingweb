@@ -2,12 +2,27 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useUser } from "@/hooks/use-user";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Loader2,
   Wifi,
   WifiOff,
   AlertCircle,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Expand,
+  Shrink,
 } from "lucide-react";
 import type { RoomStatus } from "@/lib/supabase/types";
 
@@ -34,11 +49,17 @@ export function LiveKitSession({
   onAllMicsReady,
 }: LiveKitSessionProps) {
   const { user } = useUser();
+  const { t } = useI18n();
   const [token, setToken] = useState<string | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [expandedView, setExpandedView] = useState(false);
+  const [preJoinOpen, setPreJoinOpen] = useState(false);
+  const [preJoinApproved, setPreJoinApproved] = useState(false);
+  const [preJoinMicOn, setPreJoinMicOn] = useState(true);
+  const [preJoinCamOn, setPreJoinCamOn] = useState(true);
   const [lkComponents, setLkComponents] = useState<{
     LiveKitRoom: React.ComponentType<Record<string, unknown>>;
     RoomAudioRenderer: React.ComponentType;
@@ -83,7 +104,7 @@ export function LiveKitSession({
       if (!res.ok) {
         const data = await res.json();
         if (data.error === "LiveKit not configured") {
-          setError("LiveKit 尚未配置");
+          setError(t("livekit.livekitNotConfigured", "LiveKit is not configured"));
         } else {
           throw new Error(data.error || "Failed to get token");
         }
@@ -94,11 +115,18 @@ export function LiveKitSession({
       setToken(data.token);
       setUrl(data.url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "连接失败");
+      setError(err instanceof Error ? err.message : t("livekit.connectFailed", "Connection failed"));
     } finally {
       setLoading(false);
     }
-  }, [user, roomId]);
+  }, [user, roomId, t]);
+
+  useEffect(() => {
+    if (isSpectator) return;
+    if (roomStatus === "preparing" && !preJoinApproved && !token) {
+      setPreJoinOpen(true);
+    }
+  }, [isSpectator, roomStatus, preJoinApproved, token]);
 
   // Auto-connect for spectators immediately, for participants when discussing starts
   useEffect(() => {
@@ -107,14 +135,17 @@ export function LiveKitSession({
       fetchToken();
     } else if (
       !isSpectator &&
-      (roomStatus === "discussing" || roomStatus === "individual") &&
+      (roomStatus === "preparing" ||
+        roomStatus === "discussing" ||
+        roomStatus === "individual") &&
+      preJoinApproved &&
       !token &&
       !hasAttemptedConnect.current
     ) {
       hasAttemptedConnect.current = true;
       fetchToken();
     }
-  }, [roomStatus, token, fetchToken, isSpectator]);
+  }, [roomStatus, token, fetchToken, isSpectator, preJoinApproved]);
 
   // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
   const roomOptions = useMemo(
@@ -140,35 +171,13 @@ export function LiveKitSession({
     []
   );
 
-  if (roomStatus === "preparing" && !isSpectator) {
-    return (
-      <div className="text-center py-6">
-        <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
-        <p className="text-[13px] text-neutral-500 mb-1">准备阶段</p>
-        <p className="text-[12px] text-neutral-400">讨论开始后自动开启音视频</p>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="mt-3 text-[12px] text-neutral-400 hover:text-neutral-900"
-          onClick={fetchToken}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
-          ) : (
-            <Wifi className="h-3.5 w-3.5 mr-1" />
-          )}
-          预连接
-        </Button>
-      </div>
-    );
-  }
-
   if (roomStatus === "finished") {
     return (
       <div className="text-center py-6">
         <WifiOff className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
-        <p className="text-[13px] text-neutral-400">已断开</p>
+        <p className="text-[13px] text-neutral-400">
+          {t("livekit.disconnect", "Disconnected")}
+        </p>
       </div>
     );
   }
@@ -177,12 +186,17 @@ export function LiveKitSession({
     return (
       <div className="text-center py-6">
         <AlertCircle className="h-5 w-5 text-neutral-400 mx-auto mb-2" />
-        <p className="text-[13px] text-neutral-500 mb-1">未连接</p>
+        <p className="text-[13px] text-neutral-500 mb-1">
+          {t("livekit.notConnected", "Not connected")}
+        </p>
         <p className="text-[12px] text-neutral-400 mb-3 px-2">{error}</p>
         <p className="text-[11px] text-neutral-300 mb-3">
           {isSpectator
-            ? "音视频需要配置 LiveKit 后观看"
-            : "可以正常练习，音视频需要配置 LiveKit 后使用"}
+            ? t("livekit.observerHint", "You can watch after LiveKit is configured")
+            : t(
+                "livekit.spectatorHint",
+                "You can still practice without AV until LiveKit is configured"
+              )}
         </p>
         <Button
           variant="ghost"
@@ -194,7 +208,7 @@ export function LiveKitSession({
           }}
           disabled={loading}
         >
-          重试
+          {t("common.retry", "Retry")}
         </Button>
       </div>
     );
@@ -204,7 +218,9 @@ export function LiveKitSession({
     return (
       <div className="text-center py-6">
         <Loader2 className="h-5 w-5 animate-spin text-neutral-300 mx-auto mb-2" />
-        <p className="text-[13px] text-neutral-400">连接中...</p>
+        <p className="text-[13px] text-neutral-400">
+          {t("common.connecting", "Connecting...")}
+        </p>
       </div>
     );
   }
@@ -222,8 +238,8 @@ export function LiveKitSession({
           serverUrl={url}
           token={token}
           connect={true}
-          audio={isSpectator ? false : undefined}
-          video={isSpectator ? false : undefined}
+          audio={isSpectator ? false : preJoinMicOn}
+          video={isSpectator ? false : preJoinCamOn}
           options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
@@ -231,8 +247,38 @@ export function LiveKitSession({
         >
           <div className="space-y-3">
             <AudioRenderer />
-            <div className="bg-neutral-950 rounded-lg overflow-hidden aspect-video relative">
+            <div
+              className={`bg-neutral-950 overflow-hidden relative ${
+                expandedView
+                  ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
+                  : "rounded-lg aspect-video"
+              }`}
+            >
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
+                onClick={() => setExpandedView((v) => !v)}
+              >
+                {expandedView ? (
+                  <>
+                    <Shrink className="mr-1 h-3.5 w-3.5" />
+                    {t("livekit.shrinkVideos", "Exit expanded view")}
+                  </>
+                ) : (
+                  <>
+                    <Expand className="mr-1 h-3.5 w-3.5" />
+                    {t("livekit.expandVideos", "Expand videos")}
+                  </>
+                )}
+              </Button>
               <VConf />
+              {expandedView && (
+                <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
+                  {t("livekit.fullViewTitle", "Expanded video view")}
+                </div>
+              )}
             </div>
           </div>
           {/* Media controls INSIDE LiveKitRoom context so hooks work */}
@@ -256,7 +302,9 @@ export function LiveKitSession({
                   }`}
                 />
                 <span className="text-[11px] text-neutral-400">
-                  {connected ? "Connected" : "Connecting..."}
+                  {connected
+                    ? t("common.connected", "Connected")
+                    : t("common.connecting", "Connecting...")}
                 </span>
               </div>
             )}
@@ -267,19 +315,104 @@ export function LiveKitSession({
   }
 
   return (
-    <div className="text-center py-6">
-      <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
-      <p className="text-[13px] text-neutral-400 mb-2">
-        {isSpectator ? "连接观看" : "等待连接"}
-      </p>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="text-[12px] text-neutral-400 hover:text-neutral-900"
-        onClick={fetchToken}
-      >
-        连接
-      </Button>
-    </div>
+    <>
+      <div className="text-center py-6">
+        <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
+        <p className="text-[13px] text-neutral-400 mb-1">
+          {roomStatus === "preparing" && !isSpectator
+            ? t("livekit.preparingTitle", "Preparation phase")
+            : isSpectator
+            ? t("livekit.connectWatch", "Connect to watch")
+            : t("livekit.waitConnect", "Waiting to connect")}
+        </p>
+        {!isSpectator && roomStatus === "preparing" && (
+          <p className="text-[12px] text-neutral-400 mb-3">
+            {t(
+              "livekit.preparingHint",
+              "Set your microphone and camera before discussion starts"
+            )}
+          </p>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-[12px] text-neutral-400 hover:text-neutral-900"
+          onClick={() => {
+            if (!isSpectator && roomStatus === "preparing") {
+              setPreJoinOpen(true);
+              return;
+            }
+            fetchToken();
+          }}
+        >
+          {t("livekit.connect", "Connect")}
+        </Button>
+      </div>
+
+      <Dialog open={preJoinOpen} onOpenChange={setPreJoinOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("livekit.prejoinTitle", "Ready to join meeting")}</DialogTitle>
+            <DialogDescription>
+              {t(
+                "livekit.prejoinDesc",
+                "Choose whether to turn on microphone and camera, like Tencent Meeting pre-join setup."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setPreJoinMicOn((v) => !v)}
+              className="w-full flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50"
+            >
+              <span className="flex items-center gap-2">
+                {preJoinMicOn ? (
+                  <Mic className="h-4 w-4 text-neutral-700" />
+                ) : (
+                  <MicOff className="h-4 w-4 text-neutral-400" />
+                )}
+                {t("livekit.microphone", "Microphone")}
+              </span>
+              <span className="text-xs text-neutral-400">
+                {preJoinMicOn ? "ON" : "OFF"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreJoinCamOn((v) => !v)}
+              className="w-full flex items-center justify-between rounded-lg border border-neutral-200 px-3 py-2 text-sm hover:bg-neutral-50"
+            >
+              <span className="flex items-center gap-2">
+                {preJoinCamOn ? (
+                  <Video className="h-4 w-4 text-neutral-700" />
+                ) : (
+                  <VideoOff className="h-4 w-4 text-neutral-400" />
+                )}
+                {t("livekit.camera", "Camera")}
+              </span>
+              <span className="text-xs text-neutral-400">
+                {preJoinCamOn ? "ON" : "OFF"}
+              </span>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreJoinOpen(false)}>
+              {t("common.cancel", "Cancel")}
+            </Button>
+            <Button
+              onClick={() => {
+                setPreJoinApproved(true);
+                setPreJoinOpen(false);
+                hasAttemptedConnect.current = false;
+                fetchToken();
+              }}
+            >
+              {t("livekit.previewJoin", "Join with selected settings")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

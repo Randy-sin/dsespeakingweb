@@ -5,18 +5,18 @@ import { ArrowRight, Mic, Users, Clock, FileText, BookOpen, MessageSquare, User 
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white overflow-hidden">
+    <div className="min-h-screen bg-white overflow-x-clip">
       <Navbar />
 
       {/* ── Hero ── */}
       <section className="relative dot-grid">
         {/* Subtle radial gradient overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.02)_0%,transparent_60%)]" />
-        <div className="absolute top-20 right-[10%] w-72 h-72 bg-neutral-100/60 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-10 left-[5%] w-56 h-56 bg-neutral-50 rounded-full blur-3xl animate-float delay-300" />
+        <div className="hidden sm:block absolute top-20 right-[10%] w-72 h-72 bg-neutral-100/60 rounded-full blur-3xl animate-float" />
+        <div className="hidden sm:block absolute bottom-10 left-[5%] w-56 h-56 bg-neutral-50 rounded-full blur-3xl animate-float delay-300" />
 
         <div className="relative max-w-6xl mx-auto px-5 sm:px-8">
-          <div className="pt-20 sm:pt-28 pb-20 sm:pb-24">
+          <div className="pt-16 sm:pt-28 pb-14 sm:pb-24">
             {/* Badge */}
             <div className="animate-fade-up">
               <span className="inline-flex items-center gap-2 border border-neutral-200 rounded-full px-4 py-1.5 text-[12px] text-neutral-500 tracking-wide uppercase mb-8 bg-white/80 backdrop-blur-sm">
@@ -26,7 +26,7 @@ export default function HomePage() {
             </div>
 
             {/* Heading */}
-            <h1 className="animate-fade-up delay-100 font-serif text-[48px] sm:text-[72px] lg:text-[84px] leading-[0.95] font-semibold text-neutral-900 tracking-tight max-w-4xl">
+            <h1 className="animate-fade-up delay-100 font-serif text-[38px] sm:text-[72px] lg:text-[84px] leading-[0.98] sm:leading-[0.95] font-semibold text-neutral-900 tracking-tight max-w-4xl">
               Practice speaking,
               <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 via-neutral-500 to-neutral-300 italic">
@@ -35,22 +35,22 @@ export default function HomePage() {
             </h1>
 
             {/* Subtext */}
-            <p className="animate-fade-up delay-200 text-[17px] sm:text-[19px] leading-relaxed text-neutral-500 mt-8 mb-12 max-w-xl">
+            <p className="animate-fade-up delay-200 text-[15px] sm:text-[19px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-12 max-w-xl">
               找到队友，选择历年真题，完整模拟 DSE Speaking 考试。从准备阅读、小组讨论到个人回应，全流程在线练习。
             </p>
 
             {/* CTA */}
-            <div className="animate-fade-up delay-300 flex flex-wrap items-center gap-4">
-              <Link href="/rooms">
-                <Button className="h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
+            <div className="animate-fade-up delay-300 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+              <Link href="/rooms" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
                   开始练习
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Link href="/rooms">
+              <Link href="/rooms" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className="h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
+                  className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
                 >
                   浏览房间
                 </Button>
@@ -58,7 +58,7 @@ export default function HomePage() {
             </div>
 
             {/* Quick stats */}
-            <div className="animate-fade-up delay-500 flex flex-wrap items-center gap-8 mt-16 pt-8 border-t border-neutral-100">
+            <div className="animate-fade-up delay-500 grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-neutral-100">
               {[
                 { value: "228", label: "历年真题" },
                 { value: "2012–2023", label: "年份覆盖" },
@@ -88,7 +88,7 @@ export default function HomePage() {
                 "WebRTC Powered", "Exam Simulation", "4-Person Teams",
                 "Group Discussion", "Individual Response", "Past Papers",
               ].map((text, i) => (
-                <span key={`${idx}-${i}`} className="text-[12px] text-neutral-400 uppercase tracking-[0.15em] flex items-center gap-8">
+                <span key={`${idx}-${i}`} className="text-[11px] sm:text-[12px] text-neutral-400 uppercase tracking-[0.15em] flex items-center gap-8">
                   {text}
                   <span className="text-neutral-200">·</span>
                 </span>
@@ -99,17 +99,17 @@ export default function HomePage() {
       </div>
 
       {/* ── How it works ── */}
-      <section className="relative max-w-6xl mx-auto px-5 sm:px-8 py-24 sm:py-32">
-        <div className="text-center mb-16 sm:mb-20">
+      <section className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-32">
+        <div className="text-center mb-12 sm:mb-20">
           <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
             How it works
           </p>
-          <h2 className="font-serif text-[32px] sm:text-[44px] font-semibold text-neutral-900 tracking-tight leading-[1.1]">
+          <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-neutral-900 tracking-tight leading-[1.1]">
             三个阶段，<br className="sm:hidden" />一次完整模拟
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
           {[
             {
               num: "01",
@@ -141,7 +141,7 @@ export default function HomePage() {
           ].map((item) => (
             <div
               key={item.num}
-              className={`group relative rounded-2xl bg-gradient-to-br ${item.gradient} border border-neutral-100 p-7 sm:p-8 hover-lift`}
+              className={`group relative rounded-2xl bg-gradient-to-br ${item.gradient} border border-neutral-100 p-6 sm:p-8 hover-lift`}
             >
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-neutral-100 shadow-sm">
@@ -175,19 +175,19 @@ export default function HomePage() {
 
       {/* ── Bento Features Grid ── */}
       <section className="bg-neutral-950 text-white grain">
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-24 sm:py-32">
-          <div className="text-center mb-16">
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-32">
+          <div className="text-center mb-12 sm:mb-16">
             <p className="text-[12px] text-neutral-500 tracking-[0.2em] uppercase mb-4">
               Features
             </p>
-            <h2 className="font-serif text-[32px] sm:text-[44px] font-semibold text-white tracking-tight leading-[1.1]">
+            <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-white tracking-tight leading-[1.1]">
               为 DSE 口试而生
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Card: Past Papers - Large */}
-            <div className="sm:col-span-2 rounded-2xl bg-white/[0.04] border border-white/[0.06] p-8 hover:bg-white/[0.07] transition-colors group">
+            <div className="md:col-span-2 rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors group">
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06]">
                   <FileText className="h-5 w-5 text-neutral-400" />
@@ -205,7 +205,7 @@ export default function HomePage() {
             </div>
 
             {/* Card: Voice */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-8 hover:bg-white/[0.07] transition-colors">
+            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
                 <Mic className="h-5 w-5 text-neutral-400" />
               </div>
@@ -218,7 +218,7 @@ export default function HomePage() {
             </div>
 
             {/* Card: Timer */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-8 hover:bg-white/[0.07] transition-colors">
+            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
                 <Clock className="h-5 w-5 text-neutral-400" />
               </div>
@@ -231,7 +231,7 @@ export default function HomePage() {
             </div>
 
             {/* Card: Teamup */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-8 hover:bg-white/[0.07] transition-colors">
+            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
                 <Users className="h-5 w-5 text-neutral-400" />
               </div>
@@ -244,7 +244,7 @@ export default function HomePage() {
             </div>
 
             {/* Card: Assessment - spanning */}
-            <div className="sm:col-span-2 lg:col-span-1 rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.06] p-8 hover:bg-white/[0.07] transition-colors">
+            <div className="md:col-span-2 lg:col-span-1 rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
               <p className="text-[12px] text-neutral-500 tracking-[0.15em] uppercase mb-5">
                 Assessment Criteria
               </p>
@@ -260,8 +260,8 @@ export default function HomePage() {
                 ].map((item) => (
                   <div key={item.en}>
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[12px] text-neutral-400">{item.en}</span>
-                      <span className="text-[11px] text-neutral-500 font-mono">{item.pct}%</span>
+                      <span className="text-[13px] text-neutral-400">{item.en}</span>
+                      <span className="text-[12px] text-neutral-500 font-mono">{item.pct}%</span>
                     </div>
                     <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
                       <div
@@ -280,24 +280,24 @@ export default function HomePage() {
       {/* ── CTA ── */}
       <section className="relative dot-grid">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.02)_0%,transparent_60%)]" />
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-28 sm:py-36 text-center">
-          <h2 className="font-serif text-[36px] sm:text-[52px] font-semibold text-neutral-900 tracking-tight leading-[1.05] mb-5">
+        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-36 text-center">
+          <h2 className="font-serif text-[32px] sm:text-[52px] font-semibold text-neutral-900 tracking-tight leading-[1.05] mb-5">
             Ready to practice?
           </h2>
           <p className="text-[16px] sm:text-[18px] text-neutral-400 mb-10 max-w-md mx-auto leading-relaxed">
             加入平台，找到练习伙伴，<br className="hidden sm:block" />一起为 DSE Speaking 做准备。
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <Link href="/register">
-              <Button className="h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-4">
+            <Link href="/register" className="w-full sm:w-auto">
+              <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
                 免费注册
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/rooms">
+            <Link href="/rooms" className="w-full sm:w-auto">
               <Button
                 variant="outline"
-                className="h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
+                className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
               >
                 浏览房间
               </Button>
@@ -319,14 +319,14 @@ export default function HomePage() {
                 Built for DSE candidates
               </span>
             </div>
-            <div className="flex items-center gap-6">
-              <Link href="/rooms" className="text-[12px] text-neutral-400 hover:text-neutral-600 transition-colors">
+            <div className="flex items-center gap-1 sm:gap-3">
+              <Link href="/rooms" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
                 Rooms
               </Link>
-              <Link href="/login" className="text-[12px] text-neutral-400 hover:text-neutral-600 transition-colors">
+              <Link href="/login" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
                 Login
               </Link>
-              <Link href="/register" className="text-[12px] text-neutral-400 hover:text-neutral-600 transition-colors">
+              <Link href="/register" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
                 Register
               </Link>
             </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { useCountdown } from "@/hooks/use-countdown";
 import { PhaseIndicator } from "@/components/session/phase-indicator";
 import { TimerDisplay } from "@/components/session/timer-display";
@@ -61,6 +62,7 @@ export default function SessionPage() {
   const roomId = params.id as string;
   const router = useRouter();
   const { user } = useUser();
+  const { t } = useI18n();
   const supabase = createClient();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -467,10 +469,16 @@ export default function SessionPage() {
               </div>
               <div>
                 <p className="text-[13px] text-amber-900 font-medium">
-                  等待所有参与者开启麦克风
+                  {t(
+                    "livekit.waitingMicsTitle",
+                    "Waiting for all participants to enable microphone"
+                  )}
                 </p>
                 <p className="text-[11px] text-amber-600">
-                  所有人麦克风就绪后自动开始 3-2-1 倒数
+                  {t(
+                    "livekit.waitingMicsDesc",
+                    "A 3-2-1 countdown starts automatically when everyone is ready"
+                  )}
                 </p>
               </div>
             </div>
@@ -480,7 +488,7 @@ export default function SessionPage() {
               className="text-[12px] border-amber-300 text-amber-700 hover:bg-amber-100 h-8"
               onClick={handleManualStartDiscussion}
             >
-              跳过等待，直接开始
+              {t("livekit.startNow", "Start now")}
             </Button>
           </div>
         </div>
@@ -491,7 +499,10 @@ export default function SessionPage() {
         <div className="bg-blue-50/60 border-b border-blue-100/60">
           <div className="max-w-7xl mx-auto px-5 py-2 flex items-center justify-between">
             <p className="text-[12px] text-blue-600">
-              你正在以观众身份观看此练习。可以看到题目和听到讨论，但不能参与互动。
+              {t(
+                "session.spectatorHint",
+                "You are watching this session as an observer. You can see prompts and hear discussion, but cannot interact."
+              )}
             </p>
             <Button
               variant="ghost"
@@ -500,7 +511,7 @@ export default function SessionPage() {
               onClick={handleLeaveSpectator}
             >
               <LogOut className="mr-1 h-3 w-3" />
-              退出观看
+              {t("session.leaveWatching", "Leave viewing")}
             </Button>
           </div>
         </div>
@@ -513,7 +524,10 @@ export default function SessionPage() {
             <div className="flex items-center gap-2">
               <ClipboardCheck className="h-3.5 w-3.5 text-violet-500" />
               <p className="text-[12px] text-violet-600">
-                Marker 模式 — 你可以评分并选择 Individual Response 问题
+                {t(
+                  "session.markerMode",
+                  "Marker mode — you can score and choose Individual Response questions"
+                )}
               </p>
             </div>
             <Button
@@ -775,7 +789,7 @@ export default function SessionPage() {
                               )}
                               {hasMarker && (
                                 <span className="text-[10px] text-violet-400 ml-auto">
-                                  selected by Marker
+                                  {t("session.selectedByMarker", "selected by Marker")}
                                 </span>
                               )}
                             </div>
@@ -800,10 +814,16 @@ export default function SessionPage() {
                         <div className="px-5 py-8 text-center">
                           <ClipboardCheck className="h-6 w-6 text-violet-300 mx-auto mb-2" />
                           <p className="text-[14px] text-neutral-500 font-medium">
-                            Waiting for Marker to select a question...
+                            {t(
+                              "session.waitingMarkerQuestion",
+                              "Waiting for Marker to select a question..."
+                            )}
                           </p>
                           <p className="text-[12px] text-neutral-400 mt-1">
-                            Marker 正在为当前候选人选择问题
+                            {t(
+                              "session.markerSelectingQuestion",
+                              "Marker is selecting a question for the current candidate"
+                            )}
                           </p>
                         </div>
                       ) : null}

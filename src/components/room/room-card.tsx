@@ -117,7 +117,7 @@ export function RoomCard({ room }: RoomCardProps) {
 
   return (
     <div
-      className="group relative bg-white rounded-2xl border border-neutral-100 p-5 hover:border-neutral-200 hover:shadow-lg hover:shadow-neutral-100/80 transition-all duration-300 cursor-pointer"
+      className="group relative bg-white rounded-2xl border border-neutral-100 p-4 sm:p-5 hover:border-neutral-200 hover:shadow-lg hover:shadow-neutral-100/80 transition-all duration-300 cursor-pointer active:scale-[0.995]"
       onClick={handleJoin}
     >
       {/* Status badge */}
@@ -141,7 +141,7 @@ export function RoomCard({ room }: RoomCardProps) {
       </div>
 
       {/* Title */}
-      <h3 className="font-serif text-[18px] font-semibold text-neutral-900 tracking-tight mb-2 group-hover:text-neutral-700 transition-colors truncate">
+      <h3 className="font-serif text-[19px] sm:text-[18px] font-semibold text-neutral-900 tracking-tight mb-2 group-hover:text-neutral-700 transition-colors truncate">
         {room.name}
       </h3>
 
@@ -164,13 +164,13 @@ export function RoomCard({ room }: RoomCardProps) {
       )}
 
       {/* Host */}
-      <div className="flex items-center gap-2 mb-5">
-        <Avatar className="h-6 w-6">
+      <div className="flex items-center gap-2.5 mb-5">
+        <Avatar className="h-7 w-7">
           <AvatarFallback className="text-[10px] bg-neutral-900 text-white font-medium">
             {room.host?.display_name?.slice(0, 1)?.toUpperCase() || "?"}
           </AvatarFallback>
         </Avatar>
-        <span className="text-[13px] text-neutral-500">
+        <span className="text-[13px] sm:text-[13px] text-neutral-500">
           {room.host?.display_name || "Unknown"}
         </span>
         {isHost && (
@@ -181,14 +181,14 @@ export function RoomCard({ room }: RoomCardProps) {
       </div>
 
       {/* Members bar */}
-      <div className="flex items-center justify-between pt-4 border-t border-neutral-50">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-neutral-50">
         <div className="flex items-center gap-3">
           {/* Stacked avatars */}
           <div className="flex items-center -space-x-2">
             {participants.slice(0, 4).map((member, i) => (
               <Avatar
                 key={member.id}
-                className="h-7 w-7 border-2 border-white"
+                className="h-8 w-8 border-2 border-white"
                 style={{ zIndex: 4 - i }}
               >
                 <AvatarFallback className="text-[9px] bg-neutral-200 text-neutral-600 font-medium">
@@ -200,7 +200,7 @@ export function RoomCard({ room }: RoomCardProps) {
             ))}
             {participantCount < room.max_members && room.status === "waiting" && (
               <div
-                className="h-7 w-7 rounded-full border-2 border-white bg-neutral-50 flex items-center justify-center border-dashed border-neutral-200"
+                className="h-8 w-8 rounded-full border-2 border-white bg-neutral-50 flex items-center justify-center border-dashed border-neutral-200"
                 style={{ zIndex: 0 }}
               >
                 <Users className="h-3 w-3 text-neutral-300" />
@@ -208,7 +208,7 @@ export function RoomCard({ room }: RoomCardProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-neutral-400 tabular-nums">
+            <span className="text-[13px] text-neutral-400 tabular-nums">
               {participantCount}/{room.max_members}
             </span>
             {hasMarker && (
@@ -227,7 +227,7 @@ export function RoomCard({ room }: RoomCardProps) {
 
         <Button
           size="sm"
-          className={`text-[12px] h-8 rounded-full px-4 transition-all ${
+          className={`w-full sm:w-auto text-[13px] min-h-11 rounded-full px-5 transition-all ${
             isMember || isHost
               ? "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 shadow-none"
               : isInSession

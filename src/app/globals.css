@@ -123,6 +123,21 @@
   }
   body {
     @apply bg-background text-foreground;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  button,
+  [role="button"],
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -189,6 +204,41 @@
 }
 .animate-ticker {
   animation: ticker 30s linear infinite;
+}
+
+@media (max-width: 640px) {
+  .animate-float {
+    animation: none;
+  }
+
+  .animate-ticker {
+    animation-duration: 45s;
+  }
+
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in,
+  .animate-slide-left,
+  .animate-float,
+  .animate-shimmer,
+  .animate-gradient,
+  .animate-ticker {
+    animation: none !important;
+  }
+
+  .hover-lift,
+  .hover-lift:hover {
+    transition: none;
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 /* Stagger delays */

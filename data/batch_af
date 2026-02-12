@@ -1,0 +1,14 @@
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2025/page-20.webp'] WHERE id = '04204f8d-4eba-479c-84c4-a0abb50fc885';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2025/page-21.webp'] WHERE id = '91f5c522-ffa4-418b-b6b7-3c65e534b2bb';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2025/page-22.webp'] WHERE id = '005fc865-ab2b-430b-adee-ab18758c2df6';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2025/page-23.webp'] WHERE id = '35db1470-ebb4-438c-ba9c-7b01d518cf18';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2025/page-24.webp'] WHERE id = '48e4388d-8c0e-42a1-b7b0-1db59a13b3ae';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-practice/page-01.webp'] WHERE id = 'c2440b10-ce63-4d8a-a232-6406605aa1b9';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-practice/page-02.webp'] WHERE id = 'eac0f07d-29be-40a1-9d60-18e9316e93bc';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-practice/page-03.webp'] WHERE id = '07e38302-b513-4958-b66a-6415d71322a9';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-sample/page-01.webp'] WHERE id = '34888c7a-ad5e-417b-ada3-f10ffbd3e8ed';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-sample/page-02.webp'] WHERE id = '8504f75d-7ee4-43d5-8c9e-3a445fb48115';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2012-sample/page-03.webp'] WHERE id = '11cd2b85-d604-4df7-be8f-353014720f92';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2024/page-01.webp'] WHERE id = '9a863166-5148-4af0-96f6-3e98167b3315';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2024/page-02.webp'] WHERE id = 'b4ade950-14ef-470f-a0c4-a851256ca5b3';
+UPDATE pastpaper_papers SET page_images = ARRAY[E'/paper-images/2024/page-03.webp'] WHERE id = 'ab90292c-88b5-437a-aa19-22ded4922565';

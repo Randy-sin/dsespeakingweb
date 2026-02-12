@@ -7,6 +7,7 @@ import {
 } from "@livekit/components-react";
 import { RoomEvent } from "livekit-client";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Mic, MicOff, Video, VideoOff, Eye } from "lucide-react";
 import type { RoomStatus } from "@/lib/supabase/types";
 
@@ -38,6 +39,7 @@ export function MediaControls({
   expectedParticipantCount = 0,
   onAllMicsReady,
 }: MediaControlsProps) {
+  const { t } = useI18n();
   const room = useRoomContext();
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
     useLocalParticipant();
@@ -80,10 +82,12 @@ export function MediaControls({
 
     const localMicOn = localParticipant.isMicrophoneEnabled;
 
-    // Filter remote participants: exclude spectators (prefixed with [观众])
+    // Filter remote participants: exclude observers (prefixed with [观众] or [Marker])
     const remoteNonSpectators = Array.from(
       room.remoteParticipants.values()
-    ).filter((p) => !p.name?.includes("[观众]"));
+    ).filter(
+      (p) => !p.name?.includes("[观众]") && !p.name?.includes("[Marker]")
+    );
 
     const remoteMicsOn = remoteNonSpectators.filter(
       (p) => p.isMicrophoneEnabled
@@ -154,7 +158,9 @@ export function MediaControls({
     return (
       <div className="flex items-center justify-center gap-1.5">
         <Eye className="h-3.5 w-3.5 text-neutral-400" />
-        <span className="text-[11px] text-neutral-400">观看模式</span>
+        <span className="text-[11px] text-neutral-400">
+          {t("livekit.watchMode", "View-only mode")}
+        </span>
         <div className="flex items-center gap-1 ml-2">
           <div
             className={`w-1.5 h-1.5 rounded-full ${
@@ -162,7 +168,9 @@ export function MediaControls({
             }`}
           />
           <span className="text-[11px] text-neutral-400">
-            {connected ? "Connected" : "Connecting..."}
+            {connected
+              ? t("common.connected", "Connected")
+              : t("common.connecting", "Connecting...")}
           </span>
         </div>
       </div>
@@ -191,7 +199,8 @@ export function MediaControls({
       {waitingForMics && (
         <div className="text-center py-1">
           <p className="text-[12px] text-amber-600 font-medium">
-            等待开启麦克风 {micReadyCount}/{expectedParticipantCount}
+            {t("livekit.micWaiting", "Waiting for microphones")}{" "}
+            {micReadyCount}/{expectedParticipantCount}
           </p>
         </div>
       )}
@@ -238,7 +247,9 @@ export function MediaControls({
             }`}
           />
           <span className="text-[11px] text-neutral-400">
-            {connected ? "Connected" : "Connecting..."}
+            {connected
+              ? t("common.connected", "Connected")
+              : t("common.connecting", "Connecting...")}
           </span>
         </div>
       </div>

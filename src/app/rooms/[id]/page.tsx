@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
+import { useI18n } from "@/components/providers/i18n-provider";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -33,6 +34,7 @@ export default function WaitingRoomPage() {
   const roomId = params.id as string;
   const router = useRouter();
   const { user } = useUser();
+  const { t, locale } = useI18n();
   const supabase = createClient();
 
   const [room, setRoom] = useState<Room | null>(null);
@@ -122,6 +124,11 @@ export default function WaitingRoomPage() {
     room?.status === "discussing" ||
     room?.status === "individual";
   const isFull = memberCount >= (room?.max_members ?? 4);
+  const roleLabels: Record<RoleType, string> = {
+    participant: locale === "zh-Hant" ? "參與者" : "Participant",
+    spectator: locale === "zh-Hant" ? "觀眾" : "Spectator",
+    marker: "Marker",
+  };
 
   // ---- Role switching / joining ----
   const handleSelectRole = async (role: RoleType) => {
@@ -141,17 +148,29 @@ export default function WaitingRoomPage() {
 
       // Validation
       if (role === "participant" && isInSession) {
-        toast.error("练习已开始，无法加入为参与者");
+        toast.error(
+          locale === "zh-Hant"
+            ? "練習已開始，無法加入為參與者"
+            : "Session already started, cannot join as participant"
+        );
         setSwitching(false);
         return;
       }
       if (role === "participant" && !isMember && isFull) {
-        toast.error("参与者席位已满");
+        toast.error(
+          locale === "zh-Hant"
+            ? "參與者席位已滿"
+            : "Participant seats are full"
+        );
         setSwitching(false);
         return;
       }
       if (role === "participant" && isMember && myRole !== "participant" && isFull) {
-        toast.error("参与者席位已满");
+        toast.error(
+          locale === "zh-Hant"
+            ? "參與者席位已滿"
+            : "Participant seats are full"
+        );
         setSwitching(false);
         return;
       }
@@ -176,12 +195,11 @@ export default function WaitingRoomPage() {
         if (error) {
           toast.error("切换角色失败");
         } else {
-          const labels: Record<RoleType, string> = {
-            participant: "参与者",
-            spectator: "观众",
-            marker: "Marker",
-          };
-          toast.success(`已切换为${labels[role]}`);
+          toast.success(
+            locale === "zh-Hant"
+              ? `已切換為${roleLabels[role]}`
+              : `Switched to ${roleLabels[role]}`
+          );
           // If switching to spectator/marker and room is in session, go to session
           if ((role === "spectator" || role === "marker") && isInSession) {
             router.push(`/rooms/${roomId}/session`);
@@ -195,12 +213,11 @@ export default function WaitingRoomPage() {
         if (error) {
           toast.error("加入失败");
         } else {
-          const labels: Record<RoleType, string> = {
-            participant: "参与者",
-            spectator: "观众",
-            marker: "Marker",
-          };
-          toast.success(`以${labels[role]}身份加入`);
+          toast.success(
+            locale === "zh-Hant"
+              ? `以${roleLabels[role]}身份加入`
+              : `Joined as ${roleLabels[role]}`
+          );
           if ((role === "spectator" || role === "marker") && isInSession) {
             router.push(`/rooms/${roomId}/session`);
           }
@@ -356,15 +373,21 @@ export default function WaitingRoomPage() {
   }[] = [
     {
       role: "participant",
-      label: "参与者",
+      label: roleLabels.participant,
       icon: <Users className="h-3.5 w-3.5" />,
       count: `${memberCount}/${room.max_members}`,
       disabled: (isInSession && myRole !== "participant") || (!isMember && isFull && !isInSession),
-      disabledReason: isInSession ? "练习中" : "已满",
+      disabledReason: isInSession
+        ? locale === "zh-Hant"
+          ? "練習中"
+          : "In session"
+        : locale === "zh-Hant"
+        ? "已滿"
+        : "Full",
     },
     {
       role: "spectator",
-      label: "观众",
+      label: roleLabels.spectator,
       icon: <Eye className="h-3.5 w-3.5" />,
       count: `${spectators.length}`,
       disabled: false,
@@ -375,7 +398,7 @@ export default function WaitingRoomPage() {
       icon: <ClipboardCheck className="h-3.5 w-3.5" />,
       count: hasMarker ? "1/1" : "0/1",
       disabled: hasMarker && markerMember?.user_id !== user?.id,
-      disabledReason: "已占用",
+      disabledReason: locale === "zh-Hant" ? "已佔用" : "Occupied",
     },
   ];
 
@@ -580,7 +603,7 @@ export default function WaitingRoomPage() {
                         {markerMember.profiles?.display_name || "Marker"}
                       </p>
                       <p className="text-[12px] text-violet-500">
-                        评分员
+                        {locale === "zh-Hant" ? "評分員" : "Marker"}
                         {markerMember.user_id === room.host_id && " · 房主"}
                       </p>
                     </div>
@@ -591,7 +614,11 @@ export default function WaitingRoomPage() {
                     <div className="w-9 h-9 rounded-full border border-dashed border-violet-200 flex items-center justify-center">
                       <ClipboardCheck className="h-4 w-4 text-violet-300" />
                     </div>
-                    <span className="text-[13px]">等待 Marker 加入</span>
+                    <span className="text-[13px]">
+                      {locale === "zh-Hant"
+                        ? "等待 Marker 加入"
+                        : "Waiting for Marker to join"}
+                    </span>
                   </div>
                 )}
               </div>
@@ -601,7 +628,11 @@ export default function WaitingRoomPage() {
             {spectators.length > 0 && (
               <div className="flex items-center gap-2 text-[12px] text-neutral-400">
                 <Eye className="h-3.5 w-3.5" />
-                <span>{spectators.length} 位观众</span>
+                <span>
+                  {locale === "zh-Hant"
+                    ? `${spectators.length} 位觀眾`
+                    : `${spectators.length} spectator(s)`}
+                </span>
               </div>
             )}
 
@@ -655,7 +686,13 @@ export default function WaitingRoomPage() {
                     </Button>
                   ) : (
                     <p className="text-[13px] text-neutral-400 py-2">
-                      {myRole === "marker" ? "等待参与者准备就绪后自动开始" : "等待练习开始..."}
+                      {myRole === "marker"
+                        ? locale === "zh-Hant"
+                          ? "等待參與者準備就緒後自動開始"
+                          : "Waiting for participants to get ready..."
+                        : locale === "zh-Hant"
+                        ? "等待練習開始..."
+                        : "Waiting for session to start..."}
                     </p>
                   )}
                   <Button
@@ -669,7 +706,9 @@ export default function WaitingRoomPage() {
                 </>
               ) : (
                 <p className="text-[13px] text-neutral-400 py-2">
-                  选择上方角色加入房间
+                  {locale === "zh-Hant"
+                    ? "選擇上方角色加入房間"
+                    : "Choose a role above to join"}
                 </p>
               )}
             </div>

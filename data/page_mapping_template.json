@@ -1,0 +1,441 @@
+[
+  {
+    "pdf_key": "2012-practice",
+    "total_images": 4,
+    "images": [
+      "2012-practice/page-01.webp",
+      "2012-practice/page-02.webp",
+      "2012-practice/page-03.webp",
+      "2012-practice/page-04.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2012-sample",
+    "total_images": 4,
+    "images": [
+      "2012-sample/page-01.webp",
+      "2012-sample/page-02.webp",
+      "2012-sample/page-03.webp",
+      "2012-sample/page-04.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2012",
+    "total_images": 24,
+    "images": [
+      "2012/page-01.webp",
+      "2012/page-02.webp",
+      "2012/page-03.webp",
+      "2012/page-04.webp",
+      "2012/page-05.webp",
+      "2012/page-06.webp",
+      "2012/page-07.webp",
+      "2012/page-08.webp",
+      "2012/page-09.webp",
+      "2012/page-10.webp",
+      "2012/page-11.webp",
+      "2012/page-12.webp",
+      "2012/page-13.webp",
+      "2012/page-14.webp",
+      "2012/page-15.webp",
+      "2012/page-16.webp",
+      "2012/page-17.webp",
+      "2012/page-18.webp",
+      "2012/page-19.webp",
+      "2012/page-20.webp",
+      "2012/page-21.webp",
+      "2012/page-22.webp",
+      "2012/page-23.webp",
+      "2012/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2013",
+    "total_images": 30,
+    "images": [
+      "2013/page-01.webp",
+      "2013/page-02.webp",
+      "2013/page-03.webp",
+      "2013/page-04.webp",
+      "2013/page-05.webp",
+      "2013/page-06.webp",
+      "2013/page-07.webp",
+      "2013/page-08.webp",
+      "2013/page-09.webp",
+      "2013/page-10.webp",
+      "2013/page-11.webp",
+      "2013/page-12.webp",
+      "2013/page-13.webp",
+      "2013/page-14.webp",
+      "2013/page-15.webp",
+      "2013/page-16.webp",
+      "2013/page-17.webp",
+      "2013/page-18.webp",
+      "2013/page-19.webp",
+      "2013/page-20.webp",
+      "2013/page-21.webp",
+      "2013/page-22.webp",
+      "2013/page-23.webp",
+      "2013/page-24.webp",
+      "2013/page-25.webp",
+      "2013/page-26.webp",
+      "2013/page-27.webp",
+      "2013/page-28.webp",
+      "2013/page-29.webp",
+      "2013/page-30.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2014",
+    "total_images": 30,
+    "images": [
+      "2014/page-01.webp",
+      "2014/page-02.webp",
+      "2014/page-03.webp",
+      "2014/page-04.webp",
+      "2014/page-05.webp",
+      "2014/page-06.webp",
+      "2014/page-07.webp",
+      "2014/page-08.webp",
+      "2014/page-09.webp",
+      "2014/page-10.webp",
+      "2014/page-11.webp",
+      "2014/page-12.webp",
+      "2014/page-13.webp",
+      "2014/page-14.webp",
+      "2014/page-15.webp",
+      "2014/page-16.webp",
+      "2014/page-17.webp",
+      "2014/page-18.webp",
+      "2014/page-19.webp",
+      "2014/page-20.webp",
+      "2014/page-21.webp",
+      "2014/page-22.webp",
+      "2014/page-23.webp",
+      "2014/page-24.webp",
+      "2014/page-25.webp",
+      "2014/page-26.webp",
+      "2014/page-27.webp",
+      "2014/page-28.webp",
+      "2014/page-29.webp",
+      "2014/page-30.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2015",
+    "total_images": 27,
+    "images": [
+      "2015/page-01.webp",
+      "2015/page-02.webp",
+      "2015/page-03.webp",
+      "2015/page-04.webp",
+      "2015/page-05.webp",
+      "2015/page-06.webp",
+      "2015/page-07.webp",
+      "2015/page-08.webp",
+      "2015/page-09.webp",
+      "2015/page-10.webp",
+      "2015/page-11.webp",
+      "2015/page-12.webp",
+      "2015/page-13.webp",
+      "2015/page-14.webp",
+      "2015/page-15.webp",
+      "2015/page-16.webp",
+      "2015/page-17.webp",
+      "2015/page-18.webp",
+      "2015/page-19.webp",
+      "2015/page-20.webp",
+      "2015/page-21.webp",
+      "2015/page-22.webp",
+      "2015/page-23.webp",
+      "2015/page-24.webp",
+      "2015/page-25.webp",
+      "2015/page-26.webp",
+      "2015/page-27.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2016",
+    "total_images": 28,
+    "images": [
+      "2016/page-01.webp",
+      "2016/page-02.webp",
+      "2016/page-03.webp",
+      "2016/page-04.webp",
+      "2016/page-05.webp",
+      "2016/page-06.webp",
+      "2016/page-07.webp",
+      "2016/page-08.webp",
+      "2016/page-09.webp",
+      "2016/page-10.webp",
+      "2016/page-11.webp",
+      "2016/page-12.webp",
+      "2016/page-13.webp",
+      "2016/page-14.webp",
+      "2016/page-15.webp",
+      "2016/page-16.webp",
+      "2016/page-17.webp",
+      "2016/page-18.webp",
+      "2016/page-19.webp",
+      "2016/page-20.webp",
+      "2016/page-21.webp",
+      "2016/page-22.webp",
+      "2016/page-23.webp",
+      "2016/page-24.webp",
+      "2016/page-25.webp",
+      "2016/page-26.webp",
+      "2016/page-27.webp",
+      "2016/page-28.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2017",
+    "total_images": 24,
+    "images": [
+      "2017/page-01.webp",
+      "2017/page-02.webp",
+      "2017/page-03.webp",
+      "2017/page-04.webp",
+      "2017/page-05.webp",
+      "2017/page-06.webp",
+      "2017/page-07.webp",
+      "2017/page-08.webp",
+      "2017/page-09.webp",
+      "2017/page-10.webp",
+      "2017/page-11.webp",
+      "2017/page-12.webp",
+      "2017/page-13.webp",
+      "2017/page-14.webp",
+      "2017/page-15.webp",
+      "2017/page-16.webp",
+      "2017/page-17.webp",
+      "2017/page-18.webp",
+      "2017/page-19.webp",
+      "2017/page-20.webp",
+      "2017/page-21.webp",
+      "2017/page-22.webp",
+      "2017/page-23.webp",
+      "2017/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2018",
+    "total_images": 24,
+    "images": [
+      "2018/page-01.webp",
+      "2018/page-02.webp",
+      "2018/page-03.webp",
+      "2018/page-04.webp",
+      "2018/page-05.webp",
+      "2018/page-06.webp",
+      "2018/page-07.webp",
+      "2018/page-08.webp",
+      "2018/page-09.webp",
+      "2018/page-10.webp",
+      "2018/page-11.webp",
+      "2018/page-12.webp",
+      "2018/page-13.webp",
+      "2018/page-14.webp",
+      "2018/page-15.webp",
+      "2018/page-16.webp",
+      "2018/page-17.webp",
+      "2018/page-18.webp",
+      "2018/page-19.webp",
+      "2018/page-20.webp",
+      "2018/page-21.webp",
+      "2018/page-22.webp",
+      "2018/page-23.webp",
+      "2018/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2019",
+    "total_images": 24,
+    "images": [
+      "2019/page-01.webp",
+      "2019/page-02.webp",
+      "2019/page-03.webp",
+      "2019/page-04.webp",
+      "2019/page-05.webp",
+      "2019/page-06.webp",
+      "2019/page-07.webp",
+      "2019/page-08.webp",
+      "2019/page-09.webp",
+      "2019/page-10.webp",
+      "2019/page-11.webp",
+      "2019/page-12.webp",
+      "2019/page-13.webp",
+      "2019/page-14.webp",
+      "2019/page-15.webp",
+      "2019/page-16.webp",
+      "2019/page-17.webp",
+      "2019/page-18.webp",
+      "2019/page-19.webp",
+      "2019/page-20.webp",
+      "2019/page-21.webp",
+      "2019/page-22.webp",
+      "2019/page-23.webp",
+      "2019/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2023",
+    "total_images": 24,
+    "images": [
+      "2023/page-01.webp",
+      "2023/page-02.webp",
+      "2023/page-03.webp",
+      "2023/page-04.webp",
+      "2023/page-05.webp",
+      "2023/page-06.webp",
+      "2023/page-07.webp",
+      "2023/page-08.webp",
+      "2023/page-09.webp",
+      "2023/page-10.webp",
+      "2023/page-11.webp",
+      "2023/page-12.webp",
+      "2023/page-13.webp",
+      "2023/page-14.webp",
+      "2023/page-15.webp",
+      "2023/page-16.webp",
+      "2023/page-17.webp",
+      "2023/page-18.webp",
+      "2023/page-19.webp",
+      "2023/page-20.webp",
+      "2023/page-21.webp",
+      "2023/page-22.webp",
+      "2023/page-23.webp",
+      "2023/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2024",
+    "total_images": 3,
+    "images": [
+      "2024/page-01.webp",
+      "2024/page-02.webp",
+      "2024/page-03.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  },
+  {
+    "pdf_key": "2025",
+    "total_images": 24,
+    "images": [
+      "2025/page-01.webp",
+      "2025/page-02.webp",
+      "2025/page-03.webp",
+      "2025/page-04.webp",
+      "2025/page-05.webp",
+      "2025/page-06.webp",
+      "2025/page-07.webp",
+      "2025/page-08.webp",
+      "2025/page-09.webp",
+      "2025/page-10.webp",
+      "2025/page-11.webp",
+      "2025/page-12.webp",
+      "2025/page-13.webp",
+      "2025/page-14.webp",
+      "2025/page-15.webp",
+      "2025/page-16.webp",
+      "2025/page-17.webp",
+      "2025/page-18.webp",
+      "2025/page-19.webp",
+      "2025/page-20.webp",
+      "2025/page-21.webp",
+      "2025/page-22.webp",
+      "2025/page-23.webp",
+      "2025/page-24.webp"
+    ],
+    "papers": [
+      {
+        "paper_id": "FILL_IN",
+        "image_indices": "FILL_IN e.g. [1, 2]",
+        "comment": ""
+      }
+    ]
+  }
+]
