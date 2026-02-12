@@ -73,6 +73,7 @@ export function LiveKitSession({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
   const hasAttemptedConnect = useRef(false);
+  const [canAccessMediaDevices, setCanAccessMediaDevices] = useState(true);
 
   useEffect(() => {
     import("@livekit/components-react")
@@ -93,6 +94,18 @@ export function LiveKitSession({
       })
       .catch(() => {});
 
+  }, []);
+
+  useEffect(() => {
+    // getUserMedia requires secure context in most browsers.
+    const checkSecureContext = () => {
+      if (typeof window === "undefined") return;
+      const host = window.location.hostname;
+      const isLocalhost =
+        host === "localhost" || host === "127.0.0.1" || host === "::1";
+      setCanAccessMediaDevices(window.isSecureContext || isLocalhost);
+    };
+    checkSecureContext();
   }, []);
 
   useEffect(() => {
@@ -305,9 +318,17 @@ export function LiveKitSession({
               ? false
               : isMarker
                 ? false
-                : preJoinMicOn
+                : canAccessMediaDevices
+                  ? preJoinMicOn
+                  : false
           }
-          video={isSpectator || isMarker ? false : preJoinCamOn}
+          video={
+            isSpectator || isMarker
+              ? false
+              : canAccessMediaDevices
+                ? preJoinCamOn
+                : false
+          }
           options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
@@ -394,6 +415,7 @@ export function LiveKitSession({
                 isMarker={isMarker}
                 userId={user?.id}
                 connected={connected}
+                canAccessMediaDevices={canAccessMediaDevices}
                 waitingForMics={waitingForMics}
                 expectedParticipantCount={expectedParticipantCount}
                 onAllMicsReady={onAllMicsReady}
@@ -434,6 +456,14 @@ export function LiveKitSession({
             {t(
               "livekit.preparingHint",
               "Set your microphone and camera before discussion starts"
+            )}
+          </p>
+        )}
+        {!canAccessMediaDevices && !isSpectator && (
+          <p className="text-[12px] text-amber-600 mb-3 px-2">
+            {t(
+              "livekit.secureContextHint",
+              "Microphone/camera require HTTPS or localhost. Open this site via https://... or http://localhost:3000."
             )}
           </p>
         )}

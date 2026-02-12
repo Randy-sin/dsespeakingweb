@@ -18,6 +18,7 @@ interface MediaControlsProps {
   isMarker?: boolean;
   userId?: string;
   connected: boolean;
+  canAccessMediaDevices?: boolean;
   /** Whether we're waiting for all mics before starting discussion */
   waitingForMics?: boolean;
   /** Number of expected participants (non-spectator) */
@@ -37,6 +38,7 @@ export function MediaControls({
   isMarker = false,
   userId,
   connected,
+  canAccessMediaDevices = true,
   waitingForMics = false,
   expectedParticipantCount = 0,
   onAllMicsReady,
@@ -74,6 +76,12 @@ export function MediaControls({
 
     if (roomStatus === prevRoomStatus.current) return;
     prevRoomStatus.current = roomStatus;
+
+    if (!canAccessMediaDevices) {
+      localParticipant.setMicrophoneEnabled(false);
+      localParticipant.setCameraEnabled(false);
+      return;
+    }
 
     if (isSpectator) {
       localParticipant.setMicrophoneEnabled(false);
@@ -117,6 +125,7 @@ export function MediaControls({
     isMarker,
     localParticipant,
     connected,
+    canAccessMediaDevices,
   ]);
 
   // Check all participants' mic status using LiveKit room events
@@ -227,6 +236,7 @@ export function MediaControls({
   }
 
   const handleToggleMic = async () => {
+    if (!canAccessMediaDevices) return;
     if (isSpectator) return;
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
@@ -236,6 +246,7 @@ export function MediaControls({
   };
 
   const handleToggleCam = async () => {
+    if (!canAccessMediaDevices) return;
     try {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
@@ -261,6 +272,7 @@ export function MediaControls({
           size="sm"
           onClick={handleToggleMic}
           disabled={
+            !canAccessMediaDevices ||
             (isMarker && roomStatus === "discussing") ||
             (isSpectator && roomStatus !== "free_discussion")
           }
@@ -284,7 +296,7 @@ export function MediaControls({
           variant={isCameraEnabled ? "default" : "outline"}
           size="sm"
           onClick={handleToggleCam}
-          disabled={isMarker || isSpectator}
+          disabled={isMarker || isSpectator || !canAccessMediaDevices}
           className={`h-10 w-10 p-0 ${
             isCameraEnabled
               ? "bg-neutral-900 hover:bg-neutral-800 shadow-sm"
@@ -326,6 +338,14 @@ export function MediaControls({
           {isCameraEnabled ? t("livekit.camOn", "Camera on") : t("livekit.camOff", "Camera off")}
         </div>
       </div>
+      {!canAccessMediaDevices && (
+        <p className="text-center text-[11px] text-amber-600">
+          {t(
+            "livekit.secureContextShort",
+            "Mic/camera unavailable on insecure HTTP. Use HTTPS or localhost."
+          )}
+        </p>
+      )}
       {isMarker && (
         <p className="text-center text-[11px] text-neutral-400">
           Marker camera is disabled. Microphone is available.
