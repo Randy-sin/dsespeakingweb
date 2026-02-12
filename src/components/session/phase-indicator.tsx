@@ -11,6 +11,8 @@ const phases = [
   { key: "preparing", label: "Prep" },
   { key: "discussing", label: "Discussion" },
   { key: "individual", label: "Individual" },
+  { key: "results", label: "Results" },
+  { key: "free_discussion", label: "Free Talk" },
   { key: "finished", label: "Done" },
 ] as const;
 

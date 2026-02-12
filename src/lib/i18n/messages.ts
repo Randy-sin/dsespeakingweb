@@ -1,6 +1,6 @@
 export type Locale = "en" | "zh-Hant";
 
-export const defaultLocale: Locale = "en";
+export const defaultLocale: Locale = "zh-Hant";
 
 export const messages = {
   en: {
@@ -161,7 +161,5 @@ export function detectBrowserLocale(): Locale {
   if (typeof window === "undefined") return defaultLocale;
   const stored = window.localStorage.getItem("app_locale");
   if (stored === "en" || stored === "zh-Hant") return stored;
-  const lang = window.navigator.language.toLowerCase();
-  if (lang.includes("zh")) return "zh-Hant";
-  return "en";
+  return defaultLocale;
 }

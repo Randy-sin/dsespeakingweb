@@ -24,11 +24,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(initial);
   }, []);
 
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = locale === "zh-Hant" ? "zh-Hant" : "en";
+    }
+  }, [locale]);
+
   const setLocale = (next: Locale) => {
     setLocaleState(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("app_locale", next);
-      document.documentElement.lang = next === "zh-Hant" ? "zh-Hant" : "en";
     }
   };
 

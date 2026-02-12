@@ -1,10 +1,9 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Check, ArrowRight, Mic } from "lucide-react";
+import { Check, Play, Mic } from "lucide-react";
 import { toast } from "sonner";
 import type { Room, Profile, RoomMember, Json } from "@/lib/supabase/types";
 
@@ -60,33 +59,40 @@ export function MarkerQuestionSelector({
     if (error) {
       console.error("Select question error:", error);
       toast.error("选择问题失败");
+      return;
     }
+
+    // Keep in selecting mode until marker confirms countdown.
+    await supabase
+      .from("rooms")
+      .update({ part_b_subphase: "selecting", part_b_countdown_end_at: null })
+      .eq("id", roomId);
   };
 
-  const handleNextSpeaker = async () => {
-    const nextIndex = currentSpeakerIndex + 1;
-    if (nextIndex < participants.length) {
-      const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
-      await supabase
-        .from("rooms")
-        .update({
-          current_phase_end_at: phaseEnd,
-          current_speaker_index: nextIndex,
-          skip_votes: [],
-        })
-        .eq("id", roomId);
-    } else {
-      await supabase
-        .from("rooms")
-        .update({
-          status: "finished",
-          current_phase_end_at: null,
-          current_speaker_index: null,
-          skip_votes: [],
-        })
-        .eq("id", roomId);
-      toast("练习完成");
+  const handleStartCountdown = async () => {
+    if (!hasSelected) {
+      toast.error("请先选择题目");
+      return;
     }
+
+    const countdownEndAt = new Date(Date.now() + 3 * 1000).toISOString();
+    const { error } = await supabase
+      .from("rooms")
+      .update({
+        part_b_subphase: "countdown",
+        part_b_countdown_end_at: countdownEndAt,
+        current_phase_end_at: null,
+      })
+      .eq("id", roomId)
+      .eq("status", "individual");
+
+    if (error) {
+      console.error("Start countdown error:", error);
+      toast.error("开始倒数失败");
+      return;
+    }
+
+    toast.success("3-2-1 倒数开始");
   };
 
   return (
@@ -191,19 +197,14 @@ export function MarkerQuestionSelector({
         })}
       </div>
 
-      {/* Next speaker button */}
+      {/* Confirm & start countdown */}
       <Button
-        onClick={handleNextSpeaker}
+        onClick={handleStartCountdown}
+        disabled={!hasSelected}
         className="w-full h-9 text-[13px] bg-violet-600 hover:bg-violet-700 text-white"
       >
-        {currentSpeakerIndex + 1 < participants.length ? (
-          <>
-            <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-            Next Speaker
-          </>
-        ) : (
-          "Finish Session"
-        )}
+        <Play className="mr-1.5 h-3.5 w-3.5" />
+        Confirm Question & Start 3-2-1
       </Button>
     </div>
   );

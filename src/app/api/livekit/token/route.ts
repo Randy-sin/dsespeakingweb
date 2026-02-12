@@ -39,7 +39,15 @@ export async function POST(req: NextRequest) {
 
     const isSpectator = member.role === "spectator";
     const isMarker = member.role === "marker";
-    const isObserver = isSpectator || isMarker; // Both are non-publishing roles
+
+    const { data: roomData } = await supabase
+      .from("rooms")
+      .select("status")
+      .eq("id", roomId)
+      .single();
+
+    const roomStatus = roomData?.status;
+    const spectatorCanPublish = isSpectator && roomStatus === "free_discussion";
 
     // Get user profile for display name
     const { data: profile } = await supabase
@@ -70,8 +78,9 @@ export async function POST(req: NextRequest) {
     at.addGrant({
       roomJoin: true,
       room: `dse-speaking-${roomId}`,
-      canPublish: !isObserver, // Spectators and Markers cannot publish
-      canSubscribe: true,      // Everyone can subscribe (receive audio/video)
+      // Candidate + Marker can publish. Spectator can only publish in free discussion.
+      canPublish: !isSpectator || spectatorCanPublish,
+      canSubscribe: true,
     });
 
     const token = await at.toJwt();
@@ -79,7 +88,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       token,
       url: process.env.NEXT_PUBLIC_LIVEKIT_URL,
-      isSpectator: isObserver, // treat marker same as spectator for LiveKit
+      isSpectator,
       isMarker,
     });
   } catch (error) {

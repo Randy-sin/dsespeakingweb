@@ -15,6 +15,7 @@ interface MediaControlsProps {
   roomStatus: RoomStatus;
   currentSpeakerUserId?: string;
   isSpectator: boolean;
+  isMarker?: boolean;
   userId?: string;
   connected: boolean;
   /** Whether we're waiting for all mics before starting discussion */
@@ -33,6 +34,7 @@ export function MediaControls({
   roomStatus,
   currentSpeakerUserId,
   isSpectator,
+  isMarker = false,
   userId,
   connected,
   waitingForMics = false,
@@ -50,10 +52,35 @@ export function MediaControls({
 
   // Auto-toggle audio/video based on room phase changes
   useEffect(() => {
-    if (isSpectator || !connected) return;
+    if (!connected) return;
 
     if (roomStatus === prevRoomStatus.current) return;
     prevRoomStatus.current = roomStatus;
+
+    if (isSpectator) {
+      if (roomStatus === "free_discussion") {
+        localParticipant.setCameraEnabled(false);
+      } else {
+        localParticipant.setMicrophoneEnabled(false);
+        localParticipant.setCameraEnabled(false);
+      }
+      return;
+    }
+
+    if (isMarker) {
+      if (roomStatus === "discussing" || roomStatus === "preparing") {
+        localParticipant.setMicrophoneEnabled(false);
+      } else if (
+        roomStatus === "individual" ||
+        roomStatus === "results" ||
+        roomStatus === "free_discussion" ||
+        roomStatus === "finished"
+      ) {
+        localParticipant.setMicrophoneEnabled(true);
+      }
+      localParticipant.setCameraEnabled(false);
+      return;
+    }
 
     if (roomStatus === "discussing" && !hasAutoEnabled.current) {
       hasAutoEnabled.current = true;
@@ -66,12 +93,19 @@ export function MediaControls({
       const isSpeaker = userId === currentSpeakerUserId;
       localParticipant.setMicrophoneEnabled(isSpeaker);
       localParticipant.setCameraEnabled(true);
+    } else if (roomStatus === "results") {
+      localParticipant.setMicrophoneEnabled(false);
+      localParticipant.setCameraEnabled(true);
+    } else if (roomStatus === "free_discussion") {
+      localParticipant.setMicrophoneEnabled(true);
+      localParticipant.setCameraEnabled(true);
     }
   }, [
     roomStatus,
     currentSpeakerUserId,
     userId,
     isSpectator,
+    isMarker,
     localParticipant,
     connected,
   ]);
@@ -154,7 +188,7 @@ export function MediaControls({
     }
   }, [waitingForMics]);
 
-  if (isSpectator) {
+  if (isSpectator && roomStatus !== "free_discussion") {
     return (
       <div className="flex items-center justify-center gap-1.5">
         <Eye className="h-3.5 w-3.5 text-neutral-400" />
@@ -178,6 +212,8 @@ export function MediaControls({
   }
 
   const handleToggleMic = async () => {
+    if (isMarker && roomStatus === "discussing") return;
+    if (isSpectator && roomStatus !== "free_discussion") return;
     try {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
@@ -210,10 +246,16 @@ export function MediaControls({
           variant={isMicrophoneEnabled ? "default" : "outline"}
           size="sm"
           onClick={handleToggleMic}
+          disabled={
+            (isMarker && roomStatus === "discussing") ||
+            (isSpectator && roomStatus !== "free_discussion")
+          }
           className={`h-8 w-8 p-0 transition-all ${
             isMicrophoneEnabled
               ? "bg-neutral-900 hover:bg-neutral-800"
-              : waitingForMics
+              : isMarker && roomStatus === "discussing"
+                ? "border-neutral-200 text-neutral-300"
+                : waitingForMics
                 ? "border-amber-300 text-amber-500 animate-pulse"
                 : "border-neutral-200 text-neutral-400"
           }`}
@@ -228,6 +270,7 @@ export function MediaControls({
           variant={isCameraEnabled ? "default" : "outline"}
           size="sm"
           onClick={handleToggleCam}
+          disabled={isMarker || isSpectator}
           className={`h-8 w-8 p-0 ${
             isCameraEnabled
               ? "bg-neutral-900 hover:bg-neutral-800"
@@ -253,6 +296,18 @@ export function MediaControls({
           </span>
         </div>
       </div>
+      {isMarker && (
+        <p className="text-center text-[11px] text-neutral-400">
+          {roomStatus === "discussing"
+            ? "Marker mic is muted during group discussion"
+            : "Marker mic is available in this phase"}
+        </p>
+      )}
+      {isSpectator && roomStatus === "free_discussion" && (
+        <p className="text-center text-[11px] text-neutral-400">
+          Free discussion mode: spectator can now use microphone.
+        </p>
+      )}
     </div>
   );
 }

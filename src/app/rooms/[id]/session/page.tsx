@@ -24,12 +24,19 @@ import {
   LogOut,
   Mic,
   ClipboardCheck,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { MarkerScoringPanel } from "@/components/session/marker-scoring-panel";
 import { MarkerQuestionSelector } from "@/components/session/marker-question-selector";
-import type { Room, Profile, RoomMember, PastPaper } from "@/lib/supabase/types";
+import type {
+  Room,
+  Profile,
+  RoomMember,
+  PastPaper,
+  MarkerScore,
+} from "@/lib/supabase/types";
 
 type MemberWithProfile = RoomMember & { profiles: Profile };
 
@@ -40,6 +47,8 @@ type PartBQuestion = {
   difficulty?: string;
   difficulty_level?: string;
 };
+
+type PartBSubphase = "selecting" | "countdown" | "answering";
 
 /** Evenly distribute N questions across P participants */
 function assignQuestions(
@@ -68,6 +77,7 @@ export default function SessionPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [allMembers, setAllMembers] = useState<MemberWithProfile[]>([]);
   const [paper, setPaper] = useState<PastPaper | null>(null);
+  const [markerScores, setMarkerScores] = useState<MarkerScore[]>([]);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
@@ -84,7 +94,7 @@ export default function SessionPage() {
   const isSpectator = myMembership?.role === "spectator";
   const isMarker = myMembership?.role === "marker";
   const hasMarker = !!markerMember;
-  const isObserver = isSpectator || isMarker; // Neither can publish or vote
+  const isObserver = isSpectator || isMarker; // Observer for room controls/votes
 
   const fetchData = useCallback(async () => {
     const { data: roomData } = await supabase
@@ -114,6 +124,13 @@ export default function SessionPage() {
     if (memberData) {
       setAllMembers(memberData as unknown as MemberWithProfile[]);
     }
+
+    const { data: scoresData } = await supabase
+      .from("marker_scores")
+      .select("*")
+      .eq("room_id", roomId);
+    setMarkerScores(scoresData ?? []);
+
     setLoading(false);
   }, [roomId, supabase]);
 
@@ -131,6 +148,11 @@ export default function SessionPage() {
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
         () => fetchData()
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "marker_scores", filter: `room_id=eq.${roomId}` },
+        () => fetchData()
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -138,6 +160,8 @@ export default function SessionPage() {
   }, [roomId, fetchData, supabase]);
 
   const { timeLeft, isExpired } = useCountdown(room?.current_phase_end_at ?? null);
+  const { timeLeft: partBCountdownLeft, isExpired: isPartBCountdownExpired } =
+    useCountdown(room?.part_b_countdown_end_at ?? null);
 
   // ---- Waiting for mics + 3-2-1 countdown logic ----
   const isWaitingForMics =
@@ -150,6 +174,14 @@ export default function SessionPage() {
     room?.current_phase_end_at &&
     timeLeft > DISCUSSION_DURATION
       ? Math.ceil(timeLeft - DISCUSSION_DURATION)
+      : null;
+
+  const partBSubphase = (room?.part_b_subphase as PartBSubphase | null) ?? null;
+  const partBCountdownNumber =
+    room?.status === "individual" &&
+    partBSubphase === "countdown" &&
+    room?.part_b_countdown_end_at
+      ? Math.max(1, Math.ceil(partBCountdownLeft))
       : null;
 
   // Reset micsReadyRef when we enter a new "waiting for mics" state
@@ -196,6 +228,47 @@ export default function SessionPage() {
     toast.success("讨论即将开始");
   }, [isObserver, room, roomId, supabase]);
 
+  // Part B: countdown(3-2-1) -> answering(60s)
+  useEffect(() => {
+    if (
+      !room ||
+      room.status !== "individual" ||
+      partBSubphase !== "countdown" ||
+      !isPartBCountdownExpired ||
+      phaseTransitionRef.current ||
+      isSpectator
+    ) {
+      return;
+    }
+
+    const startAnsweringWindow = async () => {
+      phaseTransitionRef.current = true;
+      const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
+      await supabase
+        .from("rooms")
+        .update({
+          part_b_subphase: "answering",
+          part_b_countdown_end_at: null,
+          current_phase_end_at: phaseEnd,
+        })
+        .eq("id", roomId)
+        .eq("status", "individual");
+
+      setTimeout(() => {
+        phaseTransitionRef.current = false;
+      }, 1000);
+    };
+
+    startAnsweringWindow();
+  }, [
+    room,
+    partBSubphase,
+    isPartBCountdownExpired,
+    roomId,
+    supabase,
+    isSpectator,
+  ]);
+
   // ---- Phase transition (any PARTICIPANT can trigger when timer expires) ----
   useEffect(() => {
     if (!isExpired || !room || phaseTransitionRef.current || isObserver) return;
@@ -216,7 +289,11 @@ export default function SessionPage() {
           .eq("status", "preparing");
         toast("进入讨论阶段 — 请开启麦克风");
       } else if (room.status === "discussing") {
-        const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
+        const hasMarkerInRoom =
+          allMembers.some((m) => m.role === "marker");
+        const phaseEnd = hasMarkerInRoom
+          ? null
+          : new Date(Date.now() + 1 * 60 * 1000).toISOString();
         await supabase
           .from("rooms")
           .update({
@@ -225,33 +302,49 @@ export default function SessionPage() {
             current_speaker_index: 0,
             skip_votes: [],
             marker_questions: {},
+            part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+            part_b_countdown_end_at: null,
           })
           .eq("id", roomId)
           .eq("status", "discussing");
         toast("进入个人回应阶段");
       } else if (room.status === "individual") {
+        // Only transition automatically when the current answering window is active.
+        if (partBSubphase !== "answering") {
+          phaseTransitionRef.current = false;
+          return;
+        }
+
         const nextIndex = (room.current_speaker_index ?? 0) + 1;
+        const hasMarkerInRoom =
+          allMembers.some((m) => m.role === "marker");
         if (nextIndex < participants.length) {
-          const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
+          const phaseEnd = hasMarkerInRoom
+            ? null
+            : new Date(Date.now() + 1 * 60 * 1000).toISOString();
           await supabase
             .from("rooms")
             .update({
               current_phase_end_at: phaseEnd,
               current_speaker_index: nextIndex,
               skip_votes: [],
+              part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+              part_b_countdown_end_at: null,
             })
             .eq("id", roomId);
         } else {
           await supabase
             .from("rooms")
             .update({
-              status: "finished",
+              status: "results",
               current_phase_end_at: null,
               current_speaker_index: null,
               skip_votes: [],
+              part_b_subphase: null,
+              part_b_countdown_end_at: null,
             })
             .eq("id", roomId);
-          toast("练习完成");
+          toast("进入结果公布阶段");
         }
       }
 
@@ -261,7 +354,16 @@ export default function SessionPage() {
     };
 
     transitionPhase();
-  }, [isExpired, room, participants.length, roomId, supabase, isObserver]);
+  }, [
+    isExpired,
+    room,
+    participants.length,
+    roomId,
+    supabase,
+    isObserver,
+    allMembers,
+    partBSubphase,
+  ]);
 
   // ---- Voting to skip current phase (participants only) ----
   const skipVotes = room?.skip_votes ?? [];
@@ -293,7 +395,11 @@ export default function SessionPage() {
           .eq("status", "preparing");
         toast.success("全员同意，跳过准备阶段 — 请开启麦克风");
       } else if (room.status === "discussing") {
-        const phaseEnd = new Date(Date.now() + 1 * 60 * 1000).toISOString();
+        const hasMarkerInRoom =
+          allMembers.some((m) => m.role === "marker");
+        const phaseEnd = hasMarkerInRoom
+          ? null
+          : new Date(Date.now() + 1 * 60 * 1000).toISOString();
         await supabase
           .from("rooms")
           .update({
@@ -302,6 +408,8 @@ export default function SessionPage() {
             current_speaker_index: 0,
             skip_votes: [],
             marker_questions: {},
+            part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+            part_b_countdown_end_at: null,
           })
           .eq("id", roomId)
           .eq("status", "discussing");
@@ -314,7 +422,7 @@ export default function SessionPage() {
     };
 
     executeSkip();
-  }, [allVotedSkip, room, roomId, supabase, isObserver]);
+  }, [allVotedSkip, room, roomId, supabase, isObserver, allMembers]);
 
   const handleToggleSkipVote = async () => {
     if (!user || !room || isObserver) return;
@@ -345,6 +453,36 @@ export default function SessionPage() {
       .eq("user_id", user.id);
     toast.success("已退出观看");
     router.push("/rooms");
+  };
+
+  const handleStartFreeDiscussion = async () => {
+    if (!room || isSpectator) return;
+    await supabase
+      .from("rooms")
+      .update({
+        status: "free_discussion",
+        current_phase_end_at: null,
+        part_b_subphase: null,
+        part_b_countdown_end_at: null,
+      })
+      .eq("id", roomId)
+      .eq("status", "results");
+    toast.success("进入自由讨论");
+  };
+
+  const handleFinishSession = async () => {
+    if (!room || isSpectator) return;
+    await supabase
+      .from("rooms")
+      .update({
+        status: "finished",
+        current_phase_end_at: null,
+        current_speaker_index: null,
+        part_b_subphase: null,
+        part_b_countdown_end_at: null,
+      })
+      .eq("id", roomId);
+    toast.success("会话已结束");
   };
 
   if (loading) {
@@ -390,9 +528,13 @@ export default function SessionPage() {
       : null;
 
   // Determine which question to show: marker-selected or auto-assigned
-  const displayQuestion = hasMarker
-    ? markerSelectedQuestion
-    : assignedQuestions[currentSpeakerIndex] ?? null;
+  const displayQuestion =
+    room.status === "individual" &&
+    (partBSubphase === "answering" || !hasMarker)
+      ? hasMarker
+        ? markerSelectedQuestion
+        : assignedQuestions[currentSpeakerIndex] ?? null
+      : null;
 
   // Timer display label
   const timerLabel = isWaitingForMics
@@ -403,6 +545,10 @@ export default function SessionPage() {
         ? "Discussion"
         : room.status === "individual"
           ? `Individual ${currentSpeakerIndex + 1}/${participants.length}`
+          : room.status === "results"
+            ? "Results"
+            : room.status === "free_discussion"
+              ? "Free Talk"
           : "Done";
 
   return (
@@ -420,6 +566,24 @@ export default function SessionPage() {
             </div>
             <p className="text-white/60 text-[16px] mt-6 tracking-wide">
               Discussion starts in...
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Part B 3-2-1 overlay */}
+      {partBCountdownNumber !== null && partBCountdownNumber > 0 && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div
+              key={`partb-${partBCountdownNumber}`}
+              className="text-white text-[140px] font-bold leading-none animate-bounce"
+              style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
+            >
+              {partBCountdownNumber}
+            </div>
+            <p className="text-white/70 text-[15px] mt-5 tracking-wide">
+              Part B starts in...
             </p>
           </div>
         </div>
@@ -544,6 +708,103 @@ export default function SessionPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-5 py-6">
+        {/* Results */}
+        {room.status === "results" && (
+          <div className="py-8">
+            <div className="text-center mb-8">
+              <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-2">
+                Results
+              </p>
+              <h2 className="font-serif text-[30px] font-semibold text-neutral-900 tracking-tight">
+                Marker Feedback
+              </h2>
+              <p className="text-[14px] text-neutral-500 mt-2">
+                所有人均可查看评分与评语。Marker 现在可以开麦给口头建议。
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-4">
+                {participants.map((candidate) => {
+                  const score = markerScores.find(
+                    (s) => s.candidate_id === candidate.user_id
+                  );
+                  const total =
+                    (score?.pronunciation_delivery ?? 0) +
+                    (score?.communication_strategies ?? 0) +
+                    (score?.vocabulary_language ?? 0) +
+                    (score?.ideas_organisation ?? 0);
+
+                  return (
+                    <div
+                      key={candidate.user_id}
+                      className="rounded-xl border border-neutral-200/70 p-4 bg-white"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-neutral-900 text-white text-[10px]">
+                              {candidate.profiles?.display_name
+                                ?.slice(0, 2)
+                                ?.toUpperCase() || "??"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-[14px] font-medium text-neutral-900">
+                            {candidate.profiles?.display_name || "Candidate"}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="font-mono text-[11px]">
+                          {score ? `${total}/28` : "Pending"}
+                        </Badge>
+                      </div>
+                      <div className="grid sm:grid-cols-2 gap-2 text-[12px] text-neutral-600">
+                        <div>Pronunciation: {score?.pronunciation_delivery ?? "-"}</div>
+                        <div>Communication: {score?.communication_strategies ?? "-"}</div>
+                        <div>Vocabulary: {score?.vocabulary_language ?? "-"}</div>
+                        <div>Ideas: {score?.ideas_organisation ?? "-"}</div>
+                      </div>
+                      <p className="mt-3 text-[13px] text-neutral-500 leading-relaxed">
+                        {score?.comment || "No comment yet."}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-4">
+                {isMarker && user && (
+                  <MarkerScoringPanel
+                    roomId={roomId}
+                    markerId={user.id}
+                    participants={participants}
+                  />
+                )}
+                <div className="rounded-xl border border-neutral-200/70 p-4 space-y-2">
+                  <p className="text-[12px] text-neutral-400 uppercase tracking-wide">
+                    Next Step
+                  </p>
+                  <Button
+                    className="w-full"
+                    onClick={handleStartFreeDiscussion}
+                    disabled={isSpectator}
+                  >
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Start Free Discussion
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleFinishSession}
+                    disabled={isSpectator}
+                  >
+                    End Session
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Finished */}
         {room.status === "finished" && (
           <div className="text-center py-20">
@@ -582,10 +843,21 @@ export default function SessionPage() {
         )}
 
         {/* Active */}
-        {room.status !== "finished" && (
+        {room.status !== "finished" && room.status !== "results" && (
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main */}
             <div className="lg:col-span-2 space-y-8">
+              {room.status === "free_discussion" && (
+                <div className="rounded-xl border border-emerald-200/70 bg-emerald-50/50 p-4">
+                  <p className="text-[12px] text-emerald-600 uppercase tracking-wide mb-1">
+                    Free Discussion
+                  </p>
+                  <p className="text-[14px] text-emerald-800">
+                    自由讨论阶段已开启。所有角色都可开麦交流，房间无时间限制。
+                  </p>
+                </div>
+              )}
+
               {/* Topic */}
               <div>
                 <div className="flex items-baseline justify-between mb-5">
@@ -814,16 +1086,20 @@ export default function SessionPage() {
                         <div className="px-5 py-8 text-center">
                           <ClipboardCheck className="h-6 w-6 text-violet-300 mx-auto mb-2" />
                           <p className="text-[14px] text-neutral-500 font-medium">
-                            {t(
-                              "session.waitingMarkerQuestion",
-                              "Waiting for Marker to select a question..."
-                            )}
+                            {partBSubphase === "countdown"
+                              ? "3-2-1 倒数中，题目即将显示..."
+                              : t(
+                                  "session.waitingMarkerQuestion",
+                                  "Waiting for Marker to select a question..."
+                                )}
                           </p>
                           <p className="text-[12px] text-neutral-400 mt-1">
-                            {t(
-                              "session.markerSelectingQuestion",
-                              "Marker is selecting a question for the current candidate"
-                            )}
+                            {partBSubphase === "countdown"
+                              ? "请当前考生准备回答。"
+                              : t(
+                                  "session.markerSelectingQuestion",
+                                  "Marker is selecting a question for the current candidate"
+                                )}
                           </p>
                         </div>
                       ) : null}
@@ -884,7 +1160,8 @@ export default function SessionPage() {
                     roomId={roomId}
                     roomStatus={room.status}
                     currentSpeakerUserId={currentSpeaker?.user_id}
-                    isSpectator={isObserver}
+                    isSpectator={isSpectator}
+                    isMarker={isMarker}
                     waitingForMics={isWaitingForMics}
                     expectedParticipantCount={participants.length}
                     onAllMicsReady={handleAllMicsReady}

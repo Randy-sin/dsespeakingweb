@@ -197,6 +197,8 @@ export type Database = {
       }
       rooms: {
         Row: {
+          part_b_countdown_end_at: string | null
+          part_b_subphase: string | null
           created_at: string
           current_phase_end_at: string | null
           current_speaker_index: number | null
@@ -213,6 +215,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          part_b_countdown_end_at?: string | null
+          part_b_subphase?: string | null
           created_at?: string
           current_phase_end_at?: string | null
           current_speaker_index?: number | null
@@ -229,6 +233,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          part_b_countdown_end_at?: string | null
+          part_b_subphase?: string | null
           created_at?: string
           current_phase_end_at?: string | null
           current_speaker_index?: number | null
@@ -274,6 +280,8 @@ export type Database = {
         | "preparing"
         | "discussing"
         | "individual"
+        | "results"
+        | "free_discussion"
         | "finished"
     }
     CompositeTypes: {
@@ -415,6 +423,8 @@ export const Constants = {
         "preparing",
         "discussing",
         "individual",
+        "results",
+        "free_discussion",
         "finished",
       ],
     },

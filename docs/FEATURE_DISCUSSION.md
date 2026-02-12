@@ -223,6 +223,34 @@ Spectator ──×──→ 任何人（不发送任何流）
 - Marker 的 mic 可以在 Part A 阶段由系统自动静音，Part B 阶段自动开启
 - 未来如果观众量大，可以考虑将 Candidate 的音频转为直播流（降低 WebRTC 连接数）
 
+### 设计落地流程（实施版）
+
+1. **权限建模（Token 层）**
+   - Candidate: `canPublish=true, canSubscribe=true`
+   - Marker: `canPublish=true, canSubscribe=true`（由客户端按阶段控麦）
+   - Spectator: `canPublish=false, canSubscribe=true`
+
+2. **阶段行为编排（Client 层）**
+   - Candidate：保持现有流程（讨论可发言、个人回应仅当前 speaker 发言）
+   - Marker：`preparing/discussing` 自动静音，`individual/finished` 允许开麦，始终禁用摄像头
+   - Spectator：始终无麦克风/无摄像头
+
+3. **媒体订阅策略（Bandwidth 层）**
+   - Spectator 进入房间后强制音频订阅、视频退订（audio-only）
+   - Spectator UI 不渲染视频墙，仅保留音频旁听状态
+   - Marker 保留视频观看能力（看得到 Candidate 画面）
+
+4. **界面与交互约束（UX 层）**
+   - Marker 在讨论阶段麦克风按钮置灰并给出说明
+   - Spectator 显示“旁听模式”提示，明确不可互动
+   - Candidate 保持原有操作心智，不增加额外负担
+
+5. **验收与回归（QA 层）**
+   - 角色切换后重进房间，权限保持正确
+   - Part A: Marker 无法开麦，Candidate 正常讨论
+   - Part B: Marker 可开麦提问，Spectator 仍不可发言
+   - Spectator 网络抓包可见不接收远端视频轨（仅音频轨）
+
 ---
 
 ## 6. Part B 完整流程 + 结果公布 + 自由讨论
@@ -461,6 +489,13 @@ Part B 全部完成后，进入结果公布阶段。
 - **确认房间解散规则：** 所有人离开后房间自动解散，记录归档
 - 下一步：讨论评分体系细节、UI 布局
 
+### 2026-02-12 - 第 5 项音视频权限开始实施
+
+- 已将 Marker 从“纯观察者”中拆分，允许发布音频能力（由阶段逻辑控麦）
+- 已实现 Spectator audio-only 模式：不显示视频，且客户端强制只订阅音频轨
+- 已在 Session 侧区分 `isSpectator` / `isMarker`，不再共用同一套观察者媒体逻辑
+- 当前可作为第 5 项的首版可运行基线，后续再迭代 Phase 5（自由讨论全员开麦）策略
+
 ---
 
-*最后更新：2026-02-11*
+*最后更新：2026-02-12*

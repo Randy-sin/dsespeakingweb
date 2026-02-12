@@ -31,6 +31,7 @@ interface LiveKitSessionProps {
   roomStatus: RoomStatus;
   currentSpeakerUserId?: string;
   isSpectator?: boolean;
+  isMarker?: boolean;
   /** Whether we're waiting for all mics before starting discussion timer */
   waitingForMics?: boolean;
   /** Number of expected participants (non-spectator) */
@@ -44,6 +45,7 @@ export function LiveKitSession({
   roomStatus,
   currentSpeakerUserId,
   isSpectator = false,
+  isMarker = false,
   waitingForMics = false,
   expectedParticipantCount = 0,
   onAllMicsReady,
@@ -67,7 +69,10 @@ export function LiveKitSession({
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
+  const [SpectatorAudioOnlyEnforcerComp, setSpectatorAudioOnlyEnforcerComp] =
+    useState<React.ComponentType | null>(null);
   const hasAttemptedConnect = useRef(false);
+  const refreshedForFreeDiscussion = useRef(false);
 
   useEffect(() => {
     import("@livekit/components-react")
@@ -85,6 +90,12 @@ export function LiveKitSession({
     import("./media-controls")
       .then((mod) => {
         setMediaControlsComp(() => mod.MediaControls);
+      })
+      .catch(() => {});
+
+    import("./spectator-audio-only-enforcer")
+      .then((mod) => {
+        setSpectatorAudioOnlyEnforcerComp(() => mod.SpectatorAudioOnlyEnforcer);
       })
       .catch(() => {});
   }, []);
@@ -122,30 +133,55 @@ export function LiveKitSession({
   }, [user, roomId, t]);
 
   useEffect(() => {
-    if (isSpectator) return;
+    if (isSpectator || isMarker) return;
     if (roomStatus === "preparing" && !preJoinApproved && !token) {
       setPreJoinOpen(true);
     }
-  }, [isSpectator, roomStatus, preJoinApproved, token]);
+  }, [isSpectator, isMarker, roomStatus, preJoinApproved, token]);
 
-  // Auto-connect for spectators immediately, for participants when discussing starts
+  // Auto-connect observers immediately.
+  // Participants in active phases (discussing/individual/results/free_discussion)
+  // should not be blocked by pre-join approval.
   useEffect(() => {
-    if (isSpectator && !token && !hasAttemptedConnect.current) {
+    if ((isSpectator || isMarker) && !token && !hasAttemptedConnect.current) {
       hasAttemptedConnect.current = true;
       fetchToken();
     } else if (
       !isSpectator &&
-      (roomStatus === "preparing" ||
-        roomStatus === "discussing" ||
-        roomStatus === "individual") &&
+      !isMarker &&
+      roomStatus === "preparing" &&
       preJoinApproved &&
       !token &&
       !hasAttemptedConnect.current
     ) {
       hasAttemptedConnect.current = true;
       fetchToken();
+    } else if (
+      !isSpectator &&
+      !isMarker &&
+      (roomStatus === "discussing" ||
+        roomStatus === "individual" ||
+        roomStatus === "results" ||
+        roomStatus === "free_discussion") &&
+      !token &&
+      !hasAttemptedConnect.current
+    ) {
+      hasAttemptedConnect.current = true;
+      fetchToken();
     }
-  }, [roomStatus, token, fetchToken, isSpectator, preJoinApproved]);
+  }, [roomStatus, token, fetchToken, isSpectator, isMarker, preJoinApproved]);
+
+  // Spectator needs a refreshed token to publish in free discussion.
+  useEffect(() => {
+    if (!isSpectator) return;
+    if (roomStatus !== "free_discussion") return;
+    if (refreshedForFreeDiscussion.current) return;
+
+    refreshedForFreeDiscussion.current = true;
+    hasAttemptedConnect.current = false;
+    setToken(null);
+    setUrl(null);
+  }, [isSpectator, roomStatus]);
 
   // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
   const roomOptions = useMemo(
@@ -238,48 +274,68 @@ export function LiveKitSession({
           serverUrl={url}
           token={token}
           connect={true}
-          audio={isSpectator ? false : preJoinMicOn}
-          video={isSpectator ? false : preJoinCamOn}
+          audio={
+            isSpectator
+              ? roomStatus === "free_discussion"
+              : isMarker
+                ? false
+                : preJoinMicOn
+          }
+          video={isSpectator || isMarker ? false : preJoinCamOn}
           options={roomOptions}
           onConnected={() => setConnected(true)}
           onDisconnected={() => setConnected(false)}
           style={{ height: "auto" }}
         >
+          {isSpectator &&
+            SpectatorAudioOnlyEnforcerComp &&
+            <SpectatorAudioOnlyEnforcerComp />}
           <div className="space-y-3">
             <AudioRenderer />
-            <div
-              className={`bg-neutral-950 overflow-hidden relative ${
-                expandedView
-                  ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
-                  : "rounded-lg aspect-video"
-              }`}
-            >
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
-                onClick={() => setExpandedView((v) => !v)}
+            {!isSpectator ? (
+              <div
+                className={`bg-neutral-950 overflow-hidden relative ${
+                  expandedView
+                    ? "fixed inset-4 z-50 rounded-xl shadow-2xl"
+                    : "rounded-lg aspect-video"
+                }`}
               >
-                {expandedView ? (
-                  <>
-                    <Shrink className="mr-1 h-3.5 w-3.5" />
-                    {t("livekit.shrinkVideos", "Exit expanded view")}
-                  </>
-                ) : (
-                  <>
-                    <Expand className="mr-1 h-3.5 w-3.5" />
-                    {t("livekit.expandVideos", "Expand videos")}
-                  </>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="absolute right-2 top-2 z-10 h-7 text-[11px] bg-black/50 text-white border-white/20 hover:bg-black/70"
+                  onClick={() => setExpandedView((v) => !v)}
+                >
+                  {expandedView ? (
+                    <>
+                      <Shrink className="mr-1 h-3.5 w-3.5" />
+                      {t("livekit.shrinkVideos", "Exit expanded view")}
+                    </>
+                  ) : (
+                    <>
+                      <Expand className="mr-1 h-3.5 w-3.5" />
+                      {t("livekit.expandVideos", "Expand videos")}
+                    </>
+                  )}
+                </Button>
+                <VConf />
+                {expandedView && (
+                  <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
+                    {t("livekit.fullViewTitle", "Expanded video view")}
+                  </div>
                 )}
-              </Button>
-              <VConf />
-              {expandedView && (
-                <div className="absolute left-3 top-2 z-10 rounded bg-black/50 px-2 py-1 text-[11px] text-white">
-                  {t("livekit.fullViewTitle", "Expanded video view")}
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3">
+                <p className="text-[12px] text-neutral-500">
+                  {t(
+                    "livekit.spectatorAudioOnly",
+                    "Audio-only spectator mode: listening to session discussion."
+                  )}
+                </p>
+              </div>
+            )}
           </div>
           {/* Media controls INSIDE LiveKitRoom context so hooks work */}
           <div className="mt-3">
@@ -288,6 +344,7 @@ export function LiveKitSession({
                 roomStatus={roomStatus}
                 currentSpeakerUserId={currentSpeakerUserId}
                 isSpectator={isSpectator}
+                isMarker={isMarker}
                 userId={user?.id}
                 connected={connected}
                 waitingForMics={waitingForMics}
@@ -319,13 +376,13 @@ export function LiveKitSession({
       <div className="text-center py-6">
         <Wifi className="h-5 w-5 text-neutral-300 mx-auto mb-2" />
         <p className="text-[13px] text-neutral-400 mb-1">
-          {roomStatus === "preparing" && !isSpectator
+          {roomStatus === "preparing" && !isSpectator && !isMarker
             ? t("livekit.preparingTitle", "Preparation phase")
             : isSpectator
             ? t("livekit.connectWatch", "Connect to watch")
             : t("livekit.waitConnect", "Waiting to connect")}
         </p>
-        {!isSpectator && roomStatus === "preparing" && (
+        {!isSpectator && !isMarker && roomStatus === "preparing" && (
           <p className="text-[12px] text-neutral-400 mb-3">
             {t(
               "livekit.preparingHint",
@@ -338,7 +395,7 @@ export function LiveKitSession({
           size="sm"
           className="text-[12px] text-neutral-400 hover:text-neutral-900"
           onClick={() => {
-            if (!isSpectator && roomStatus === "preparing") {
+            if (!isSpectator && !isMarker && roomStatus === "preparing") {
               setPreJoinOpen(true);
               return;
             }
