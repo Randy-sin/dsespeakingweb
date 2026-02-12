@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Navbar } from "@/components/layout/navbar";
 import { RoomCard } from "@/components/room/room-card";
@@ -17,32 +17,52 @@ type RoomWithInfo = Room & {
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<RoomWithInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
+  const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasFetchedOnce = useRef(false);
 
-  const fetchRooms = useCallback(async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("rooms")
-      .select(
-        `*, host:profiles!rooms_host_id_fkey(*), room_members(*, profiles(*))`
-      )
-      .in("status", ["waiting", "preparing", "discussing", "individual"])
-      .order("created_at", { ascending: false });
+  const fetchRooms = useCallback(
+    async (opts?: { showSpinner?: boolean }) => {
+      if (opts?.showSpinner) setRefreshing(true);
 
-    if (!error && data) {
-      setRooms(data as unknown as RoomWithInfo[]);
-    }
-    setLoading(false);
-  }, [supabase]);
+      const { data, error } = await supabase
+        .from("rooms")
+        .select(
+          `*, host:profiles!rooms_host_id_fkey(*), room_members(*, profiles(*))`
+        )
+        .in("status", ["waiting", "preparing", "discussing", "individual"])
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (!error && data) {
+        setRooms(data as unknown as RoomWithInfo[]);
+      }
+
+      if (!hasFetchedOnce.current) {
+        hasFetchedOnce.current = true;
+        setInitialLoading(false);
+      }
+      if (opts?.showSpinner) {
+        setTimeout(() => setRefreshing(false), 400);
+      }
+    },
+    [supabase]
+  );
+
+  const debouncedRealtimeFetch = useCallback(() => {
+    if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
+    realtimeDebounceRef.current = setTimeout(() => {
+      fetchRooms();
+    }, 800);
+  }, [fetchRooms]);
 
   const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchRooms();
-    setTimeout(() => setRefreshing(false), 600);
+    await fetchRooms({ showSpinner: true });
   };
 
   useEffect(() => {
@@ -52,18 +72,19 @@ export default function RoomsPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "rooms" },
-        () => fetchRooms()
+        debouncedRealtimeFetch
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members" },
-        () => fetchRooms()
+        debouncedRealtimeFetch
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
+      if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
     };
-  }, [fetchRooms, supabase]);
+  }, [fetchRooms, debouncedRealtimeFetch, supabase]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -170,14 +191,28 @@ export default function RoomsPage() {
 
       {/* Room Content */}
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 sm:py-8">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-32">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
+        {initialLoading ? (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-neutral-100 bg-white p-5 space-y-3 animate-pulse"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-neutral-100" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3.5 w-2/3 rounded bg-neutral-100" />
+                    <div className="h-2.5 w-1/3 rounded bg-neutral-50" />
+                  </div>
+                </div>
+                <div className="h-3 w-full rounded bg-neutral-50" />
+                <div className="h-3 w-4/5 rounded bg-neutral-50" />
+                <div className="flex gap-2 pt-1">
+                  <div className="h-6 w-16 rounded-full bg-neutral-100" />
+                  <div className="h-6 w-12 rounded-full bg-neutral-50" />
+                </div>
               </div>
-            </div>
-            <p className="text-[13px] text-neutral-400 mt-4">載入中...</p>
+            ))}
           </div>
         ) : filteredRooms.length === 0 ? (
           /* ── Rich Empty State ── */
