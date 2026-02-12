@@ -83,8 +83,15 @@ export default function WaitingRoomPage() {
         departed.push(m);
       }
     }
-    setDepartedMembers(departed);
-  }, [members, loading, room, user?.id]);
+    
+    // Only update if departed list actually changed
+    if (
+      departed.length !== departedMembers.length ||
+      departed.some((d) => !departedMembers.some((dm) => dm.user_id === d.user_id))
+    ) {
+      setDepartedMembers(departed);
+    }
+  }, [members, loading, room, user?.id, departedMembers]);
 
   const fetchRoom = useCallback(async () => {
     const [{ data: roomData }, { data: memberData }] = await Promise.all([
@@ -147,17 +154,31 @@ export default function WaitingRoomPage() {
 
   useEffect(() => {
     fetchRoom();
+    
+    // Throttle fetchRoom to prevent excessive calls
+    let fetchThrottle: ReturnType<typeof setTimeout> | null = null;
+    const throttledFetch = () => {
+      if (fetchThrottle) return;
+      fetchThrottle = setTimeout(() => {
+        fetchRoom();
+        fetchThrottle = null;
+      }, 300); // 300ms throttle
+    };
+    
     const channel = supabase
       .channel(`room-${roomId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
-        () => fetchRoom()
+        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+        (payload) => {
+          // Direct update for rooms - faster than fetchRoom()
+          setRoom(payload.new as Room);
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
-        () => fetchRoom()
+        throttledFetch
       )
       .subscribe();
 
@@ -179,6 +200,7 @@ export default function WaitingRoomPage() {
     return () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(nudgeChannel);
+      if (fetchThrottle) clearTimeout(fetchThrottle);
     };
   }, [roomId, fetchRoom, supabase, user?.id, room?.host_id]);
 

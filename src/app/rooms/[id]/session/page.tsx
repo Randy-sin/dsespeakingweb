@@ -128,8 +128,15 @@ export default function SessionPage() {
         departed.push(m);
       }
     }
-    setDepartedMembers(departed);
-  }, [allMembers, loading, user?.id]);
+    
+    // Only update if departed list actually changed
+    if (
+      departed.length !== departedMembers.length ||
+      departed.some((d) => !departedMembers.some((dm) => dm.user_id === d.user_id))
+    ) {
+      setDepartedMembers(departed);
+    }
+  }, [allMembers, loading, user?.id, departedMembers]);
 
   // Separate participants from spectators and marker
   const participants = allMembers.filter((m) => m.role === "participant");
@@ -200,6 +207,17 @@ export default function SessionPage() {
 
   useEffect(() => {
     fetchData();
+    
+    // Throttle fetchData to prevent excessive calls
+    let fetchThrottle: ReturnType<typeof setTimeout> | null = null;
+    const throttledFetch = () => {
+      if (fetchThrottle) return;
+      fetchThrottle = setTimeout(() => {
+        fetchData();
+        fetchThrottle = null;
+      }, 300); // 300ms throttle
+    };
+    
     const channel = supabase
       .channel(`session-${roomId}`)
       .on(
@@ -210,16 +228,17 @@ export default function SessionPage() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` },
-        () => fetchData()
+        throttledFetch
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "marker_scores", filter: `room_id=eq.${roomId}` },
-        () => fetchData()
+        throttledFetch
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
+      if (fetchThrottle) clearTimeout(fetchThrottle);
     };
   }, [roomId, fetchData, supabase]);
 
