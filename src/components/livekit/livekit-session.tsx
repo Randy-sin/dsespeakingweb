@@ -69,9 +69,15 @@ export function LiveKitSession({
     LiveKitRoom: React.ComponentType<Record<string, unknown>>;
     RoomAudioRenderer: React.ComponentType;
     VideoConference: React.ComponentType;
+    GridLayout: React.ComponentType<Record<string, unknown>>;
+    ParticipantTile: React.ComponentType<Record<string, unknown>>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useTracks: any;
   } | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [SpectatorGridComp, setSpectatorGridComp] = useState<React.ComponentType<any> | null>(null);
   const hasAttemptedConnect = useRef(false);
   const [canAccessMediaDevices, setCanAccessMediaDevices] = useState(true);
 
@@ -81,7 +87,11 @@ export function LiveKitSession({
         setLkComponents({
           LiveKitRoom: mod.LiveKitRoom as unknown as React.ComponentType<Record<string, unknown>>,
           RoomAudioRenderer: mod.RoomAudioRenderer,
-          VideoConference: mod.VideoConference,
+          VideoConference: mod.VideoConference as unknown as React.ComponentType,
+          // Also load GridLayout + ParticipantTile for spectator view
+          GridLayout: mod.GridLayout as unknown as React.ComponentType<Record<string, unknown>>,
+          ParticipantTile: mod.ParticipantTile as unknown as React.ComponentType<Record<string, unknown>>,
+          useTracks: mod.useTracks,
         });
       })
       .catch(() => {});
@@ -91,6 +101,13 @@ export function LiveKitSession({
     import("./media-controls")
       .then((mod) => {
         setMediaControlsComp(() => mod.MediaControls);
+      })
+      .catch(() => {});
+
+    // Dynamically import SpectatorGrid
+    import("./spectator-grid")
+      .then((mod) => {
+        setSpectatorGridComp(() => mod.SpectatorGrid);
       })
       .catch(() => {});
 
@@ -338,6 +355,10 @@ export function LiveKitSession({
       VideoConference: VConf,
     } = lkComponents;
 
+    // Use SpectatorGrid for observers (spectator/marker) for reliable remote track rendering
+    const isObserver = isSpectator || isMarker;
+    const VideoGrid = isObserver && SpectatorGridComp ? SpectatorGridComp : VConf;
+
     const renderMediaControls = (isCompact: boolean) =>
       MediaControlsComp ? (
         <MediaControlsComp
@@ -439,7 +460,7 @@ export function LiveKitSession({
 
               {/* Video grid — takes all remaining space */}
               <div className="flex-1 min-h-0">
-                <VConf />
+                <VideoGrid />
               </div>
 
               {/* Bottom floating control bar */}
@@ -493,7 +514,7 @@ export function LiveKitSession({
 
               {/* Video grid */}
               <div className="h-full w-full">
-                <VConf />
+                <VideoGrid />
               </div>
             </div>
           )}

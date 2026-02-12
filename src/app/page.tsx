@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mic, Users, Clock, FileText, BookOpen, MessageSquare, User } from "lucide-react";
+import { PromoVideo } from "@/components/home/promo-video";
 
 export default function HomePage() {
   return (
@@ -17,51 +18,62 @@ export default function HomePage() {
 
         <div className="relative max-w-6xl mx-auto px-5 sm:px-8">
           <div className="pt-16 sm:pt-28 pb-14 sm:pb-24">
-            {/* Badge */}
-            <div className="animate-fade-up">
-              <span className="inline-flex items-center gap-2 border border-neutral-200 rounded-full px-4 py-1.5 text-[12px] text-neutral-500 tracking-wide uppercase mb-8 bg-white/80 backdrop-blur-sm">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                DSE English Paper 4
-              </span>
-            </div>
+            {/* Two-column layout: text left, video right on desktop */}
+            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-12 xl:gap-16">
+              {/* Left column: text content */}
+              <div className="flex-1 min-w-0">
+                {/* Badge */}
+                <div className="animate-fade-up">
+                  <span className="inline-flex items-center gap-2 border border-neutral-200 rounded-full px-4 py-1.5 text-[12px] text-neutral-500 tracking-wide uppercase mb-8 bg-white/80 backdrop-blur-sm">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    DSE English Paper 4
+                  </span>
+                </div>
 
-            {/* Heading */}
-            <h1 className="animate-fade-up delay-100 font-serif text-[38px] sm:text-[72px] lg:text-[84px] leading-[0.98] sm:leading-[0.95] font-semibold text-neutral-900 tracking-tight max-w-4xl">
-              Practice speaking,
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 via-neutral-500 to-neutral-300 italic">
-                together.
-              </span>
-            </h1>
+                {/* Heading */}
+                <h1 className="animate-fade-up delay-100 font-serif text-[38px] sm:text-[64px] lg:text-[72px] leading-[0.98] sm:leading-[0.95] font-semibold text-neutral-900 tracking-tight">
+                  Practice speaking,
+                  <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 via-neutral-500 to-neutral-300 italic">
+                    together.
+                  </span>
+                </h1>
 
-            {/* Subtext */}
-            <p className="animate-fade-up delay-200 text-[15px] sm:text-[19px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-12 max-w-xl">
-              找到隊友，選擇歷年真題，完整模擬 DSE Speaking 考試。從準備閱讀、小組討論到個人回應，全流程線上練習。
-            </p>
+                {/* Subtext */}
+                <p className="animate-fade-up delay-200 text-[15px] sm:text-[18px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-10 max-w-lg">
+                  找到隊友，選擇歷年真題，完整模擬 DSE Speaking 考試。從準備閱讀、小組討論到個人回應，全流程線上練習。
+                </p>
 
-            {/* CTA */}
-            <div className="animate-fade-up delay-300 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
-              <Link href="/rooms" className="w-full sm:w-auto">
-                <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                  開始練習
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/rooms" className="w-full sm:w-auto">
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
-                >
-                  瀏覽房間
-                </Button>
-              </Link>
+                {/* CTA */}
+                <div className="animate-fade-up delay-300 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+                  <Link href="/rooms" className="w-full sm:w-auto">
+                    <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
+                      開始練習
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/rooms" className="w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
+                    >
+                      瀏覽房間
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right column: promo video (landscape) */}
+              <div className="animate-fade-up delay-300 mt-10 lg:mt-0 lg:flex-shrink-0 lg:w-[440px] xl:w-[520px]">
+                <PromoVideo />
+              </div>
             </div>
 
             {/* Quick stats */}
             <div className="animate-fade-up delay-500 grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-neutral-100">
               {[
                 { value: "228", label: "歷年真題" },
-                { value: "2012–2023", label: "年份涵蓋" },
+                { value: "2012–2025", label: "年份涵蓋" },
                 { value: "4 人", label: "小組討論" },
                 { value: "19 min", label: "完整模擬" },
               ].map((stat) => (
