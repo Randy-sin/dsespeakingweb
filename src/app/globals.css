@@ -251,7 +251,7 @@
 .delay-700 { animation-delay: 700ms; }
 .delay-800 { animation-delay: 800ms; }
 
-/* ── LiveKit Video Overrides ── */
+/* ── LiveKit Video Overrides (Zoom/腾讯会议风格) ── */
 
 /* Hide LiveKit's built-in control bar — we use our own MediaControls */
 .lk-control-bar,
@@ -270,6 +270,7 @@
   width: 100% !important;
   display: flex !important;
   flex-direction: column !important;
+  background: #242424 !important;
 }
 
 /* The grid layout inside VideoConference must stretch to fill */
@@ -278,6 +279,7 @@
   min-height: 0 !important;
   height: 100% !important;
   width: 100% !important;
+  background: #242424 !important;
 }
 
 /* Also handle the focus-layout wrapper if present */
@@ -289,60 +291,88 @@
   height: 100% !important;
 }
 
-/* Make participant tiles fill grid cells properly */
+/* Make participant tiles fill grid cells properly - 更友好的深灰色背景 */
 .lk-participant-tile {
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   overflow: hidden !important;
-  background: #1a1a1a !important;
+  background: linear-gradient(145deg, #3a3a3a, #2d2d2d) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
 .lk-participant-tile video {
   object-fit: cover !important;
 }
 
-/* Clean up participant name display */
+/* 无视频时的占位符样式 - 显示用户头像区域 */
+.lk-participant-tile .lk-participant-placeholder {
+  background: linear-gradient(145deg, #4a4a4a, #3a3a3a) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 占位符中的头像图标 */
+.lk-participant-tile .lk-participant-placeholder svg {
+  width: 48px !important;
+  height: 48px !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Clean up participant name display - 更清晰的名字标签 */
 .lk-participant-name {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.01em !important;
-  padding: 3px 8px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+  padding: 4px 10px !important;
   border-radius: 6px !important;
-  background: rgba(0, 0, 0, 0.55) !important;
-  backdrop-filter: blur(8px) !important;
-  -webkit-backdrop-filter: blur(8px) !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Mic/connection indicators on tiles */
 .lk-participant-tile .lk-participant-metadata {
-  padding: 6px 8px !important;
+  padding: 8px 10px !important;
 }
 
-/* Focus ring for active speaker */
+/* 麦克风静音图标 - 红色背景更明显 */
+.lk-participant-tile .lk-participant-metadata-item[data-lk-muted="true"] {
+  background: #e53935 !important;
+  border-radius: 50% !important;
+  padding: 4px !important;
+}
+
+/* Focus ring for active speaker - 绿色边框 (Zoom风格) */
 .lk-participant-tile[data-lk-speaking="true"] {
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5),
-              0 0 20px rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 0 3px #22c55e,
+              0 0 24px rgba(34, 197, 94, 0.3) !important;
+  border-color: #22c55e !important;
 }
 
 /* Grid gaps */
 .lk-grid-layout {
-  gap: 6px !important;
-  padding: 6px !important;
+  gap: 8px !important;
+  padding: 8px !important;
+  background: #242424 !important;
 }
 
 /* Mobile: tighter grid */
 @media (max-width: 1023px) {
   .lk-grid-layout {
-    gap: 4px !important;
-    padding: 4px !important;
+    gap: 6px !important;
+    padding: 6px !important;
   }
 
   .lk-participant-tile {
-    border-radius: 8px !important;
+    border-radius: 10px !important;
   }
 
   .lk-participant-name {
     font-size: 11px !important;
-    padding: 2px 6px !important;
+    padding: 3px 8px !important;
   }
 }
 

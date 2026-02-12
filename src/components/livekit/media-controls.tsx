@@ -268,7 +268,7 @@ export function MediaControls({
           </span>
         )}
 
-        {/* Mic button */}
+        {/* Mic button - Zoom风格: 开启=深色, 关闭=红色 */}
         <button
           type="button"
           onClick={handleToggleMic}
@@ -277,34 +277,36 @@ export function MediaControls({
             (isMarker && roomStatus === "discussing") ||
             (isSpectator && roomStatus !== "free_discussion")
           }
-          className={`relative h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+          title={isMicrophoneEnabled ? t("livekit.muteMic", "Mute") : t("livekit.unmuteMic", "Unmute")}
+          className={`relative h-11 w-11 rounded-full flex items-center justify-center transition-all shadow-lg ${
             isMicrophoneEnabled
-              ? "bg-white/20 text-white hover:bg-white/30"
-              : "bg-red-500/80 text-white hover:bg-red-500/90"
-          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-400/60 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
+              ? "bg-neutral-700/90 text-white hover:bg-neutral-600/90 border border-white/10"
+              : "bg-red-500 text-white hover:bg-red-600 border border-red-400/30"
+          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-400/80 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isMicrophoneEnabled ? (
-            <Mic className="h-4 w-4" />
+            <Mic className="h-5 w-5" />
           ) : (
-            <MicOff className="h-4 w-4" />
+            <MicOff className="h-5 w-5" />
           )}
         </button>
 
-        {/* Camera button */}
+        {/* Camera button - Zoom风格: 开启=深色, 关闭=红色 */}
         <button
           type="button"
           onClick={handleToggleCam}
           disabled={isMarker || isSpectator || !canAccessMediaDevices}
-          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
+          title={isCameraEnabled ? t("livekit.stopVideo", "Stop Video") : t("livekit.startVideo", "Start Video")}
+          className={`h-11 w-11 rounded-full flex items-center justify-center transition-all shadow-lg ${
             isCameraEnabled
-              ? "bg-white/20 text-white hover:bg-white/30"
-              : "bg-red-500/80 text-white hover:bg-red-500/90"
+              ? "bg-neutral-700/90 text-white hover:bg-neutral-600/90 border border-white/10"
+              : "bg-red-500 text-white hover:bg-red-600 border border-red-400/30"
           } disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isCameraEnabled ? (
-            <Video className="h-4 w-4" />
+            <Video className="h-5 w-5" />
           ) : (
-            <VideoOff className="h-4 w-4" />
+            <VideoOff className="h-5 w-5" />
           )}
         </button>
 
@@ -339,8 +341,8 @@ export function MediaControls({
         </div>
       )}
 
-      <div className="flex items-center justify-center gap-2">
-        {/* Mic */}
+      <div className="flex items-center justify-center gap-3">
+        {/* Mic - Zoom风格: 开启=深色, 关闭=红色 */}
         <button
           type="button"
           onClick={handleToggleMic}
@@ -349,41 +351,43 @@ export function MediaControls({
             (isMarker && roomStatus === "discussing") ||
             (isSpectator && roomStatus !== "free_discussion")
           }
-          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all border ${
+          title={isMicrophoneEnabled ? t("livekit.muteMic", "Mute") : t("livekit.unmuteMic", "Unmute")}
+          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all shadow-md ${
             isMicrophoneEnabled
-              ? "bg-neutral-900 border-neutral-900 text-white hover:bg-neutral-800"
-              : "bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300"
-          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-300 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
+              ? "bg-neutral-800 text-white hover:bg-neutral-700 border border-neutral-700"
+              : "bg-red-500 text-white hover:bg-red-600 border border-red-400"
+          } ${waitingForMics && !isMicrophoneEnabled ? "ring-2 ring-amber-400 animate-pulse" : ""} disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isMicrophoneEnabled ? (
-            <Mic className="h-4 w-4" />
+            <Mic className="h-5 w-5" />
           ) : (
-            <MicOff className="h-4 w-4" />
+            <MicOff className="h-5 w-5" />
           )}
         </button>
 
-        {/* Camera */}
+        {/* Camera - Zoom风格: 开启=深色, 关闭=红色 */}
         <button
           type="button"
           onClick={handleToggleCam}
           disabled={isMarker || isSpectator || !canAccessMediaDevices}
-          className={`h-10 w-10 rounded-full flex items-center justify-center transition-all border ${
+          title={isCameraEnabled ? t("livekit.stopVideo", "Stop Video") : t("livekit.startVideo", "Start Video")}
+          className={`h-12 w-12 rounded-full flex items-center justify-center transition-all shadow-md ${
             isCameraEnabled
-              ? "bg-neutral-900 border-neutral-900 text-white hover:bg-neutral-800"
-              : "bg-white border-neutral-200 text-neutral-400 hover:border-neutral-300"
+              ? "bg-neutral-800 text-white hover:bg-neutral-700 border border-neutral-700"
+              : "bg-red-500 text-white hover:bg-red-600 border border-red-400"
           } disabled:opacity-30 disabled:cursor-not-allowed`}
         >
           {isCameraEnabled ? (
-            <Video className="h-4 w-4" />
+            <Video className="h-5 w-5" />
           ) : (
-            <VideoOff className="h-4 w-4" />
+            <VideoOff className="h-5 w-5" />
           )}
         </button>
 
         {/* Status pill */}
-        <div className="flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1.5 ml-1">
-          <div className={`h-1.5 w-1.5 rounded-full ${connected ? networkDotClass : "bg-neutral-300 animate-pulse"}`} />
-          <span className="text-[11px] text-neutral-500 font-medium">
+        <div className="flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-2 ml-1">
+          <div className={`h-2 w-2 rounded-full ${connected ? networkDotClass : "bg-neutral-300 animate-pulse"}`} />
+          <span className="text-xs text-neutral-600 font-medium">
             {connected ? networkLabel : t("common.connecting", "Connecting...")}
           </span>
         </div>

@@ -102,6 +102,9 @@ export default function WaitingRoomPage() {
           .maybeSingle();
 
         if (!error && data?.role === expectedRole) {
+          // Always refresh local state so the UI updates immediately,
+          // especially on mobile where realtime delivery can be delayed.
+          await fetchRoom();
           return true;
         }
 

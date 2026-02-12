@@ -273,16 +273,22 @@ export default function SessionPage() {
     isSpectator,
   ]);
 
-  // ---- Phase transition (any PARTICIPANT can trigger when timer expires) ----
+  // ---- Phase transition (any connected user can trigger when timer expires) ----
+  // Note: For preparing→discussing, we allow ANY user (including marker) to trigger
+  // to ensure reliable transition even if participants have connection issues.
   useEffect(() => {
-    if (!isExpired || !room || phaseTransitionRef.current || isObserver) return;
+    if (!isExpired || !room || phaseTransitionRef.current) return;
+
+    // For preparing phase, allow anyone to trigger (more reliable)
+    // For other phases, only participants can trigger
+    if (room.status !== "preparing" && isObserver) return;
 
     const transitionPhase = async () => {
       phaseTransitionRef.current = true;
 
       if (room.status === "preparing") {
         // Transition to discussing: set current_phase_end_at = null (wait for mics)
-        await supabase
+        const { error } = await supabase
           .from("rooms")
           .update({
             status: "discussing",
@@ -291,7 +297,10 @@ export default function SessionPage() {
           })
           .eq("id", roomId)
           .eq("status", "preparing");
-        toast("進入討論階段 — 請開啟麥克風");
+
+        if (!error) {
+          toast("進入討論階段 — 請開啟麥克風");
+        }
       } else if (room.status === "discussing") {
         const hasMarkerInRoom =
           allMembers.some((m) => m.role === "marker");
@@ -368,6 +377,45 @@ export default function SessionPage() {
     allMembers,
     partBSubphase,
   ]);
+
+  // ---- Fallback: retry phase transition if stuck after timer expired ----
+  // This handles edge cases where the initial transition failed silently
+  useEffect(() => {
+    if (!room || !isExpired || room.status !== "preparing") return;
+
+    // If still in preparing phase 3 seconds after expiry, retry transition
+    const retryTimeout = setTimeout(async () => {
+      if (phaseTransitionRef.current) return;
+
+      // Double-check room is still in preparing state
+      const { data: currentRoom } = await supabase
+        .from("rooms")
+        .select("status")
+        .eq("id", roomId)
+        .single();
+
+      if (currentRoom?.status === "preparing") {
+        console.log("Fallback: retrying preparing→discussing transition");
+        phaseTransitionRef.current = true;
+
+        await supabase
+          .from("rooms")
+          .update({
+            status: "discussing",
+            current_phase_end_at: null,
+            skip_votes: [],
+          })
+          .eq("id", roomId)
+          .eq("status", "preparing");
+
+        setTimeout(() => {
+          phaseTransitionRef.current = false;
+        }, 2000);
+      }
+    }, 3000);
+
+    return () => clearTimeout(retryTimeout);
+  }, [room, isExpired, roomId, supabase]);
 
   // ---- Voting to skip current phase (participants only) ----
   const skipVotes = room?.skip_votes ?? [];
