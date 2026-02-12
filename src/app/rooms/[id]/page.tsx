@@ -60,6 +60,32 @@ export default function WaitingRoomPage() {
   const [switching, setSwitching] = useState(false);
   const startingRef = useRef(false);
 
+  // Track departed members (were in the room but left)
+  const seenMembersRef = useRef<Map<string, MemberWithProfile>>(new Map());
+  const [departedMembers, setDepartedMembers] = useState<MemberWithProfile[]>([]);
+
+  // Update departed tracking whenever members change
+  useEffect(() => {
+    if (loading || !room) return;
+
+    const currentUserIds = new Set(members.map((m) => m.user_id));
+    const seen = seenMembersRef.current;
+
+    // Add all current members to "seen"
+    for (const m of members) {
+      seen.set(m.user_id, m);
+    }
+
+    // Compute departed: in seen but not in current (exclude self - handled separately)
+    const departed: MemberWithProfile[] = [];
+    for (const [uid, m] of seen) {
+      if (!currentUserIds.has(uid) && uid !== user?.id) {
+        departed.push(m);
+      }
+    }
+    setDepartedMembers(departed);
+  }, [members, loading, room, user?.id]);
+
   const fetchRoom = useCallback(async () => {
     const [{ data: roomData }, { data: memberData }] = await Promise.all([
       supabase.from("rooms").select("*").eq("id", roomId).single(),
@@ -807,6 +833,36 @@ export default function WaitingRoomPage() {
                     </div>
                   );
                 })}
+
+                {/* Departed participants */}
+                {departedMembers
+                  .filter((d) => d.role === "participant")
+                  .map((departed) => (
+                    <div
+                      key={`departed-${departed.user_id}`}
+                      className="flex items-center gap-3 p-3.5 rounded-lg border border-red-100 bg-red-50/30 opacity-60"
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-[11px] font-medium bg-neutral-200 text-neutral-400">
+                          {departed.profiles?.display_name
+                            ?.slice(0, 2)
+                            ?.toUpperCase() || "??"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-neutral-400 truncate line-through">
+                          {departed.profiles?.display_name || "匿名"}
+                        </p>
+                        <p className="text-[12px] text-neutral-300">
+                          Level {departed.profiles?.speaking_level || 3}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-red-400">
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span className="text-[12px] font-medium">已退出</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
 
@@ -872,10 +928,39 @@ export default function WaitingRoomPage() {
                   </div>
                 )}
               </div>
+
+              {/* Departed marker */}
+              {!markerMember &&
+                departedMembers
+                  .filter((d) => d.role === "marker")
+                  .map((departed) => (
+                    <div
+                      key={`departed-marker-${departed.user_id}`}
+                      className="mt-2 flex items-center gap-3 p-3.5 rounded-lg border border-red-100 bg-red-50/30 opacity-60"
+                    >
+                      <Avatar className="h-9 w-9">
+                        <AvatarFallback className="text-[11px] font-medium bg-neutral-200 text-neutral-400">
+                          {departed.profiles?.display_name
+                            ?.slice(0, 2)
+                            ?.toUpperCase() || "MK"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-medium text-neutral-400 truncate line-through">
+                          {departed.profiles?.display_name || "Marker"}
+                        </p>
+                        <p className="text-[12px] text-neutral-300">Marker</p>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-red-400">
+                        <LogOut className="h-3.5 w-3.5" />
+                        <span className="text-[12px] font-medium">已退出</span>
+                      </div>
+                    </div>
+                  ))}
             </div>
 
             {/* Spectators */}
-            {spectators.length > 0 && (
+            {(spectators.length > 0 || departedMembers.some((d) => d.role === "spectator")) && (
               <div>
                 <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
                   {locale === "zh-Hant"
@@ -924,6 +1009,33 @@ export default function WaitingRoomPage() {
                       </div>
                     );
                   })}
+
+                  {/* Departed spectators */}
+                  {departedMembers
+                    .filter((d) => d.role === "spectator")
+                    .map((departed) => (
+                      <div
+                        key={`departed-spec-${departed.user_id}`}
+                        className="flex items-center gap-3 px-3.5 py-2.5 rounded-lg border border-red-100 bg-red-50/30 opacity-60"
+                      >
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="text-[10px] font-medium bg-neutral-200 text-neutral-400">
+                            {departed.profiles?.display_name
+                              ?.slice(0, 2)
+                              ?.toUpperCase() || "??"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] text-neutral-400 truncate line-through">
+                            {departed.profiles?.display_name || "匿名"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 text-red-400">
+                          <LogOut className="h-3 w-3" />
+                          <span className="text-[11px]">已退出</span>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

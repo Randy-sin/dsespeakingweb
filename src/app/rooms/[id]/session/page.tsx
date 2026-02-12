@@ -26,6 +26,7 @@ import {
   Mic,
   ClipboardCheck,
   MessageSquare,
+  UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -88,10 +89,69 @@ export default function SessionPage() {
   const phaseTransitionRef = useRef(false);
   const micsReadyRef = useRef(false);
 
+  // Track departed members (members who were in the room but left)
+  const seenMembersRef = useRef<Map<string, MemberWithProfile>>(new Map());
+  const [departedMembers, setDepartedMembers] = useState<MemberWithProfile[]>([]);
+  // Keep a stable snapshot of original participants with their speaking_order for Part B
+  const originalParticipantsRef = useRef<MemberWithProfile[]>([]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const currentUserIds = new Set(allMembers.map((m) => m.user_id));
+    const seen = seenMembersRef.current;
+
+    // Add all current members to "seen"
+    for (const m of allMembers) {
+      seen.set(m.user_id, m);
+    }
+
+    // Build original participants list (once we have participants with speaking_order)
+    const currentParticipants = allMembers.filter((m) => m.role === "participant");
+    if (
+      originalParticipantsRef.current.length === 0 &&
+      currentParticipants.length > 0
+    ) {
+      originalParticipantsRef.current = [...currentParticipants];
+    }
+    // Also add any new participants not yet in the original list
+    for (const p of currentParticipants) {
+      if (!originalParticipantsRef.current.some((op) => op.user_id === p.user_id)) {
+        originalParticipantsRef.current.push(p);
+      }
+    }
+
+    // Compute departed
+    const departed: MemberWithProfile[] = [];
+    for (const [uid, m] of seen) {
+      if (!currentUserIds.has(uid) && uid !== user?.id) {
+        departed.push(m);
+      }
+    }
+    setDepartedMembers(departed);
+  }, [allMembers, loading, user?.id]);
+
   // Separate participants from spectators and marker
   const participants = allMembers.filter((m) => m.role === "participant");
   const spectators = allMembers.filter((m) => m.role === "spectator");
   const markerMember = allMembers.find((m) => m.role === "marker");
+
+  // Departed participants who were in participant role
+  const departedParticipants = departedMembers.filter((d) => d.role === "participant");
+  // Combined participants list that preserves original speaking order (for display)
+  // Active participants first, then mark departed ones
+  const displayParticipants = originalParticipantsRef.current.map((op) => {
+    const active = participants.find((p) => p.user_id === op.user_id);
+    if (active) return { ...active, hasLeft: false };
+    const departed = departedParticipants.find((d) => d.user_id === op.user_id);
+    if (departed) return { ...departed, hasLeft: true };
+    return { ...op, hasLeft: true };
+  });
+  // Fallback: if originalParticipantsRef is still empty, use current participants
+  const effectiveDisplayParticipants =
+    displayParticipants.length > 0
+      ? displayParticipants
+      : participants.map((p) => ({ ...p, hasLeft: false }));
 
   // Detect current user's role
   const myMembership = allMembers.find((m) => m.user_id === user?.id);
@@ -416,6 +476,91 @@ export default function SessionPage() {
 
     return () => clearTimeout(retryTimeout);
   }, [room, isExpired, roomId, supabase]);
+
+  // ---- Auto-skip departed speaker in individual phase ----
+  // When the current speaker has left, automatically advance to the next speaker
+  const autoSkipRef = useRef(false);
+  useEffect(() => {
+    if (
+      !room ||
+      room.status !== "individual" ||
+      autoSkipRef.current ||
+      isObserver ||
+      effectiveDisplayParticipants.length === 0
+    ) {
+      return;
+    }
+
+    const currentIdx = room.current_speaker_index ?? 0;
+    const currentDisplay = effectiveDisplayParticipants[currentIdx];
+    if (!currentDisplay || !currentDisplay.hasLeft) return;
+
+    // Current speaker has departed — find the next active speaker
+    autoSkipRef.current = true;
+
+    const advancePastDeparted = async () => {
+      let nextIdx = currentIdx + 1;
+
+      // Skip all consecutive departed speakers
+      while (
+        nextIdx < effectiveDisplayParticipants.length &&
+        effectiveDisplayParticipants[nextIdx].hasLeft
+      ) {
+        nextIdx++;
+      }
+
+      if (nextIdx < effectiveDisplayParticipants.length) {
+        // Advance to next active speaker
+        const hasMarkerInRoom = allMembers.some((m) => m.role === "marker");
+        const phaseEnd = hasMarkerInRoom
+          ? null
+          : new Date(Date.now() + 1 * 60 * 1000).toISOString();
+
+        await supabase
+          .from("rooms")
+          .update({
+            current_speaker_index: nextIdx,
+            current_phase_end_at: phaseEnd,
+            skip_votes: [],
+            part_b_subphase: hasMarkerInRoom ? "selecting" : "answering",
+            part_b_countdown_end_at: null,
+          })
+          .eq("id", roomId)
+          .eq("status", "individual");
+
+        toast(`${currentDisplay.profiles?.display_name || "參與者"} 已退出，跳至下一位`);
+      } else {
+        // All remaining speakers departed — go to results
+        await supabase
+          .from("rooms")
+          .update({
+            status: "results",
+            current_phase_end_at: null,
+            current_speaker_index: null,
+            skip_votes: [],
+            part_b_subphase: null,
+            part_b_countdown_end_at: null,
+          })
+          .eq("id", roomId);
+        toast("所有發言者已結束，進入結果階段");
+      }
+
+      setTimeout(() => {
+        autoSkipRef.current = false;
+      }, 2000);
+    };
+
+    // Short delay to prevent race conditions with other transitions
+    const timeout = setTimeout(advancePastDeparted, 500);
+    return () => clearTimeout(timeout);
+  }, [
+    room,
+    effectiveDisplayParticipants,
+    isObserver,
+    allMembers,
+    supabase,
+    roomId,
+  ]);
 
   // ---- Voting to skip current phase (participants only) ----
   const skipVotes = room?.skip_votes ?? [];
@@ -871,7 +1016,7 @@ export default function SessionPage() {
 
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
-                {participants.map((candidate) => {
+                {effectiveDisplayParticipants.map((candidate) => {
                   const score = markerScores.find(
                     (s) => s.candidate_id === candidate.user_id
                   );
@@ -880,24 +1025,33 @@ export default function SessionPage() {
                     (score?.communication_strategies ?? 0) +
                     (score?.vocabulary_language ?? 0) +
                     (score?.ideas_organisation ?? 0);
+                  const hasLeft = candidate.hasLeft;
 
                   return (
                     <div
                       key={candidate.user_id}
-                      className="rounded-xl border border-neutral-200/70 p-4 bg-white"
+                      className={`rounded-xl border p-4 ${hasLeft ? "border-red-100 bg-red-50/20 opacity-70" : "border-neutral-200/70 bg-white"}`}
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2.5">
                           <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-neutral-900 text-white text-[10px]">
+                            <AvatarFallback className={`text-[10px] ${hasLeft ? "bg-neutral-200 text-neutral-400" : "bg-neutral-900 text-white"}`}>
                               {candidate.profiles?.display_name
                                 ?.slice(0, 2)
                                 ?.toUpperCase() || "??"}
                             </AvatarFallback>
                           </Avatar>
-                          <p className="text-[14px] font-medium text-neutral-900">
-                            {candidate.profiles?.display_name || "Candidate"}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className={`text-[14px] font-medium ${hasLeft ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
+                              {candidate.profiles?.display_name || "Candidate"}
+                            </p>
+                            {hasLeft && (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full">
+                                <UserX className="h-2.5 w-2.5" />
+                                已退出
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <Badge variant="outline" className="font-mono text-[11px]">
                           {score ? `${total}/28` : "Pending"}
@@ -1118,23 +1272,27 @@ export default function SessionPage() {
                     </p>
 
                     {/* Speaker queue overview */}
-                    <div className="flex items-center gap-1.5 mb-4">
-                      {participants.map((m, idx) => {
+                    <div className="flex items-center gap-1.5 mb-4 flex-wrap">
+                      {effectiveDisplayParticipants.map((m, idx) => {
                         const isActive = idx === currentSpeakerIndex;
                         const isDone = idx < currentSpeakerIndex;
+                        const hasLeft = m.hasLeft;
                         return (
                           <div
                             key={m.user_id}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium transition-all ${
-                              isActive
-                                ? "bg-neutral-900 text-white shadow-sm"
-                                : isDone
-                                ? "bg-emerald-50 text-emerald-600 line-through"
-                                : "bg-neutral-100 text-neutral-400"
+                              hasLeft
+                                ? "bg-red-50 text-red-400 line-through"
+                                : isActive
+                                  ? "bg-neutral-900 text-white shadow-sm"
+                                  : isDone
+                                    ? "bg-emerald-50 text-emerald-600 line-through"
+                                    : "bg-neutral-100 text-neutral-400"
                             }`}
                           >
-                            {isDone && <Check className="h-3 w-3" />}
-                            {isActive && <Mic className="h-3 w-3 animate-pulse" />}
+                            {hasLeft && <UserX className="h-3 w-3" />}
+                            {!hasLeft && isDone && <Check className="h-3 w-3" />}
+                            {!hasLeft && isActive && <Mic className="h-3 w-3 animate-pulse" />}
                             <span>
                               {m.profiles?.display_name?.split(" ")[0] || `#${idx + 1}`}
                             </span>
@@ -1318,31 +1476,36 @@ export default function SessionPage() {
               {/* Participants */}
               <div>
                 <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3">
-                  Participants ({participants.length})
+                  Participants ({participants.length}{departedParticipants.length > 0 ? `/${participants.length + departedParticipants.length}` : ""})
                 </p>
                 <div className="space-y-1">
-                  {participants.map((member, idx) => {
+                  {effectiveDisplayParticipants.map((member, idx) => {
                     const isSpeaking =
                       room.status === "individual" &&
                       idx === currentSpeakerIndex;
                     const memberIsHost = member.user_id === room.host_id;
                     const hasVotedSkip =
                       canVoteSkip && skipVotes.includes(member.user_id);
+                    const hasLeft = member.hasLeft;
                     return (
                       <div
                         key={member.id}
                         className={`flex items-center gap-2.5 p-2.5 rounded-lg transition-colors ${
-                          isSpeaking
-                            ? "bg-neutral-50 border border-neutral-200"
-                            : "hover:bg-neutral-50"
+                          hasLeft
+                            ? "bg-red-50/40 border border-red-100 opacity-60"
+                            : isSpeaking
+                              ? "bg-neutral-50 border border-neutral-200"
+                              : "hover:bg-neutral-50"
                         }`}
                       >
                         <Avatar className="h-7 w-7">
                           <AvatarFallback
                             className={`text-[10px] font-medium ${
-                              isSpeaking
-                                ? "bg-neutral-900 text-white"
-                                : "bg-neutral-100 text-neutral-500"
+                              hasLeft
+                                ? "bg-neutral-200 text-neutral-400"
+                                : isSpeaking
+                                  ? "bg-neutral-900 text-white"
+                                  : "bg-neutral-100 text-neutral-500"
                             }`}
                           >
                             {member.profiles?.display_name
@@ -1351,7 +1514,7 @@ export default function SessionPage() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[13px] font-medium text-neutral-900 truncate">
+                          <p className={`text-[13px] font-medium truncate ${hasLeft ? "text-neutral-400 line-through" : "text-neutral-900"}`}>
                             {member.profiles?.display_name || "匿名"}
                             {member.user_id === user?.id && (
                               <span className="text-neutral-400 font-normal">
@@ -1361,26 +1524,35 @@ export default function SessionPage() {
                             )}
                           </p>
                         </div>
-                        {memberIsHost && (
-                          <span className="text-[10px] text-neutral-400">
-                            host
-                          </span>
+                        {hasLeft ? (
+                          <div className="flex items-center gap-1 text-red-400">
+                            <UserX className="h-3 w-3" />
+                            <span className="text-[10px] font-medium">已退出</span>
+                          </div>
+                        ) : (
+                          <>
+                            {memberIsHost && (
+                              <span className="text-[10px] text-neutral-400">
+                                host
+                              </span>
+                            )}
+                            {isSpeaking && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] border-neutral-300 text-neutral-500"
+                              >
+                                speaking
+                              </Badge>
+                            )}
+                            {canVoteSkip &&
+                              validSkipVotes > 0 &&
+                              (hasVotedSkip ? (
+                                <Check className="h-3.5 w-3.5 text-emerald-500" />
+                              ) : (
+                                <Circle className="h-3.5 w-3.5 text-neutral-200" />
+                              ))}
+                          </>
                         )}
-                        {isSpeaking && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] border-neutral-300 text-neutral-500"
-                          >
-                            speaking
-                          </Badge>
-                        )}
-                        {canVoteSkip &&
-                          validSkipVotes > 0 &&
-                          (hasVotedSkip ? (
-                            <Check className="h-3.5 w-3.5 text-emerald-500" />
-                          ) : (
-                            <Circle className="h-3.5 w-3.5 text-neutral-200" />
-                          ))}
                       </div>
                     );
                   })}
@@ -1388,7 +1560,7 @@ export default function SessionPage() {
               </div>
 
               {/* Spectators */}
-              {spectators.length > 0 && (
+              {(spectators.length > 0 || departedMembers.some((d) => d.role === "spectator")) && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                     <Eye className="h-3.5 w-3.5" />
@@ -1418,6 +1590,27 @@ export default function SessionPage() {
                         </p>
                       </div>
                     ))}
+                    {/* Departed spectators */}
+                    {departedMembers
+                      .filter((d) => d.role === "spectator")
+                      .map((departed) => (
+                        <div
+                          key={`departed-spec-${departed.user_id}`}
+                          className="flex items-center gap-2.5 p-2 rounded-lg opacity-50"
+                        >
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-[9px] font-medium bg-neutral-200 text-neutral-400">
+                              {departed.profiles?.display_name
+                                ?.slice(0, 2)
+                                ?.toUpperCase() || "??"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-[12px] text-neutral-400 truncate line-through">
+                            {departed.profiles?.display_name || "匿名"}
+                          </p>
+                          <span className="text-[10px] text-red-400 ml-auto">已退出</span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               )}
@@ -1443,22 +1636,46 @@ export default function SessionPage() {
               )}
 
               {/* Marker in sidebar */}
-              {hasMarker && !isMarker && (
+              {(hasMarker || departedMembers.some((d) => d.role === "marker")) && !isMarker && (
                 <div>
                   <p className="text-[13px] text-neutral-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                     <ClipboardCheck className="h-3.5 w-3.5" />
                     Marker
                   </p>
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-violet-50/50 border border-violet-100">
-                    <Avatar className="h-7 w-7">
-                      <AvatarFallback className="text-[10px] font-medium bg-violet-600 text-white">
-                        {markerMember?.profiles?.display_name?.slice(0, 2)?.toUpperCase() || "MK"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="text-[13px] font-medium text-neutral-900 truncate">
-                      {markerMember?.profiles?.display_name || "Marker"}
-                    </p>
-                  </div>
+                  {hasMarker ? (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-violet-50/50 border border-violet-100">
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className="text-[10px] font-medium bg-violet-600 text-white">
+                          {markerMember?.profiles?.display_name?.slice(0, 2)?.toUpperCase() || "MK"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-[13px] font-medium text-neutral-900 truncate">
+                        {markerMember?.profiles?.display_name || "Marker"}
+                      </p>
+                    </div>
+                  ) : (
+                    departedMembers
+                      .filter((d) => d.role === "marker")
+                      .map((departed) => (
+                        <div
+                          key={`departed-marker-${departed.user_id}`}
+                          className="flex items-center gap-2.5 p-2.5 rounded-lg bg-red-50/30 border border-red-100 opacity-60"
+                        >
+                          <Avatar className="h-7 w-7">
+                            <AvatarFallback className="text-[10px] font-medium bg-neutral-200 text-neutral-400">
+                              {departed.profiles?.display_name?.slice(0, 2)?.toUpperCase() || "MK"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-[13px] font-medium text-neutral-400 truncate line-through">
+                            {departed.profiles?.display_name || "Marker"}
+                          </p>
+                          <div className="flex items-center gap-1 text-red-400 ml-auto">
+                            <UserX className="h-3 w-3" />
+                            <span className="text-[10px] font-medium">已退出</span>
+                          </div>
+                        </div>
+                      ))
+                  )}
                 </div>
               )}
 
