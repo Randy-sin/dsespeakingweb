@@ -528,7 +528,7 @@ export default function SessionPage() {
   };
 
   const handleLeaveSpectator = async () => {
-    if (!user) return;
+    if (!user || !isSpectator) return;
     await supabase
       .from("room_members")
       .delete()
@@ -767,7 +767,7 @@ export default function SessionPage() {
       {/* Marker banner */}
       {isMarker && room.status !== "finished" && (
         <div className="bg-violet-50/60 border-b border-violet-100/60">
-          <div className="max-w-7xl mx-auto px-5 py-2 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-5 py-2 flex items-center">
             <div className="flex items-center gap-2">
               <ClipboardCheck className="h-3.5 w-3.5 text-violet-500" />
               <p className="text-[12px] text-violet-600">
@@ -777,15 +777,6 @@ export default function SessionPage() {
                 )}
               </p>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-[12px] text-violet-500 hover:text-violet-700 h-7"
-              onClick={handleLeaveSpectator}
-            >
-              <LogOut className="mr-1 h-3 w-3" />
-              退出
-            </Button>
           </div>
         </div>
       )}

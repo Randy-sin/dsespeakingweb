@@ -73,7 +73,6 @@ export function LiveKitSession({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [MediaControlsComp, setMediaControlsComp] = useState<React.ComponentType<any> | null>(null);
   const hasAttemptedConnect = useRef(false);
-  const refreshedForFreeDiscussion = useRef(false);
 
   useEffect(() => {
     import("@livekit/components-react")
@@ -163,7 +162,12 @@ export function LiveKitSession({
   // Participants in active phases (discussing/individual/results/free_discussion)
   // should not be blocked by pre-join approval.
   useEffect(() => {
-    if ((isSpectator || isMarker) && !token && !hasAttemptedConnect.current) {
+    if (
+      (isSpectator || isMarker) &&
+      !token &&
+      !loading &&
+      !hasAttemptedConnect.current
+    ) {
       hasAttemptedConnect.current = true;
       fetchToken();
     } else if (
@@ -189,19 +193,21 @@ export function LiveKitSession({
       hasAttemptedConnect.current = true;
       fetchToken();
     }
-  }, [roomStatus, token, fetchToken, isSpectator, isMarker, preJoinApproved]);
+  }, [
+    roomStatus,
+    token,
+    loading,
+    fetchToken,
+    isSpectator,
+    isMarker,
+    preJoinApproved,
+  ]);
 
-  // Spectator needs a refreshed token to publish in free discussion.
+  // If observer connection dropped (or token fetch failed), auto-allow retry on status changes.
   useEffect(() => {
-    if (!isSpectator) return;
-    if (roomStatus !== "free_discussion") return;
-    if (refreshedForFreeDiscussion.current) return;
-
-    refreshedForFreeDiscussion.current = true;
+    if (!isSpectator && !isMarker) return;
     hasAttemptedConnect.current = false;
-    setToken(null);
-    setUrl(null);
-  }, [isSpectator, roomStatus]);
+  }, [isSpectator, isMarker, roomStatus]);
 
   // IMPORTANT: useMemo must be BEFORE all conditional returns to satisfy React hooks rules
   const roomOptions = useMemo(
