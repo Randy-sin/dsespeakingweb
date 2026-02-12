@@ -235,6 +235,13 @@ export default function SessionPage() {
         { event: "*", schema: "public", table: "marker_scores", filter: `room_id=eq.${roomId}` },
         throttledFetch
       )
+      .on("broadcast", { event: "skip_update" }, (payload) => {
+        // Instant skip vote update via broadcast
+        const newSkipVotes = payload?.payload?.skip_votes;
+        if (newSkipVotes && Array.isArray(newSkipVotes)) {
+          setRoom((prev) => prev ? { ...prev, skip_votes: newSkipVotes } : null);
+        }
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
@@ -755,6 +762,16 @@ export default function SessionPage() {
       }
       return;
     }
+
+    // Broadcast to all clients for instant update
+    const broadcastChannel = supabase.channel(`session-${roomId}`);
+    await broadcastChannel.subscribe();
+    await broadcastChannel.send({
+      type: "broadcast",
+      event: "skip_update",
+      payload: { skip_votes: persistedVotes },
+    });
+    supabase.removeChannel(broadcastChannel);
 
     if (!shouldVoteSkip) return;
 

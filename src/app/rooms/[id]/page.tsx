@@ -182,9 +182,9 @@ export default function WaitingRoomPage() {
       )
       .subscribe();
 
-    // Listen for nudge broadcasts from host
-    const nudgeChannel = supabase
-      .channel(`nudge-${roomId}`)
+    // Listen for real-time broadcasts (nudge + ready state)
+    const broadcastChannel = supabase
+      .channel(`room-broadcast-${roomId}`)
       .on("broadcast", { event: "nudge" }, (payload) => {
         // Only show to non-host participants who haven't readied up
         const fromHost = payload?.payload?.from === room?.host_id;
@@ -195,11 +195,25 @@ export default function WaitingRoomPage() {
           });
         }
       })
+      .on("broadcast", { event: "ready_update" }, (payload) => {
+        // Instant ready state update via broadcast
+        const newReadyVotes = payload?.payload?.ready_votes;
+        if (newReadyVotes && Array.isArray(newReadyVotes)) {
+          setRoom((prev) => prev ? { ...prev, ready_votes: newReadyVotes } : null);
+        }
+      })
+      .on("broadcast", { event: "skip_update" }, (payload) => {
+        // Instant skip vote update via broadcast
+        const newSkipVotes = payload?.payload?.skip_votes;
+        if (newSkipVotes && Array.isArray(newSkipVotes)) {
+          setRoom((prev) => prev ? { ...prev, skip_votes: newSkipVotes } : null);
+        }
+      })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
-      supabase.removeChannel(nudgeChannel);
+      supabase.removeChannel(broadcastChannel);
       if (fetchThrottle) clearTimeout(fetchThrottle);
     };
   }, [roomId, fetchRoom, supabase, user?.id, room?.host_id]);
@@ -466,7 +480,9 @@ export default function WaitingRoomPage() {
       newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
     }
 
+    // Optimistic update
     setRoom({ ...room, skip_votes: newVotes });
+    
     const { error } = await supabase
       .from("rooms")
       .update({ skip_votes: newVotes })
@@ -478,6 +494,16 @@ export default function WaitingRoomPage() {
       setRoom({ ...room, skip_votes: currentVotes });
       return;
     }
+
+    // Broadcast to all clients for instant update
+    const channel = supabase.channel(`room-broadcast-${roomId}`);
+    await channel.subscribe();
+    await channel.send({
+      type: "broadcast",
+      event: "skip_update",
+      payload: { skip_votes: newVotes },
+    });
+    supabase.removeChannel(channel);
 
     if (!myVoteContinue) {
       toast.success(locale === "zh-Hant" ? "已投票同意繼續" : "Voted to continue");
@@ -495,6 +521,7 @@ export default function WaitingRoomPage() {
       newVotes = [...currentVotes.filter((v) => v !== user.id), user.id];
     }
 
+    // Optimistic update
     setRoom({ ...room, ready_votes: newVotes });
 
     const { error } = await supabase
@@ -506,8 +533,20 @@ export default function WaitingRoomPage() {
       console.error("Toggle ready failed:", error);
       toast.error("操作失敗，請重試");
       setRoom({ ...room, ready_votes: currentVotes });
-    } else if (!myVoteReady) {
-      toast.success("已準備");
+    } else {
+      // Broadcast to all clients for instant update
+      const channel = supabase.channel(`room-broadcast-${roomId}`);
+      await channel.subscribe();
+      await channel.send({
+        type: "broadcast",
+        event: "ready_update",
+        payload: { ready_votes: newVotes },
+      });
+      supabase.removeChannel(channel);
+      
+      if (!myVoteReady) {
+        toast.success("已準備");
+      }
     }
   };
 
