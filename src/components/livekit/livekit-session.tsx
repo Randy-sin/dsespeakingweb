@@ -38,6 +38,8 @@ interface LiveKitSessionProps {
   expectedParticipantCount?: number;
   /** Called when all participants have their mic enabled */
   onAllMicsReady?: () => void;
+  /** Larger inline viewport for discussion shell */
+  layoutMode?: "default" | "immersive";
 }
 
 export function LiveKitSession({
@@ -49,6 +51,7 @@ export function LiveKitSession({
   waitingForMics = false,
   expectedParticipantCount = 0,
   onAllMicsReady,
+  layoutMode = "default",
 }: LiveKitSessionProps) {
   const { user } = useUser();
   const { t } = useI18n();
@@ -304,8 +307,9 @@ export function LiveKitSession({
   }
 
   if (loading) {
+    const loadingHeight = layoutMode === "immersive" ? "100%" : "320px";
     return (
-      <div className="bg-neutral-950 rounded-xl overflow-hidden p-3" style={{ height: "320px" }}>
+      <div className="bg-neutral-950 rounded-xl overflow-hidden p-3" style={{ height: loadingHeight }}>
         {/* Video skeleton grid */}
         <div className="grid grid-cols-2 gap-2 h-full">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -340,6 +344,14 @@ export function LiveKitSession({
   }
 
   if (token && url && lkComponents) {
+    const inlineHeight = isMobileViewport
+      ? isLandscape
+        ? "55vh"
+        : "35vh"
+      : layoutMode === "immersive"
+        ? "100%"
+        : "320px";
+
     const {
       LiveKitRoom: LKRoom,
       RoomAudioRenderer: AudioRenderer,
@@ -471,11 +483,7 @@ export function LiveKitSession({
           {!expandedView && (
             <div
               className="bg-neutral-950 rounded-xl overflow-hidden relative"
-              style={{
-                height: isMobileViewport
-                  ? isLandscape ? "55vh" : "35vh"
-                  : "320px",
-              }}
+              style={{ height: inlineHeight }}
             >
               {/* Top bar overlay */}
               <div className="absolute top-2 left-2.5 right-2.5 z-10 flex items-center justify-between pointer-events-none">
