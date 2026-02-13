@@ -5,7 +5,7 @@ import { parseRealtimeCallInput } from "@/lib/ai/realtime-api";
 
 export const runtime = "nodejs";
 
-async function assertAuthenticatedAndRoomAccess(roomId?: string) {
+async function assertRoomMember(roomId: string) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,8 +14,6 @@ async function assertAuthenticatedAndRoomAccess(roomId?: string) {
   if (!user) {
     throw new Error("Unauthorized");
   }
-
-  if (!roomId) return;
 
   const { data: member, error } = await supabase
     .from("room_members")
@@ -32,8 +30,8 @@ async function assertAuthenticatedAndRoomAccess(roomId?: string) {
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
-    const input = parseRealtimeCallInput(body);
-    await assertAuthenticatedAndRoomAccess(input.roomId);
+    const input = parseRealtimeCallInput(body, { requireRoomId: true });
+    await assertRoomMember(input.roomId!);
 
     const result = await probeDoubaoRealtime({
       text: input.text,
@@ -45,17 +43,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
-      sessionId: result.sessionId,
       chatText: result.chatText,
       latencyMs: result.latencyMs,
+      audioChunkCount: result.audioChunksBase64.length,
       totalAudioBytes: result.totalAudioBytes,
       eventTimeline: result.eventTimeline,
       audioChunksBase64: input.includeAudioChunks ? result.audioChunksBase64 : undefined,
-      audioChunkCount: result.audioChunksBase64.length,
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Unknown realtime probe error";
+      error instanceof Error ? error.message : "Unknown realtime respond error";
     const status =
       message === "Unauthorized"
         ? 401

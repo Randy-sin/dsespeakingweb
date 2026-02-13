@@ -2,13 +2,16 @@ import { randomUUID } from "crypto";
 import WebSocket from "ws";
 import { getDoubaoRealtimeEnv } from "@/lib/ai/env";
 
-type DoubaoModel = "O" | "SC";
+export type DoubaoModel = "O" | "SC";
+export type DoubaoInputMode = "text" | "audio_file";
 
 interface RealtimeProbeParams {
   text: string;
   model?: DoubaoModel;
   speaker?: string;
   timeoutMs?: number;
+  inputMode?: DoubaoInputMode;
+  includeTtsPcmS16le?: boolean;
 }
 
 interface TimelineItem {
@@ -33,6 +36,7 @@ interface ParsedFrame {
   flags: number;
   serialization: number;
   compression: number;
+  errorCode?: number;
   eventId?: number;
   sessionId?: string;
   payload: Buffer;
@@ -98,8 +102,14 @@ function parseFrame(raw: Buffer): ParsedFrame {
   const compression = raw[2] & 0b0000_1111;
 
   let offset = 4;
+  let errorCode: number | undefined;
   let eventId: number | undefined;
   let sessionId: string | undefined;
+
+  if (messageType === 0b1111) {
+    errorCode = raw.readInt32BE(offset);
+    offset += 4;
+  }
 
   if (flags === 0b0100) {
     eventId = raw.readInt32BE(offset);
@@ -124,6 +134,7 @@ function parseFrame(raw: Buffer): ParsedFrame {
     flags,
     serialization,
     compression,
+    errorCode,
     eventId,
     sessionId,
     payload,
@@ -148,6 +159,39 @@ function decodePayload(frame: ParsedFrame): unknown {
 
 type FrameMatcher = (frame: ParsedFrame) => boolean;
 
+class DoubaoRealtimeError extends Error {
+  code?: number;
+  eventId?: number;
+  payload?: unknown;
+
+  constructor(message: string, opts?: { code?: number; eventId?: number; payload?: unknown }) {
+    super(message);
+    this.name = "DoubaoRealtimeError";
+    this.code = opts?.code;
+    this.eventId = opts?.eventId;
+    this.payload = opts?.payload;
+  }
+}
+
+function getFailureFrame(frames: ParsedFrame[]): ParsedFrame | undefined {
+  return frames.find((f) => {
+    if (f.messageType === 0b1111) return true;
+    return f.eventId === EVENT.ConnectionFailed || f.eventId === EVENT.SessionFailed;
+  });
+}
+
+function throwFailure(frame: ParsedFrame): never {
+  const payload = decodePayload(frame) as { error?: string } | undefined;
+  const fallbackMessage =
+    payload?.error ||
+    `Doubao realtime failure: messageType=${frame.messageType}, eventId=${frame.eventId ?? "n/a"}`;
+  throw new DoubaoRealtimeError(fallbackMessage, {
+    code: frame.errorCode,
+    eventId: frame.eventId,
+    payload,
+  });
+}
+
 async function waitForFrame(
   frames: ParsedFrame[],
   matcher: FrameMatcher,
@@ -155,6 +199,8 @@ async function waitForFrame(
 ): Promise<ParsedFrame> {
   const existing = frames.find(matcher);
   if (existing) return existing;
+  const failure = getFailureFrame(frames);
+  if (failure) throwFailure(failure);
 
   return new Promise<ParsedFrame>((resolve, reject) => {
     const timer = setTimeout(() => {
@@ -163,6 +209,20 @@ async function waitForFrame(
     }, timeoutMs);
 
     const poll = setInterval(() => {
+      const fail = getFailureFrame(frames);
+      if (fail) {
+        clearInterval(poll);
+        clearTimeout(timer);
+        reject(
+          new DoubaoRealtimeError("Doubao realtime returned a failure event", {
+            code: fail.errorCode,
+            eventId: fail.eventId,
+            payload: decodePayload(fail),
+          })
+        );
+        return;
+      }
+
       const found = frames.find(matcher);
       if (found) {
         clearInterval(poll);
@@ -174,7 +234,14 @@ async function waitForFrame(
 }
 
 export async function probeDoubaoRealtime(params: RealtimeProbeParams): Promise<RealtimeProbeResult> {
-  const { text, model = "O", speaker, timeoutMs = 15_000 } = params;
+  const {
+    text,
+    model = "O",
+    speaker,
+    timeoutMs = 15_000,
+    inputMode = "text",
+    includeTtsPcmS16le = true,
+  } = params;
   const env = getDoubaoRealtimeEnv();
   const sessionId = randomUUID();
   const connectId = randomUUID();
@@ -247,10 +314,20 @@ export async function probeDoubaoRealtime(params: RealtimeProbeParams): Promise<
     await waitForFrame(receivedFrames, (f) => f.eventId === EVENT.ConnectionStarted, timeoutMs);
 
     const startSessionPayload: Record<string, unknown> = {
-      dialog: { extra: { model } },
+      dialog: { extra: { model, input_mod: inputMode } },
     };
     if (speaker) {
       startSessionPayload.tts = { speaker };
+    }
+    if (includeTtsPcmS16le) {
+      startSessionPayload.tts = {
+        ...(typeof startSessionPayload.tts === "object" ? (startSessionPayload.tts as object) : {}),
+        audio_config: {
+          channel: 1,
+          format: "pcm_s16le",
+          sample_rate: 24000,
+        },
+      };
     }
 
     ws.send(buildJsonEventFrame(EVENT.StartSession, startSessionPayload, sessionId));
