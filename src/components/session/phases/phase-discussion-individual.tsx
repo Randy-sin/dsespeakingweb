@@ -69,6 +69,8 @@ export function PhaseDiscussionIndividual({
   onImageClick,
 }: PhaseDiscussionIndividualProps) {
   const statusLabel = room.status === "discussing" ? "Discussion" : "Individual Response";
+  const activeSpeaker = room.status === "individual" ? effectiveDisplayParticipants[currentSpeakerIndex] : undefined;
+  const activeSpeakerName = activeSpeaker?.profiles?.display_name || "匿名";
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,0.9fr)] gap-4">
@@ -113,6 +115,14 @@ export function PhaseDiscussionIndividual({
           <p className="text-[12px] text-neutral-400 uppercase tracking-wide mb-3">
             Marker / 觀眾 / 參與者
           </p>
+          <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+            <p className="text-[11px] uppercase tracking-wide text-emerald-600">
+              Current Speaker
+            </p>
+            <p className="mt-0.5 text-[13px] font-semibold text-emerald-700">
+              {activeSpeaker ? activeSpeakerName : "自由讨论中"}
+            </p>
+          </div>
           <div className="space-y-2">
             {effectiveDisplayParticipants.map((member, idx) => {
               const isSpeaking = room.status === "individual" && idx === currentSpeakerIndex;
@@ -124,7 +134,7 @@ export function PhaseDiscussionIndividual({
                     hasLeft
                       ? "border-red-100 bg-red-50/40 opacity-70"
                       : isSpeaking
-                        ? "border-neutral-300 bg-neutral-50"
+                        ? "border-emerald-300 bg-emerald-50"
                         : "border-neutral-200/70 bg-white"
                   }`}
                 >
@@ -145,7 +155,9 @@ export function PhaseDiscussionIndividual({
                   {hasLeft ? (
                     <span className="text-[10px] text-red-400">已退出</span>
                   ) : isSpeaking ? (
-                    <Badge variant="outline" className="text-[10px]">speaking</Badge>
+                    <Badge variant="outline" className="text-[10px] border-emerald-300 bg-emerald-100 text-emerald-700">
+                      speaking
+                    </Badge>
                   ) : null}
                 </div>
               );
