@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Shuffle, CalendarDays, Clock, Zap } from "lucide-react";
+import { ArrowLeft, Loader2, Shuffle, CalendarDays, Clock, Zap, Lock } from "lucide-react";
 import Link from "next/link";
 import type { PastPaper } from "@/lib/supabase/types";
 
@@ -69,6 +69,10 @@ export default function CreateRoomPage() {
   const [papers, setPapers] = useState<PastPaper[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(true);
+
+  // Password (optional)
+  const [enablePassword, setEnablePassword] = useState(false);
+  const [password, setPassword] = useState("");
 
   // Schedule mode: "now" (default) or "later"
   const [scheduleMode, setScheduleMode] = useState<"now" | "later">("now");
@@ -132,23 +136,22 @@ export default function CreateRoomPage() {
           ? new Date().toISOString()
           : new Date(`${scheduledDate}T${scheduledTime}:00`).toISOString();
 
-      const { data: room, error: roomError } = await supabase
-        .from("rooms")
-        .insert({
+      const res = await fetch("/api/rooms/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           name: name || `${user.email?.split("@")[0] || "User"}的練習房`,
-          host_id: user.id,
-          paper_id: selectedPaperId,
-          scheduled_at: scheduledAt,
-        })
-        .select()
-        .single();
-      if (roomError) throw roomError;
-      const { error: memberError } = await supabase
-        .from("room_members")
-        .insert({ room_id: room.id, user_id: user.id, speaking_order: 1 });
-      if (memberError) throw memberError;
+          paperId: selectedPaperId,
+          scheduledAt,
+          password: enablePassword ? password : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        throw new Error(data.error);
+      }
       toast.success("房間已建立");
-      router.push(`/rooms/${room.id}`);
+      router.push(`/rooms/${data.roomId}`);
     } catch (error) {
       console.error(error);
       toast.error("建立失敗，請重試");
@@ -353,6 +356,39 @@ export default function CreateRoomPage() {
                   </div>
                 )}
               </>
+            )}
+          </div>
+
+          {/* Password (optional) */}
+          <div className="bg-white rounded-2xl border border-neutral-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-neutral-400" />
+                <span className="text-[13px] font-medium text-neutral-900">房間密碼</span>
+                <span className="text-[11px] text-neutral-400">（可選）</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEnablePassword(!enablePassword)}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                  enablePassword ? "bg-neutral-900" : "bg-neutral-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    enablePassword ? "translate-x-[18px]" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+            {enablePassword && (
+              <Input
+                type="password"
+                placeholder="輸入房間密碼"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-10 text-[14px]"
+              />
             )}
           </div>
 

@@ -216,6 +216,7 @@ export type Database = {
           skip_votes: string[]
           status: Database["public"]["Enums"]["room_status"]
           updated_at: string
+          password_hash: string | null
         }
         Insert: {
           part_b_countdown_end_at?: string | null
@@ -234,6 +235,7 @@ export type Database = {
           skip_votes?: string[]
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
+          password_hash?: string | null
         }
         Update: {
           part_b_countdown_end_at?: string | null
@@ -252,6 +254,7 @@ export type Database = {
           skip_votes?: string[]
           status?: Database["public"]["Enums"]["room_status"]
           updated_at?: string
+          password_hash?: string | null
         }
         Relationships: [
           {

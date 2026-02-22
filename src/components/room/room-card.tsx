@@ -1,14 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { formatDistanceToNow, format, isToday, isTomorrow } from "date-fns";
 import { zhTW } from "date-fns/locale";
-import { ArrowRight, Users, CalendarDays, Eye, ClipboardCheck } from "lucide-react";
+import { ArrowRight, Users, CalendarDays, Eye, ClipboardCheck, Lock } from "lucide-react";
+import { useState } from "react";
+import { PasswordDialog } from "./password-dialog";
 import type { Room, Profile, RoomMember } from "@/lib/supabase/types";
 
 type RoomWithInfo = Room & {
@@ -23,7 +24,9 @@ interface RoomCardProps {
 export function RoomCard({ room }: RoomCardProps) {
   const { user } = useUser();
   const router = useRouter();
-  const supabase = createClient();
+
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
 
   const participants = room.room_members?.filter((m) => m.role === "participant") || [];
   const spectators = room.room_members?.filter((m) => m.role === "spectator") || [];
@@ -40,6 +43,39 @@ export function RoomCard({ room }: RoomCardProps) {
     room.status === "discussing" ||
     room.status === "individual";
 
+  const hasPassword = !!room.password_hash;
+
+  const joinRoom = async (password?: string) => {
+    setJoinLoading(true);
+    try {
+      const role = isInSession ? "spectator" : "participant";
+      const res = await fetch("/api/rooms/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ roomId: room.id, password, role }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        if (data.code === "WRONG_PASSWORD") {
+          toast.error("密碼錯誤");
+          return;
+        }
+        if (data.code === "ROOM_FULL") {
+          toast.error("房間已滿");
+          return;
+        }
+        toast.error(data.error);
+        return;
+      }
+      setShowPasswordDialog(false);
+      router.push(isInSession ? `/rooms/${room.id}/session` : `/rooms/${room.id}`);
+    } catch {
+      toast.error("加入房間失敗");
+    } finally {
+      setJoinLoading(false);
+    }
+  };
+
   const handleJoin = async () => {
     if (!user) {
       router.push("/login");
@@ -52,33 +88,21 @@ export function RoomCard({ room }: RoomCardProps) {
       return;
     }
     if (room.status === "waiting") {
-      // Join as participant
       if (isFull) {
         toast.error("房間已滿");
         return;
       }
-      const { error } = await supabase.from("room_members").insert({
-        room_id: room.id,
-        user_id: user.id,
-        role: "participant",
-      });
-      if (error) {
-        toast.error("加入房間失敗");
+      if (hasPassword) {
+        setShowPasswordDialog(true);
         return;
       }
-      router.push(`/rooms/${room.id}`);
+      await joinRoom();
     } else if (isInSession) {
-      // Join as spectator
-      const { error } = await supabase.from("room_members").insert({
-        room_id: room.id,
-        user_id: user.id,
-        role: "spectator",
-      });
-      if (error) {
-        toast.error("加入觀看失敗");
+      if (hasPassword) {
+        setShowPasswordDialog(true);
         return;
       }
-      router.push(`/rooms/${room.id}/session`);
+      await joinRoom();
     }
   };
 
@@ -141,8 +165,9 @@ export function RoomCard({ room }: RoomCardProps) {
       </div>
 
       {/* Title */}
-      <h3 className="font-serif text-[19px] sm:text-[18px] font-semibold text-neutral-900 tracking-tight mb-2 group-hover:text-neutral-700 transition-colors truncate">
+      <h3 className="font-serif text-[19px] sm:text-[18px] font-semibold text-neutral-900 tracking-tight mb-2 group-hover:text-neutral-700 transition-colors truncate flex items-center gap-2">
         {room.name}
+        {hasPassword && <Lock className="h-4 w-4 text-neutral-400 flex-shrink-0" />}
       </h3>
 
       {/* Scheduled time */}
@@ -259,6 +284,13 @@ export function RoomCard({ room }: RoomCardProps) {
           )}
         </Button>
       </div>
+
+      <PasswordDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+        onSubmit={joinRoom}
+        loading={joinLoading}
+      />
     </div>
   );
 }
