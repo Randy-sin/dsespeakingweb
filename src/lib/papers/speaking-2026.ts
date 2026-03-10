@@ -97,7 +97,14 @@ export const speaking2026Papers: Speaking2026Paper[] = [
       "Ways teenagers can save money",
       "School activities that can be carried out",
     ],
-    status: "partial",
+    partBQuestions: [
+      "Describe an experience of buying something you don't need.",
+      "How do you keep track of your daily expenses?",
+      "If you have a thousand Hong Kong dollars, how would you save the money?",
+      "Can peer pressure help students develop the habit of keeping track of expenses?",
+      "Why is it difficult to save money?",
+    ],
+    status: "complete",
   },
   {
     id: "2026-1-3",
