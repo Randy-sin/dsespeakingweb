@@ -53,3 +53,61 @@ export const speaking2026UpdatePlan = [
   "再把 Part A、Discussion Questions、Part B 拆成可直接閱讀的區塊。",
   "最後補最少量但最有用的提示，例如題目主題、常見卡點和論壇入口。",
 ];
+
+// ─── 2026 Speaking Papers Data ─────────────────────────────────────────────
+
+export type Speaking2026Paper = {
+  id: string;
+  paperNumber: string;
+  topic: string;
+  partAArticle?: string[];
+  partADiscussionPoints: string[];
+  partBQuestions?: string[];
+  pdfUrl?: string;
+  status: "complete" | "partial" | "pending";
+};
+
+export const speaking2026Papers: Speaking2026Paper[] = [
+  {
+    id: "2026-1-1",
+    paperNumber: "1.1",
+    topic: "Two-dish Rice",
+    partADiscussionPoints: [
+      "Reasons why two-dish rice are popular",
+      "Advantages and disadvantages of two-dish rice",
+      "Ways to promote two-dish rice",
+    ],
+    partBQuestions: [
+      "What do you eat for lunch?",
+      "How can two-dish rice improve its service?",
+      "Which one is more important, food quality or price?",
+      "Do you agree that two-dish rice will become a culture in Hong Kong?",
+      "How does social media influence people's eating habits?",
+      "Do you think two-dish rice should be promoted as part of Hong Kong food culture?",
+      "Explain whether economic conditions could potentially affect people's choices of meals.",
+    ],
+    status: "complete",
+  },
+  {
+    id: "2026-1-2",
+    paperNumber: "1.2",
+    topic: "Financial Literacy for Teenagers",
+    partADiscussionPoints: [
+      "Reasons why financial literacy is important for teenagers",
+      "Ways teenagers can save money",
+      "School activities that can be carried out",
+    ],
+    status: "partial",
+  },
+  {
+    id: "2026-1-3",
+    paperNumber: "1.3",
+    topic: "Online Dishonesty",
+    partADiscussionPoints: [
+      "Why are people dishonest online?",
+      "How would people feel if their friends were to lie online?",
+      "How do we protect ourselves from online lies?",
+    ],
+    status: "partial",
+  },
+];

@@ -9,11 +9,13 @@ import {
   NotebookTabs,
   MessageSquareText,
   Download,
+  MessageCircle,
 } from "lucide-react";
 import {
   speaking2026Intro,
   speaking2026Slots,
   speaking2026UpdatePlan,
+  speaking2026Papers,
 } from "@/lib/papers/speaking-2026";
 
 export const metadata: Metadata = {
@@ -87,6 +89,89 @@ export default function Speaking2026Page() {
           </div>
         </div>
       </section>
+
+      {/* 2026 Papers Section */}
+      {speaking2026Papers.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
+          <div className="mb-6">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+              Available Papers
+            </p>
+            <h2 className="mt-2 font-serif text-[32px] text-neutral-950">
+              已收錄題目
+            </h2>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {speaking2026Papers.map((paper) => (
+              <div
+                key={paper.id}
+                className="rounded-[24px] border border-neutral-200/80 bg-white p-6 shadow-[0_12px_40px_-20px_rgba(15,23,42,0.15)] transition-shadow hover:shadow-[0_16px_50px_-20px_rgba(15,23,42,0.2)]"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="rounded-full bg-neutral-100 px-3 py-1 text-[12px] font-medium text-neutral-600">
+                    Paper {paper.paperNumber}
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      paper.status === "complete"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : paper.status === "partial"
+                          ? "bg-amber-50 text-amber-600"
+                          : "bg-neutral-100 text-neutral-500"
+                    }`}
+                  >
+                    {paper.status === "complete"
+                      ? "完整"
+                      : paper.status === "partial"
+                        ? "部分"
+                        : "待補"}
+                  </span>
+                </div>
+
+                <h3 className="mt-4 font-serif text-[22px] leading-tight text-neutral-950">
+                  {paper.topic}
+                </h3>
+
+                <div className="mt-5">
+                  <p className="mb-2 flex items-center gap-2 text-[12px] font-medium text-neutral-500">
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Discussion Points
+                  </p>
+                  <ul className="space-y-2">
+                    {paper.partADiscussionPoints.map((point, idx) => (
+                      <li
+                        key={idx}
+                        className="rounded-xl bg-[#f8f7f3] px-4 py-3 text-[14px] leading-relaxed text-neutral-700"
+                      >
+                        {point}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {paper.partBQuestions && paper.partBQuestions.length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-2 text-[12px] font-medium text-neutral-500">
+                      Part B Questions
+                    </p>
+                    <ul className="space-y-2">
+                      {paper.partBQuestions.map((q, idx) => (
+                        <li
+                          key={idx}
+                          className="rounded-xl bg-blue-50/60 px-4 py-3 text-[14px] leading-relaxed text-neutral-700"
+                        >
+                          {q}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
