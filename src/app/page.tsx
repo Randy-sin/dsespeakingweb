@@ -101,28 +101,15 @@ export default async function HomePage() {
       </section>
 
       {/* ── 2026 Banner ── */}
-      <section className="bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500">
+      <section className="bg-neutral-900">
         <Link href="/papers/2026-speaking" className="block">
-          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4 sm:py-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-[24px]">🔥</span>
-                <div>
-                  <p className="text-[14px] sm:text-[16px] font-semibold text-white">
-                    2026 DSE Speaking 題目已更新
-                  </p>
-                  <p className="text-[12px] sm:text-[13px] text-white/80">
-                    Paper 1.1, 1.2, 1.3 已收錄，持續更新中
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-medium text-white">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  即時更新
-                </span>
-                <ArrowRight className="h-5 w-5 text-white/80" />
-              </div>
+          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[14px] text-white">
+                <span className="font-medium">2026 DSE Speaking</span>
+                <span className="text-neutral-400 ml-2">Paper 1.1, 1.2, 1.3 已收錄</span>
+              </p>
+              <ArrowRight className="h-4 w-4 text-neutral-400" />
             </div>
           </div>
         </Link>

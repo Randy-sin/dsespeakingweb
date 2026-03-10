@@ -56,9 +56,9 @@ export function Navbar() {
               <Link href="/papers/2026-speaking">
                 <Button
                   size="sm"
-                  className="text-[13px] font-medium min-h-9 px-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white rounded-full shadow-sm"
+                  className="text-[13px] font-medium min-h-9 px-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full"
                 >
-                  🔥 2026
+                  2026
                 </Button>
               </Link>
               <Link href="/papers">
@@ -95,9 +95,9 @@ export function Navbar() {
             <Link href="/papers/2026-speaking" className="sm:hidden">
               <Button
                 size="sm"
-                className="text-[12px] font-medium min-h-9 px-2.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white rounded-full"
+                className="text-[12px] font-medium min-h-9 px-2.5 bg-neutral-900 text-white rounded-full"
               >
-                🔥 2026
+                2026
               </Button>
             </Link>
             <Link href="/papers" className="sm:hidden">

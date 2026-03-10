@@ -1,126 +1,81 @@
-export type Speaking2026Slot = {
-  id: string;
-  label: string;
-  title: string;
-  status: "pending";
-  note: string;
-};
-
-export const speaking2026Intro = {
-  title: "2026 DSE Speaking Past Paper",
-  subtitle:
-    "這一頁會專門整理 2026 年 DSE Speaking 原始 PDF、重點結構和易懂版本。拿到 PDF 後，可以直接補進來，不用再改頁面骨架。",
-  summary: [
-    "只放和 2026 Speaking 有關的內容，不混入其他年份。",
-    "優先保留原始 PDF 與最直觀的題目整理，避免堆砌。",
-    "後續可逐步補上 Part A、Discussion Questions、Part B 和簡短備考提示。",
-  ],
-};
-
-export const speaking2026Slots: Speaking2026Slot[] = [
-  {
-    id: "main-paper",
-    label: "Main Paper",
-    title: "2026 Speaking 原卷 PDF",
-    status: "pending",
-    note: "PDF 到手後先放這裡，作為整頁的第一入口。",
-  },
-  {
-    id: "part-a",
-    label: "Part A",
-    title: "閱讀材料與主題整理",
-    status: "pending",
-    note: "保留原文，同時補一版簡潔易懂的重點導讀。",
-  },
-  {
-    id: "discussion",
-    label: "Discussion",
-    title: "討論題目直接展示",
-    status: "pending",
-    note: "不做冗長說明，直接列出可用於練習和討論的題目。",
-  },
-  {
-    id: "part-b",
-    label: "Part B",
-    title: "個人回應題目整理",
-    status: "pending",
-    note: "按題目逐條顯示，後續可補簡短答題方向。",
-  },
-];
-
-export const speaking2026UpdatePlan = [
-  "收到 PDF 後，先上傳原卷並補上下載入口。",
-  "再把 Part A、Discussion Questions、Part B 拆成可直接閱讀的區塊。",
-  "最後補最少量但最有用的提示，例如題目主題、常見卡點和論壇入口。",
-];
-
-// ─── 2026 Speaking Papers Data ─────────────────────────────────────────────
-
 export type Speaking2026Paper = {
   id: string;
   paperNumber: string;
+  date: string;
+  time: string;
   topic: string;
-  partAArticle?: string[];
   partADiscussionPoints: string[];
-  partBQuestions?: string[];
-  pdfUrl?: string;
-  status: "complete" | "partial" | "pending";
+  partBQuestions: string[];
 };
 
 export const speaking2026Papers: Speaking2026Paper[] = [
   {
     id: "2026-1-1",
     paperNumber: "1.1",
-    topic: "Two-dish Rice",
+    date: "3.10 (TUE)",
+    time: "17:00",
+    topic: "Two-Dish Rice meals",
     partADiscussionPoints: [
-      "Reasons why two-dish rice are popular",
-      "Advantages and disadvantages of two-dish rice",
-      "Ways to promote two-dish rice to tourists",
+      "Why it is popular in Hong Kong",
+      "Advantages and disadvantages of eating such meals",
+      "How to promote it to tourists",
+      "Anything else you think is important",
     ],
     partBQuestions: [
-      "What do you eat for lunch?",
-      "How can two-dish rice improve its service?",
-      "Which one is more important, food quality or price?",
-      "Do you agree that two-dish rice will become a culture in Hong Kong?",
-      "How does social media influence people's eating habits?",
-      "Do you think two-dish rice should be promoted as part of Hong Kong food culture?",
-      "Explain whether economic conditions could potentially affect people's choices of meals.",
+      "Have you ever eaten "Two-Dish Rice" meals?",
+      "What do you prefer to have at lunch time?",
+      "What do you eat for a meal if you are in a hurry?",
+      "Is food quality or price more important?",
+      "How can "Two-Dish Rice" eateries improve and expand their services?",
+      "How do social media influencers promote "Two-Dish Rice" meals?",
+      "Do you agree that "Two-Dish Rice" will become a culture in HK?",
+      "Do you think economic conditions will change food culture?",
     ],
-    status: "complete",
   },
   {
     id: "2026-1-2",
     paperNumber: "1.2",
-    topic: "Financial Literacy for Teenagers",
+    date: "3.10 (TUE)",
+    time: "18:00",
+    topic: "Financial Literacy",
     partADiscussionPoints: [
-      "Reasons why financial literacy is important for teenagers",
-      "Ways teenagers can save money",
-      "School activities that can be carried out",
+      "Importance of being financially literate",
+      "Strategies for students to adopt to save money",
+      "How to promote financial education at school",
+      "Anything else you think is important",
     ],
     partBQuestions: [
-      "Describe an experience of buying something you don't need.",
-      "How do you keep track of your daily expenses?",
-      "If you have a thousand Hong Kong dollars, how would you save the money?",
-      "Can peer pressure help students develop the habit of keeping track of expenses?",
-      "Why is it difficult to save money?",
+      "Why do people think managing money is difficult?",
+      "If you were given a thousand dollars, how much will you save?",
+      "Why don't people nowadays have a habit of money saving?",
+      "Do you think you buy more things than you need?",
+      "Why is it difficult for some people to save money?",
+      "How does peer pressure influence teenagers in financial decisions?",
+      "Is having an emergency fund important for you and your family?",
+      "Why there are some people with weaker financial concepts?",
     ],
-    status: "complete",
   },
   {
     id: "2026-1-3",
     paperNumber: "1.3",
+    date: "3.10 (TUE)",
+    time: "19:00",
     topic: "Online Dishonesty",
     partADiscussionPoints: [
-      "Why are people dishonest online?",
-      "How would people feel if their friends were to lie online?",
-      "How do we protect ourselves from online lies?",
+      "Why people are dishonest online",
+      "What you would think if your friends lied online",
+      "How to protect people from lies online",
+      "Anything else you think is important",
     ],
     partBQuestions: [
-      "Do you often read posts on social media?",
-      "Have you ever seen any dishonest behaviour on the Internet?",
-      "Do you think it is honest to use AI to write articles and post them online?",
-      "Have you ever seen any cases of people lying on social media?",
+      "Do you often use social media?",
+      "Is it important to be honest online?",
+      "Would you like to add photo to your posts on social media?",
+      "Have you ever seen people being dishonest online?",
+      "Do you agree with people posting edited photos?",
+      "Is it common for people to exaggerate their achievements online?",
+      "Is it dishonest to post text online that is written by AI?",
+      "How do you make sure the information online is true?",
     ],
-    status: "complete",
   },
 ];
