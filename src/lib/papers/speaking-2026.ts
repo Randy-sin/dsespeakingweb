@@ -115,6 +115,12 @@ export const speaking2026Papers: Speaking2026Paper[] = [
       "How would people feel if their friends were to lie online?",
       "How do we protect ourselves from online lies?",
     ],
-    status: "partial",
+    partBQuestions: [
+      "Do you often read posts on social media?",
+      "Have you ever seen any dishonest behaviour on the Internet?",
+      "Do you think it is honest to use AI to write articles and post them online?",
+      "Have you ever seen any cases of people lying on social media?",
+    ],
+    status: "complete",
   },
 ];
