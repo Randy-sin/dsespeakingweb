@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       typeof body.paperId === "string" && body.paperId ? body.paperId : null;
     const tagSlugs = Array.isArray(body.tagSlugs)
       ? body.tagSlugs
-          .filter((slug): slug is string => typeof slug === "string")
+          .filter((slug: unknown): slug is string => typeof slug === "string")
           .slice(0, 6)
       : [];
 

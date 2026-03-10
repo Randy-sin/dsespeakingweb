@@ -116,7 +116,7 @@ export default async function PaperHubPage({
                 <div className="rounded-[28px] border border-neutral-200 bg-[#faf9f5] p-6">
                   {paper.page_images?.length ? (
                     <div className="space-y-4">
-                      {paper.page_images.map((url, index) => (
+                      {paper.page_images.map((url: string, index: number) => (
                         <img
                           key={url}
                           src={url}
@@ -127,7 +127,7 @@ export default async function PaperHubPage({
                     </div>
                   ) : (
                     <div className="space-y-4 text-[15px] leading-8 text-neutral-700">
-                      {paper.part_a_article.map((paragraph, index) => (
+                      {paper.part_a_article.map((paragraph: string, index: number) => (
                         <p key={`${paper.id}-paragraph-${index}`}>{paragraph}</p>
                       ))}
                     </div>
@@ -135,7 +135,7 @@ export default async function PaperHubPage({
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  {paper.part_a_discussion_points.map((point, index) => (
+                  {paper.part_a_discussion_points.map((point: string, index: number) => (
                     <div
                       key={`${paper.id}-discussion-${index}`}
                       className="flex gap-4 rounded-[20px] border border-neutral-200 bg-white p-5"
