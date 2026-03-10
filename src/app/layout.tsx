@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Source_Serif_4 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
 import { AppProviders } from "@/components/providers/app-providers";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -48,6 +49,7 @@ export default function RootLayout({
           {children}
           <Toaster position="top-center" />
         </AppProviders>
+        <Analytics />
       </body>
     </html>
   );
