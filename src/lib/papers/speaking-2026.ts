@@ -75,7 +75,7 @@ export const speaking2026Papers: Speaking2026Paper[] = [
     partADiscussionPoints: [
       "Reasons why two-dish rice are popular",
       "Advantages and disadvantages of two-dish rice",
-      "Ways to promote two-dish rice",
+      "Ways to promote two-dish rice to tourists",
     ],
     partBQuestions: [
       "What do you eat for lunch?",
