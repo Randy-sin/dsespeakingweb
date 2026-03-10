@@ -53,6 +53,14 @@ export function Navbar() {
               DSE Speaking
             </Link>
             <div className="hidden sm:flex items-center gap-1">
+              <Link href="/papers/2026-speaking">
+                <Button
+                  size="sm"
+                  className="text-[13px] font-medium min-h-9 px-3 bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white rounded-full shadow-sm"
+                >
+                  🔥 2026
+                </Button>
+              </Link>
               <Link href="/papers">
                 <Button
                   variant="ghost"
@@ -84,6 +92,14 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link href="/papers/2026-speaking" className="sm:hidden">
+              <Button
+                size="sm"
+                className="text-[12px] font-medium min-h-9 px-2.5 bg-gradient-to-r from-rose-500 to-orange-500 text-white rounded-full"
+              >
+                🔥 2026
+              </Button>
+            </Link>
             <Link href="/papers" className="sm:hidden">
               <Button
                 variant="ghost"

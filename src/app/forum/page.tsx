@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ForumPostCard } from "@/components/forum/forum-post-card";
 import { fetchForumFeed, fetchForumTags, fetchPaperCatalog } from "@/lib/forum/server";
 import { FORUM_POST_TYPE_OPTIONS } from "@/lib/forum/constants";
-import { Search, MessageSquareText, Sparkles, ArrowRight } from "lucide-react";
+import { Search, MessageSquareText, Sparkles, ArrowRight, Flame } from "lucide-react";
 
 type SearchParams = Promise<{
   q?: string;
@@ -195,6 +195,29 @@ export default async function ForumPage({
         </div>
 
         <aside className="space-y-5">
+          {/* 2026 Banner */}
+          <Link
+            href="/papers/2026-speaking"
+            className="block rounded-[28px] bg-gradient-to-br from-rose-500 via-orange-500 to-amber-500 p-6 shadow-lg shadow-orange-500/20 transition-transform hover:scale-[1.02]"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <Flame className="h-6 w-6 text-white" />
+              <p className="text-[12px] uppercase tracking-[0.18em] text-white/80">
+                Hot Now
+              </p>
+            </div>
+            <h3 className="font-serif text-[22px] font-semibold text-white mb-2">
+              2026 Speaking 題目
+            </h3>
+            <p className="text-[13px] text-white/80 leading-relaxed mb-4">
+              Paper 1.1, 1.2, 1.3 已收錄，Part B 題目持續更新中
+            </p>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-medium text-white">
+              查看題目
+              <ArrowRight className="h-3.5 w-3.5" />
+            </span>
+          </Link>
+
           <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
             <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
               Top Papers This Week
