@@ -27,6 +27,7 @@ import { PhaseResults } from "@/components/session/phases/phase-results";
 import { PhaseFinished } from "@/components/session/phases/phase-finished";
 import { PhasePreparing } from "@/components/session/phases/phase-preparing";
 import { PhaseDiscussionIndividual } from "@/components/session/phases/phase-discussion-individual";
+import type { PastPaper, Room } from "@/lib/supabase/types";
 
 export default function SessionPage() {
   const params = useParams();
@@ -117,6 +118,28 @@ export default function SessionPage() {
     broadcastRef,
   });
 
+  const currentSpeakerIndex = room?.current_speaker_index ?? 0;
+  const {
+    rawPartBQuestions,
+    displayQuestion,
+  } = useSessionPartBDisplay({
+    room:
+      room ??
+      ({
+        marker_questions: null,
+        status: "waiting",
+      } as unknown as Room),
+    paper:
+      paper ??
+      ({
+        part_b_questions: [],
+      } as unknown as PastPaper),
+    participants,
+    currentSpeakerIndex,
+    hasMarker,
+    partBSubphase,
+  });
+
   const handleLeaveSpectator = async () => {
     if (!user || !isSpectator) return;
     await supabase
@@ -181,19 +204,7 @@ export default function SessionPage() {
     );
   }
 
-  const currentSpeakerIndex = room.current_speaker_index ?? 0;
   const currentSpeaker = participants[currentSpeakerIndex];
-  const {
-    rawPartBQuestions,
-    displayQuestion,
-  } = useSessionPartBDisplay({
-    room,
-    paper,
-    participants,
-    currentSpeakerIndex,
-    hasMarker,
-    partBSubphase,
-  });
 
   const isDiscussionOrIR =
     room.status === "discussing" || room.status === "individual";
@@ -298,6 +309,7 @@ export default function SessionPage() {
             isMarker={isMarker}
             isSpectator={isSpectator}
             userId={user?.id}
+            paper={paper}
             onStartFreeDiscussion={handleStartFreeDiscussion}
             onFinishSession={handleFinishSession}
           />
@@ -310,6 +322,7 @@ export default function SessionPage() {
             isMarker={isMarker}
             isSpectator={isSpectator}
             userId={user?.id}
+            paper={paper}
           />
         )}
 

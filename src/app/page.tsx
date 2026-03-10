@@ -3,8 +3,11 @@ import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mic, Users, Clock, FileText, BookOpen, MessageSquare, User } from "lucide-react";
 import { PromoVideo } from "@/components/home/promo-video";
+import { fetchForumHomepageBlocks } from "@/lib/forum/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const forumBlocks = await fetchForumHomepageBlocks();
+
   return (
     <div className="min-h-screen bg-white overflow-x-clip">
       <Navbar />
@@ -60,6 +63,14 @@ export default function HomePage() {
                       瀏覽房間
                     </Button>
                   </Link>
+                  <Link href="/forum" className="w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
+                    >
+                      考試週論壇
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
@@ -72,7 +83,7 @@ export default function HomePage() {
             {/* Quick stats */}
             <div className="animate-fade-up delay-500 grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-neutral-100">
               {[
-                { value: "228", label: "歷年真題" },
+                { value: "267", label: "歷年真題" },
                 { value: "2012–2025", label: "年份涵蓋" },
                 { value: "4 人", label: "小組討論" },
                 { value: "19 min", label: "完整模擬" },
@@ -109,6 +120,93 @@ export default function HomePage() {
           ))}
         </div>
       </div>
+
+      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-10">
+          <div>
+            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-3">
+              Exam Week
+            </p>
+            <h2 className="font-serif text-[30px] sm:text-[46px] font-semibold text-neutral-900 tracking-tight leading-[1.05]">
+              真題庫和論壇，
+              <br className="sm:hidden" />現在放在一起了
+            </h2>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/papers">
+              <Button variant="outline" className="rounded-full border-neutral-200 text-neutral-600">
+                瀏覽真題
+              </Button>
+            </Link>
+            <Link href="/forum">
+              <Button className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800">
+                進入論壇
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr_0.9fr] gap-5">
+          <div className="rounded-[28px] border border-neutral-200/70 bg-[#faf9f5] p-6 sm:p-8">
+            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
+              This Week&rsquo;s Papers
+            </p>
+            <div className="space-y-3">
+              {forumBlocks.trendingPapers.map((paper) => (
+                <Link
+                  key={paper.id}
+                  href={`/papers/${paper.paper_id}`}
+                  className="block rounded-2xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 transition-colors"
+                >
+                  <p className="text-[12px] text-neutral-400">
+                    {paper.year} · {paper.paper_number}
+                  </p>
+                  <p className="mt-1 font-medium text-[15px] text-neutral-900">
+                    {paper.topic}
+                  </p>
+                  <p className="mt-2 text-[12px] text-neutral-500">
+                    {paper.discussionCount} 則討論
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-neutral-200/70 bg-white p-6 sm:p-8">
+            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
+              Fresh Discussions
+            </p>
+            <div className="space-y-3">
+              {forumBlocks.featuredPosts.length > 0 ? (
+                forumBlocks.featuredPosts.map((post) => (
+                  <Link
+                    key={post.id}
+                    href={`/forum/${post.slug}`}
+                    className="block rounded-2xl border border-neutral-100 bg-neutral-50 p-4 hover:bg-white hover:border-neutral-200 transition-colors"
+                  >
+                    <p className="text-[12px] text-neutral-400 mb-1">
+                      {post.paper ? `${post.paper.year} · ${post.paper.paper_number}` : "General"}
+                    </p>
+                    <p className="font-medium text-[15px] text-neutral-900 leading-6">
+                      {post.title}
+                    </p>
+                    <p className="mt-2 text-[12px] text-neutral-500 line-clamp-2">
+                      {post.excerpt_text}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-neutral-200 bg-[#faf9f5] p-6">
+                  <p className="font-medium text-neutral-900 mb-2">論壇已準備好</p>
+                  <p className="text-[14px] text-neutral-500 leading-relaxed">
+                    一旦你跑完 migration，就可以開始累積考試週的真題討論與模擬復盤。
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── How it works ── */}
       <section className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-32">
@@ -148,7 +246,7 @@ export default function HomePage() {
               zh: "個人回應",
               time: "1 min each",
               desc: "輪流回答考官的跟進問題，展示獨立思考和臨場表達能力。",
-              gradient: "from-violet-50 to-purple-50/50",
+              gradient: "from-stone-50 to-neutral-50/60",
             },
           ].map((item) => (
             <div
@@ -332,6 +430,12 @@ export default function HomePage() {
               </span>
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
+              <Link href="/papers" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
+                Papers
+              </Link>
+              <Link href="/forum" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
+                Forum
+              </Link>
               <Link href="/rooms" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
                 Rooms
               </Link>

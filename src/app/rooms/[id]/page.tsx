@@ -46,7 +46,7 @@ export default function WaitingRoomPage() {
   const roomId = params.id as string;
   const router = useRouter();
   const { user } = useUser();
-  const { t, locale } = useI18n();
+  const { locale } = useI18n();
   const supabase = createClient();
 
   // Keep membership alive with heartbeat
@@ -179,7 +179,7 @@ export default function WaitingRoomPage() {
       .channel(`bc-${roomId}`, {
         config: { broadcast: { self: false } },
       })
-      .on("broadcast", { event: "nudge" }, (payload) => {
+      .on("broadcast", { event: "nudge" }, () => {
         toast("房主提醒你準備就緒！", { icon: "🔔", duration: 5000 });
       })
       .on("broadcast", { event: "room_sync" }, (payload) => {
@@ -1210,6 +1210,12 @@ export default function WaitingRoomPage() {
                       : "Discussion questions will be revealed during the preparation phase"}
                   </p>
                 </div>
+                <Link
+                  href={`/papers/${paper.paper_id}`}
+                  className="inline-flex text-[13px] text-neutral-600 hover:text-neutral-900 transition-colors"
+                >
+                  {locale === "zh-Hant" ? "先看這份題的討論與復盤 →" : "Open this paper hub →"}
+                </Link>
               </div>
             ) : (
               <p className="text-[13px] text-neutral-400">

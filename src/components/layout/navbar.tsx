@@ -21,7 +21,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, LayoutGrid } from "lucide-react";
+import { LogOut, User, LayoutGrid, BookOpenText, MessageSquareText } from "lucide-react";
 import { toast } from "sonner";
 
 export function Navbar() {
@@ -53,6 +53,24 @@ export function Navbar() {
               DSE Speaking
             </Link>
             <div className="hidden sm:flex items-center gap-1">
+              <Link href="/papers">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
+                >
+                  Papers
+                </Button>
+              </Link>
+              <Link href="/forum">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
+                >
+                  Forum
+                </Button>
+              </Link>
               <Link href="/rooms">
                 <Button
                   variant="ghost"
@@ -66,6 +84,26 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
+            <Link href="/papers" className="sm:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-11 min-w-11 rounded-full text-neutral-500 hover:text-neutral-900"
+                aria-label="Papers"
+              >
+                <BookOpenText className="h-4 w-4" />
+              </Button>
+            </Link>
+            <Link href="/forum" className="sm:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-11 min-w-11 rounded-full text-neutral-500 hover:text-neutral-900"
+                aria-label="Forum"
+              >
+                <MessageSquareText className="h-4 w-4" />
+              </Button>
+            </Link>
             <Link href="/rooms" className="sm:hidden">
               <Button
                 variant="ghost"

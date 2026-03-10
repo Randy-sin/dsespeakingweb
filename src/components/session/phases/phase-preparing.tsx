@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,6 +151,24 @@ export function PhasePreparing({
               </div>
             </div>
           )}
+
+          <div className="mt-6 rounded-xl border border-neutral-200/70 bg-neutral-50/70 p-4">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400 mb-2">
+              Paper Hub
+            </p>
+            <p className="text-[14px] text-neutral-600 leading-relaxed">
+              練習前想先看別人怎樣分析這份題，或練完後想發復盤，可以直接進這份 paper 的討論頁。
+            </p>
+            <Link href={`/papers/${paper.paper_id}`} className="inline-flex mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full border-neutral-200 text-neutral-600"
+              >
+                查看這份題的討論
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {room.status === "preparing" && !isObserver && (

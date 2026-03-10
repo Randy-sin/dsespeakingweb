@@ -198,6 +198,265 @@ export type Database = {
           },
         ]
       }
+      forum_tags: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          author_id: string
+          bookmark_count: number
+          comment_count: number
+          content: string
+          created_at: string
+          excerpt: string | null
+          focus_label: string | null
+          id: string
+          is_featured: boolean
+          last_activity_at: string
+          like_count: number
+          paper_id: string | null
+          post_type: Database["public"]["Enums"]["forum_post_type"]
+          slug: string
+          status: Database["public"]["Enums"]["forum_post_status"]
+          title: string
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          author_id: string
+          bookmark_count?: number
+          comment_count?: number
+          content: string
+          created_at?: string
+          excerpt?: string | null
+          focus_label?: string | null
+          id?: string
+          is_featured?: boolean
+          last_activity_at?: string
+          like_count?: number
+          paper_id?: string | null
+          post_type?: Database["public"]["Enums"]["forum_post_type"]
+          slug: string
+          status?: Database["public"]["Enums"]["forum_post_status"]
+          title: string
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          author_id?: string
+          bookmark_count?: number
+          comment_count?: number
+          content?: string
+          created_at?: string
+          excerpt?: string | null
+          focus_label?: string | null
+          id?: string
+          is_featured?: boolean
+          last_activity_at?: string
+          like_count?: number
+          paper_id?: string | null
+          post_type?: Database["public"]["Enums"]["forum_post_type"]
+          slug?: string
+          status?: Database["public"]["Enums"]["forum_post_status"]
+          title?: string
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_paper_id_fkey"
+            columns: ["paper_id"]
+            isOneToOne: false
+            referencedRelation: "pastpaper_papers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_comments: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          like_count: number
+          parent_id: string | null
+          post_id: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          like_count?: number
+          parent_id?: string | null
+          post_id: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          like_count?: number
+          parent_id?: string | null
+          post_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "forum_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_post_likes: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_post_likes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_bookmarks: {
+        Row: {
+          created_at: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_bookmarks_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_bookmarks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forum_post_tags: {
+        Row: {
+          post_id: string
+          tag_id: string
+        }
+        Insert: {
+          post_id: string
+          tag_id: string
+        }
+        Update: {
+          post_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_post_tags_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_post_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "forum_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           part_b_countdown_end_at: string | null
@@ -281,6 +540,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      forum_post_status: "draft" | "published" | "archived"
+      forum_post_type:
+        | "paper_discussion"
+        | "part_a_analysis"
+        | "part_b_idea"
+        | "mock_review"
+        | "exam_tips"
       room_status:
         | "waiting"
         | "preparing"
@@ -419,11 +685,27 @@ export type Profile = Tables<"profiles">
 export type RoomMember = Tables<"room_members">
 export type PastPaper = Tables<"pastpaper_papers">
 export type MarkerScore = Tables<"marker_scores">
+export type ForumPost = Tables<"forum_posts">
+export type ForumComment = Tables<"forum_comments">
+export type ForumTag = Tables<"forum_tags">
+export type ForumPostLike = Tables<"forum_post_likes">
+export type ForumBookmark = Tables<"forum_bookmarks">
+export type ForumPostTag = Tables<"forum_post_tags">
 export type RoomStatus = Database["public"]["Enums"]["room_status"]
+export type ForumPostType = Database["public"]["Enums"]["forum_post_type"]
+export type ForumPostStatus = Database["public"]["Enums"]["forum_post_status"]
 
 export const Constants = {
   public: {
     Enums: {
+      forum_post_status: ["draft", "published", "archived"],
+      forum_post_type: [
+        "paper_discussion",
+        "part_a_analysis",
+        "part_b_idea",
+        "mock_review",
+        "exam_tips",
+      ],
       room_status: [
         "waiting",
         "preparing",

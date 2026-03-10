@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, UserX } from "lucide-react";
+import { MessageSquare, UserX, NotebookPen } from "lucide-react";
 import { MarkerScoringPanel } from "@/components/session/marker-scoring-panel";
-import type { MarkerScore } from "@/lib/supabase/types";
+import type { MarkerScore, PastPaper } from "@/lib/supabase/types";
 import type { DisplayParticipant, MemberWithProfile } from "@/components/session/session-types";
 
 interface PhaseResultsProps {
@@ -16,6 +17,7 @@ interface PhaseResultsProps {
   isMarker: boolean;
   isSpectator: boolean;
   userId?: string;
+  paper: Pick<PastPaper, "id" | "paper_id" | "topic" | "paper_number" | "year">;
   onStartFreeDiscussion: () => void;
   onFinishSession: () => void;
 }
@@ -28,6 +30,7 @@ export function PhaseResults({
   isMarker,
   isSpectator,
   userId,
+  paper,
   onStartFreeDiscussion,
   onFinishSession,
 }: PhaseResultsProps) {
@@ -106,6 +109,24 @@ export function PhaseResults({
             <p className="text-[12px] text-neutral-400 uppercase tracking-wide">
               Next Step
             </p>
+            <Link href={`/papers/${paper.paper_id}`} className="block">
+              <Button
+                variant="outline"
+                className="w-full border-neutral-200 text-neutral-600"
+              >
+                <MessageSquare className="mr-2 h-4 w-4" />
+                查看同題討論
+              </Button>
+            </Link>
+            <Link href={`/forum/new?paperId=${paper.id}&postType=mock_review`} className="block">
+              <Button
+                variant="outline"
+                className="w-full border-neutral-200 text-neutral-600"
+              >
+                <NotebookPen className="mr-2 h-4 w-4" />
+                寫模擬復盤
+              </Button>
+            </Link>
             <Button className="w-full" onClick={onStartFreeDiscussion} disabled={isSpectator}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Start Free Discussion

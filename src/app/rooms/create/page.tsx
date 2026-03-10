@@ -170,6 +170,9 @@ export default function CreateRoomPage() {
     {} as Record<number, PastPaper[]>
   );
 
+  const selectedPaper =
+    paperId !== "random" ? papers.find((paper) => paper.id === paperId) : null;
+
   // Preview scheduled datetime
   const scheduledPreview = useMemo(() => {
     if (scheduleMode === "now") return null;
@@ -254,6 +257,26 @@ export default function CreateRoomPage() {
                 </Select>
               )}
             </div>
+
+            {selectedPaper && (
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4">
+                <p className="text-[12px] text-neutral-400 mb-1">
+                  {selectedPaper.year} · {selectedPaper.paper_number}
+                </p>
+                <p className="text-[14px] font-medium text-neutral-900">
+                  {selectedPaper.topic}
+                </p>
+                <p className="mt-2 text-[13px] text-neutral-500 leading-relaxed">
+                  建房前可先看看這份題目的討論與復盤，快速掌握大家卡住的點與常見答法。
+                </p>
+                <Link
+                  href={`/papers/${selectedPaper.paper_id}`}
+                  className="inline-flex mt-3 text-[13px] text-neutral-700 hover:text-neutral-900 transition-colors"
+                >
+                  查看這份題的 paper hub →
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Schedule section */}

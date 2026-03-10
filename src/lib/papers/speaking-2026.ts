@@ -1,0 +1,55 @@
+export type Speaking2026Slot = {
+  id: string;
+  label: string;
+  title: string;
+  status: "pending";
+  note: string;
+};
+
+export const speaking2026Intro = {
+  title: "2026 DSE Speaking Past Paper",
+  subtitle:
+    "這一頁會專門整理 2026 年 DSE Speaking 原始 PDF、重點結構和易懂版本。拿到 PDF 後，可以直接補進來，不用再改頁面骨架。",
+  summary: [
+    "只放和 2026 Speaking 有關的內容，不混入其他年份。",
+    "優先保留原始 PDF 與最直觀的題目整理，避免堆砌。",
+    "後續可逐步補上 Part A、Discussion Questions、Part B 和簡短備考提示。",
+  ],
+};
+
+export const speaking2026Slots: Speaking2026Slot[] = [
+  {
+    id: "main-paper",
+    label: "Main Paper",
+    title: "2026 Speaking 原卷 PDF",
+    status: "pending",
+    note: "PDF 到手後先放這裡，作為整頁的第一入口。",
+  },
+  {
+    id: "part-a",
+    label: "Part A",
+    title: "閱讀材料與主題整理",
+    status: "pending",
+    note: "保留原文，同時補一版簡潔易懂的重點導讀。",
+  },
+  {
+    id: "discussion",
+    label: "Discussion",
+    title: "討論題目直接展示",
+    status: "pending",
+    note: "不做冗長說明，直接列出可用於練習和討論的題目。",
+  },
+  {
+    id: "part-b",
+    label: "Part B",
+    title: "個人回應題目整理",
+    status: "pending",
+    note: "按題目逐條顯示，後續可補簡短答題方向。",
+  },
+];
+
+export const speaking2026UpdatePlan = [
+  "收到 PDF 後，先上傳原卷並補上下載入口。",
+  "再把 Part A、Discussion Questions、Part B 拆成可直接閱讀的區塊。",
+  "最後補最少量但最有用的提示，例如題目主題、常見卡點和論壇入口。",
+];

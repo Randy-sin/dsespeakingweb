@@ -6,7 +6,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { RoomCard } from "@/components/room/room-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, RefreshCw, Loader2, Mic, Users, ArrowRight, Eye } from "lucide-react";
+import { Plus, Search, RefreshCw, Mic, Users, ArrowRight, Eye, BookOpenText, MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import type { Room, Profile, RoomMember } from "@/lib/supabase/types";
 
@@ -21,8 +21,7 @@ export default function RoomsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  const [supabase] = useState(() => createClient());
   const realtimeDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasFetchedOnce = useRef(false);
 
@@ -66,7 +65,9 @@ export default function RoomsPage() {
   };
 
   useEffect(() => {
-    fetchRooms();
+    const initialFetchTimer = window.setTimeout(() => {
+      void fetchRooms();
+    }, 0);
     const channel = supabase
       .channel("rooms-lobby")
       .on(
@@ -81,6 +82,7 @@ export default function RoomsPage() {
       )
       .subscribe();
     return () => {
+      window.clearTimeout(initialFetchTimer);
       supabase.removeChannel(channel);
       if (realtimeDebounceRef.current) clearTimeout(realtimeDebounceRef.current);
     };
@@ -133,12 +135,32 @@ export default function RoomsPage() {
                 加入一個練習房間，或建立你自己的。即時配對，隨時開始。
               </p>
             </div>
-            <Link href="/rooms/create" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] min-h-11 rounded-full px-6 shadow-sm shadow-neutral-900/10 transition-all hover:shadow-md hover:shadow-neutral-900/15 hover:-translate-y-0.5">
-                <Plus className="mr-1.5 h-3.5 w-3.5" />
-                建立房間
-              </Button>
-            </Link>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Link href="/papers" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-[14px] min-h-11 rounded-full px-5 border-neutral-200 text-neutral-600"
+                >
+                  <BookOpenText className="mr-1.5 h-3.5 w-3.5" />
+                  看真題
+                </Button>
+              </Link>
+              <Link href="/forum" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto text-[14px] min-h-11 rounded-full px-5 border-neutral-200 text-neutral-600"
+                >
+                  <MessageSquareText className="mr-1.5 h-3.5 w-3.5" />
+                  看討論
+                </Button>
+              </Link>
+              <Link href="/rooms/create" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto bg-neutral-900 hover:bg-neutral-800 text-white text-[14px] min-h-11 rounded-full px-6 shadow-sm shadow-neutral-900/10 transition-all hover:shadow-md hover:shadow-neutral-900/15 hover:-translate-y-0.5">
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
+                  建立房間
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Stats + Search row */}
@@ -185,6 +207,10 @@ export default function RoomsPage() {
                 <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
               </Button>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-neutral-200 bg-[#faf9f5] px-4 py-3 text-[13px] text-neutral-600">
+            練習前可先去 `Papers` 看題目與討論，練習後可直接回到對應 paper hub 發復盤，讓每次房間都能沉澱成有用內容。
           </div>
         </div>
       </div>
