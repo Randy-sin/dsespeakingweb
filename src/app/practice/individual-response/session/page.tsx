@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/navbar";
 import { IndividualResponseSession } from "@/features/practice/individual-response-session";
 import { getLesson, irLessons } from "@/lib/learning/content";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 export default async function IndividualResponseSessionPage({ searchParams }: { searchParams: Promise<{ type?: string }> }) {
   const { type } = await searchParams;

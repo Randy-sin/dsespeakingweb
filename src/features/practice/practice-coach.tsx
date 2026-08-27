@@ -28,7 +28,9 @@ type AiFeedbackResponse = {
 async function readAiResponse(response: Response) {
   const data = (await response.json()) as AiFeedbackResponse;
   if (!response.ok || !data.ok) {
-    throw new Error(response.status === 401 ? "請先登入，再使用 AI 教練。" : data.error || "AI 教練暫時未能回應，請稍後再試。");
+    if (response.status === 401) throw new Error("請先登入，再使用 AI 教練。");
+    if (response.status === 429) throw new Error("你剛才的 AI 練習次數較多，請稍後再試。逐字稿仍保留在本頁。");
+    throw new Error(data.error || "AI 教練暫時未能回應，請稍後再試。");
   }
   return data;
 }

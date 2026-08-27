@@ -192,7 +192,9 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
       const response = await fetch("/api/ai/transcribe", { method: "POST", body: form });
       const data = (await response.json()) as { ok?: boolean; transcript?: string; sessionId?: string; error?: string };
       if (!response.ok || !data.ok || !data.transcript) {
-        throw new Error(response.status === 401 ? "請先登入，再使用 AI 逐字稿。" : data.error || "AI 逐字稿暫時無法使用。請稍後再試。");
+        if (response.status === 401) throw new Error("請先登入，再使用 AI 逐字稿。");
+        if (response.status === 429) throw new Error("你剛才生成逐字稿的次數較多，請稍後再試。錄音仍保留在本頁。");
+        throw new Error(data.error || "AI 逐字稿暫時無法使用。請稍後再試。");
       }
       onTranscriptChange?.(data.transcript);
       if (data.sessionId) {

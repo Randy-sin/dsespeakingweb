@@ -1,7 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { ArrowLeft, Check, MessageCircleMore } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { PracticeCoach } from "@/features/practice/practice-coach";
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };
 
 const topics = {
   reading: { title: "Promoting a reading culture", prompt: "A classmate says: ‘The school should give prizes to students who read the most books.’ Respond to the idea, add a new consideration, and invite another view." },

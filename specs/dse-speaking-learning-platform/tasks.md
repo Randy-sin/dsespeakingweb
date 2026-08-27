@@ -1,6 +1,6 @@
 # DSE Speaking 教學平台重構：實施任務
 
-狀態：已獲授權，實施中
+狀態：已完成，持續進行生產監測
 需求：[requirements.md](./requirements.md)
 設計：[design.md](./design.md)
 
@@ -86,5 +86,7 @@
 - `/api/ai/transcribe` 已接入真實識別服務。瀏覽器錄音會在用戶端轉成 WAV；只有已登入使用者明確按下「生成 AI 逐字稿」後，錄音才會傳送給識別服務。
 - 逐字稿分析已改為四維結構化訓練量表。真實豆包呼叫傳回指定四個維度、逐字稿證據和下一步建議；介面明確標示這是訓練訊號，不是 HKEAA 官方分數，也不評估發音等錄音專屬表現。
 - AI 逐字稿、訓練量表和小組討論發言已接入 Supabase 私人練習記錄。authenticated 角色已完成 1 個 session、2 個 turns 的寫入與讀取，並在同一交易中復原；復原後兩張表仍為 0 筆測試記錄。
-- 仍缺正式學生登入狀態的瀏覽器完整流程驗收。匿名邊界、真實供應商呼叫、資料庫登入角色寫入和生產建置已分別通過，但不能把這些結果合併視為正式登入狀態 UI 驗收。
-- 本輪只完成本地程式與既有線上 Supabase schema 驗證，未提交 Git、未推送 GitHub，也未部署網站。
+- 正式網域已以既有 Google 帳戶走通登入、AI 訓練量表、AI 討論伙伴和 Supabase 持久化；驗收記錄與本地建置結果分開判定。
+- 2026-08-27 安全加固加入 prompt injection 邊界、模型輸出驗證、每使用者 AI 原子限流、安全 response headers、私有 rate-limit RLS、robots／sitemap 和調試 API 移除。
+- Cloudflare Bot Fight Mode 與 HTTP DDoS 防護已開啟；AI API 邊緣突發限流規則已啟用。邊緣規則仍須以 Cloudflare 事件記錄持續確認實際命中，不能只以設定頁的 Active 狀態當作攔截證據。
+- Supabase Security Advisor 的 schema 風險已清除；Free plan 不提供 leaked-password protection，故此項仍為平台方案限制。Secure password change、修改密碼時要求目前密碼及英數密碼規則已啟用。
