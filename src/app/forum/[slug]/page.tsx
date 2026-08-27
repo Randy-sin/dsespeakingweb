@@ -137,7 +137,7 @@ export default async function ForumPostDetailPage({ params }: Props) {
                   <p className="text-[14px] font-medium text-neutral-900">
                     {post.author?.display_name || "DSE Candidate"}
                   </p>
-                  <p className="text-[12px] text-neutral-400">
+                  <p className="text-[12px] text-neutral-600">
                     {formatDistanceToNow(new Date(post.created_at), {
                       addSuffix: true,
                       locale: zhTW,
@@ -224,7 +224,7 @@ export default async function ForumPostDetailPage({ params }: Props) {
                             <p className="text-[14px] font-medium text-neutral-900">
                               {comment.author?.display_name || "DSE Candidate"}
                             </p>
-                            <span className="text-[12px] text-neutral-400">
+                            <span className="text-[12px] text-neutral-600">
                               {formatDistanceToNow(new Date(comment.created_at), {
                                 addSuffix: true,
                                 locale: zhTW,
@@ -245,7 +245,7 @@ export default async function ForumPostDetailPage({ params }: Props) {
                                 <span className="text-[13px] font-medium text-neutral-900">
                                   {reply.author?.display_name || "DSE Candidate"}
                                 </span>
-                                <span className="text-[12px] text-neutral-400">
+                                <span className="text-[12px] text-neutral-600">
                                   {formatDistanceToNow(new Date(reply.created_at), {
                                     addSuffix: true,
                                     locale: zhTW,
@@ -268,11 +268,11 @@ export default async function ForumPostDetailPage({ params }: Props) {
 
           <aside className="space-y-5">
             <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-              <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+              <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
                 Related paper
               </p>
               <div className="mt-5 rounded-[24px] border border-neutral-200 bg-[#faf9f5] p-5">
-                <p className="text-[12px] text-neutral-400">
+                <p className="text-[12px] text-neutral-600">
                   {post.paper?.year} · {post.paper?.paper_number}
                 </p>
                 <h2 className="mt-2 font-serif text-[24px] text-neutral-950">
@@ -294,7 +294,7 @@ export default async function ForumPostDetailPage({ params }: Props) {
 
             {relatedPosts.length > 0 && (
               <div className="space-y-4">
-                <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+                <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
                   Related discussions
                 </p>
                 {relatedPosts.map((relatedPost) => (

@@ -11,12 +11,12 @@ export function SiteFooter() {
           </p>
         </div>
         <div className="grid grid-cols-2 gap-x-10 gap-y-3 text-sm text-[#d7d3c8] sm:grid-cols-3">
-          <Link href="/learn">學習路徑</Link>
-          <Link href="/papers">真題庫</Link>
-          <Link href="/progress">我的進度</Link>
-          <Link href="/learn/group-discussion">小組討論</Link>
-          <Link href="/learn/individual-response">個人回應</Link>
-          <Link href="/login">登入</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/learn">學習路徑</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/papers">真題庫</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/progress">我的進度</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/learn/group-discussion">小組討論</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/learn/individual-response">個人回應</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/login">登入</Link>
         </div>
       </div>
     </footer>

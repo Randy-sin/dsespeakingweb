@@ -19,6 +19,7 @@ export function OnboardingFlow() {
   const [irConfidence, setIrConfidence] = useState(2);
   const [selectedWeakAreas, setSelectedWeakAreas] = useState<WeakArea[]>([]);
   const [weeklyMinutes, setWeeklyMinutes] = useState(60);
+  const [weakAreaMessage, setWeakAreaMessage] = useState("");
 
   const profile = useMemo<LearnerProfile>(() => ({
     examYear,
@@ -34,8 +35,15 @@ export function OnboardingFlow() {
 
   const toggleWeakArea = (area: WeakArea) => {
     setSelectedWeakAreas((current) => {
-      if (current.includes(area)) return current.filter((item) => item !== area);
-      if (current.length >= 3) return current;
+      if (current.includes(area)) {
+        setWeakAreaMessage("");
+        return current.filter((item) => item !== area);
+      }
+      if (current.length >= 3) {
+        setWeakAreaMessage("最多選擇三項。請先取消一項，再加入新的重點。");
+        return current;
+      }
+      setWeakAreaMessage("");
       return [...current, area];
     });
   };
@@ -51,8 +59,8 @@ export function OnboardingFlow() {
         <p className="eyebrow text-[#aeb8af]">Learning profile</p>
         <h1 className="display-title mt-5 max-w-sm text-5xl leading-[0.92] sm:text-6xl">先知道你卡在哪裡。</h1>
         <p className="mt-6 max-w-sm text-sm leading-7 text-[#c9cfc9]">兩分鐘診斷不會替你評分，只會決定第一週先練哪項能力。所有答案會先保存在這部裝置。</p>
-        <div className="mt-10 grid grid-cols-5 gap-2" aria-label={`第 ${Math.min(step + 1, 5)} 步，共 5 步`}>
-          {[0, 1, 2, 3, 4].map((index) => (
+        <div className="mt-10 grid grid-cols-4 gap-2" role="progressbar" aria-label={step < 4 ? `第 ${step + 1} 個問題，共 4 個問題` : "四個問題已完成"} aria-valuemin={1} aria-valuemax={4} aria-valuenow={Math.min(step + 1, 4)}>
+          {[0, 1, 2, 3].map((index) => (
             <span key={index} className={`h-1 ${index <= step ? "bg-[#ad3f29]" : "bg-[#4d554e]"}`} />
           ))}
         </div>
@@ -61,8 +69,8 @@ export function OnboardingFlow() {
       <section className="flex px-4 py-10 sm:px-10 lg:col-span-8 lg:px-16 lg:py-14">
         <div className="mx-auto flex w-full max-w-3xl flex-col">
           <div className="mb-10 flex items-center justify-between">
-            <p className="font-mono text-xs text-[#665f55]">0{Math.min(step + 1, 5)} / 05</p>
-            <button type="button" onClick={finish} className="text-xs text-[#6d695f] underline underline-offset-4">略過並使用建議設定</button>
+            <p className="font-mono text-xs text-[#665f55]">{step < 4 ? `0${step + 1} / 04` : "PLAN READY"}</p>
+            {step < 4 ? <button type="button" onClick={() => router.push("/learn")} className="min-h-11 text-xs text-[#6d695f] underline underline-offset-4">稍後再做</button> : null}
           </div>
 
           {step === 0 ? (
@@ -75,7 +83,7 @@ export function OnboardingFlow() {
               <p className="eyebrow mt-9 text-[#665f55]">Target level</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {[3, 4, 5].map((level) => (
-                  <button key={level} type="button" onClick={() => setTargetLevel(level)} className={`h-12 min-w-24 rounded-full border px-5 text-sm ${targetLevel === level ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef]"}`}>Level {level}{level === 5 ? "+" : ""}</button>
+                  <button key={level} type="button" aria-pressed={targetLevel === level} onClick={() => setTargetLevel(level)} className={`h-12 min-w-24 rounded-full border px-5 text-sm ${targetLevel === level ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef]"}`}>Level {level}{level === 5 ? "+" : ""}</button>
                 ))}
               </div>
             </OnboardingStep>
@@ -95,6 +103,7 @@ export function OnboardingFlow() {
                   <Choice key={area} active={selectedWeakAreas.includes(area)} onClick={() => toggleWeakArea(area)} title={getWeakAreaLabel(area)} detail={selectedWeakAreas.includes(area) ? "已加入學習重點" : "點擊選擇"} />
                 ))}
               </div>
+              <p aria-live="polite" className="mt-3 min-h-5 text-sm text-[#a74231]">{weakAreaMessage}</p>
             </OnboardingStep>
           ) : null}
 
@@ -125,7 +134,7 @@ export function OnboardingFlow() {
             </OnboardingStep>
           ) : null}
 
-          <div className="mt-auto flex items-center justify-between border-t border-[#c9bfad] pt-7">
+          <div className="sticky bottom-0 z-10 -mx-4 mt-10 flex items-center justify-between border-t border-[#c9bfad] bg-[#f3efe4]/95 px-4 py-4 backdrop-blur sm:-mx-6 sm:px-6">
             <Button type="button" variant="ghost" disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))} className="rounded-full">
               <ArrowLeft className="mr-2 h-4 w-4" />返回
             </Button>
@@ -150,9 +159,9 @@ function OnboardingStep({ title, subtitle, children }: { title: string; subtitle
 }
 
 function Choice({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
-  return <button type="button" onClick={onClick} className={`group min-h-28 border p-5 text-left transition-colors ${active ? "border-[#48634c] bg-[#48634c] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}><span className="flex items-center justify-between font-serif text-xl"><span>{title}</span>{active ? <Check className="h-5 w-5" /> : null}</span><span className={`mt-3 block text-xs ${active ? "text-[#dbe2dc]" : "text-[#665f55]"}`}>{detail}</span></button>;
+  return <button type="button" aria-pressed={active} onClick={onClick} className={`group min-h-28 border p-5 text-left transition-colors ${active ? "border-[#48634c] bg-[#48634c] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}><span className="flex items-center justify-between font-serif text-xl"><span>{title}</span>{active ? <Check className="h-5 w-5" /> : null}</span><span className={`mt-3 block text-xs ${active ? "text-[#dbe2dc]" : "text-[#665f55]"}`}>{detail}</span></button>;
 }
 
 function ConfidenceScale({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <div className="border-t border-[#bdb3a2] py-7"><div className="mb-5 flex items-center justify-between"><h3 className="font-serif text-2xl">{label}</h3><span className="font-mono text-xs text-[#665f55]">{value} / 5</span></div><div className="grid grid-cols-5 gap-2">{[1,2,3,4,5].map((number) => <button key={number} type="button" onClick={() => onChange(number)} className={`h-12 border font-mono text-sm ${value === number ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}>{number}</button>)}</div><div className="mt-2 flex justify-between text-[11px] text-[#665f55]"><span>不知怎樣開始</span><span>可以穩定完成</span></div></div>;
+  return <fieldset className="border-t border-[#bdb3a2] py-7"><div className="mb-5 flex items-center justify-between"><legend className="font-serif text-2xl">{label}</legend><span className="font-mono text-xs text-[#665f55]">{value} / 5</span></div><div className="grid grid-cols-5 gap-2" role="radiogroup">{[1,2,3,4,5].map((number) => <button key={number} type="button" role="radio" aria-checked={value === number} onClick={() => onChange(number)} className={`h-12 border font-mono text-sm ${value === number ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}>{number}</button>)}</div><div className="mt-2 flex justify-between text-[11px] text-[#665f55]"><span>不知怎樣開始</span><span>可以穩定完成</span></div></fieldset>;
 }

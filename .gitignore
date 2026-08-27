@@ -13,6 +13,8 @@
 # testing
 /coverage
 /.seo-audit/
+/.playwright-cli/
+/output/
 
 # next.js
 /.next/

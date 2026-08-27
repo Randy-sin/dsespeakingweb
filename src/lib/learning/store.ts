@@ -72,15 +72,22 @@ export function completeLesson(slug: string, duration: number) {
   } catch {
     current = defaultProgress;
   }
-  const completedLessons = current.completedLessons.includes(slug)
-    ? current.completedLessons
-    : [...current.completedLessons, slug];
-  saveLearningProgress({
+  saveLearningProgress(applyLessonCompletion(current, slug, duration));
+}
+
+export function applyLessonCompletion(
+  current: LearningProgress,
+  slug: string,
+  duration: number,
+  completedAt = new Date().toISOString(),
+) {
+  const alreadyCompleted = current.completedLessons.includes(slug);
+  return {
     ...current,
-    completedLessons,
-    practiceMinutes: current.practiceMinutes + duration,
-    lastActiveAt: new Date().toISOString(),
-  });
+    completedLessons: alreadyCompleted ? current.completedLessons : [...current.completedLessons, slug],
+    practiceMinutes: current.practiceMinutes + (alreadyCompleted ? 0 : Math.max(0, duration)),
+    lastActiveAt: completedAt,
+  };
 }
 
 export function recordPractice(duration: number) {

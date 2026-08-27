@@ -30,7 +30,7 @@ export function ForumPostCard({ post, compact = false }: ForumPostCardProps) {
         compact ? "p-5" : "p-6"
       )}
     >
-      <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-400">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] text-neutral-600">
         <Badge
           variant="outline"
           className={cn("rounded-full border px-2.5 py-1", getPostTypeTone(post.post_type))}
@@ -93,7 +93,7 @@ export function ForumPostCard({ post, compact = false }: ForumPostCardProps) {
             <p className="text-[13px] font-medium text-neutral-900">
               {post.author?.display_name || "DSE Candidate"}
             </p>
-            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-neutral-400">
+            <div className="mt-0.5 flex items-center gap-1.5 text-[12px] text-neutral-600">
               <Clock3 className="h-3.5 w-3.5" />
               <span>
                 {formatDistanceToNow(new Date(post.last_activity_at), {
@@ -105,7 +105,7 @@ export function ForumPostCard({ post, compact = false }: ForumPostCardProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-[12px] text-neutral-400">
+        <div className="flex flex-wrap items-center gap-4 text-[12px] text-neutral-600">
           <Link
             href={buildPaperHref(post.paper)}
             className="max-w-full truncate rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-neutral-500 transition-colors hover:border-neutral-300 hover:text-neutral-700"

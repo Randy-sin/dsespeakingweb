@@ -75,6 +75,8 @@ export function PostActionBar({
     <div className="flex flex-wrap items-center gap-3">
       <Button
         variant="outline"
+        aria-label={`${liked ? "取消讚好" : "讚好"}，目前 ${likeCount} 個讚好`}
+        aria-pressed={liked}
         onClick={() => toggleAction("like")}
         disabled={pending === "like"}
         className={cn(
@@ -87,6 +89,8 @@ export function PostActionBar({
       </Button>
       <Button
         variant="outline"
+        aria-label={`${bookmarked ? "取消收藏" : "收藏"}，目前 ${bookmarkCount} 個收藏`}
+        aria-pressed={bookmarked}
         onClick={() => toggleAction("bookmark")}
         disabled={pending === "bookmark"}
         className={cn(

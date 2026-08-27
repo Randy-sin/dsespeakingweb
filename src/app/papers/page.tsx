@@ -17,6 +17,7 @@ type SearchParams = Promise<{
   q?: string;
   year?: string;
   sort?: "latest" | "trending";
+  page?: string;
 }>;
 
 export default async function PapersPage({
@@ -26,15 +27,28 @@ export default async function PapersPage({
 }) {
   const params = await searchParams;
   const sort = params.sort ?? "latest";
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const catalog = await fetchPaperCatalog({
     query: params.q,
     year: params.year,
     sort,
+    page,
+    pageSize: 24,
   });
 
-  const years = Array.from(new Set(catalog.papers.map((paper) => paper.year))).sort(
-    (a, b) => b - a
-  );
+  const totalPages = Math.max(1, Math.ceil(catalog.total / catalog.pageSize));
+  const firstResult = catalog.total === 0 ? 0 : (catalog.page - 1) * catalog.pageSize + 1;
+  const lastResult = Math.min(catalog.total, catalog.page * catalog.pageSize);
+  const pageHref = (nextPage: number) => {
+    const query = new URLSearchParams();
+    if (params.q) query.set("q", params.q);
+    if (params.year && params.year !== "all") query.set("year", params.year);
+    if (sort !== "latest") query.set("sort", sort);
+    if (nextPage > 1) query.set("page", String(nextPage));
+    const value = query.toString();
+    return value ? `/papers?${value}` : "/papers";
+  };
 
   return (
     <div className="min-h-screen bg-[#f3efe4]">
@@ -61,7 +75,7 @@ export default async function PapersPage({
             <div className="border border-white/30 bg-[#f3efe4] p-6 text-[#172019]">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-400">
+                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-600">
                     Archive
                   </p>
                   <p className="mt-3 text-[26px] font-serif text-neutral-950">
@@ -72,14 +86,14 @@ export default async function PapersPage({
                   </p>
                 </div>
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-400">
-                    Trending
+                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-600">
+                    This page
                   </p>
                   <p className="mt-3 text-[26px] font-serif text-neutral-950">
                     {catalog.papers.filter((paper) => paper.discussionCount > 0).length}
                   </p>
                   <p className="mt-1 text-[13px] text-neutral-500">
-                    可練習題組
+                    本頁有討論的題組
                   </p>
                 </div>
               </div>
@@ -114,8 +128,10 @@ export default async function PapersPage({
 
           <form className="mt-10 grid gap-3 rounded-[28px] border border-neutral-200/80 bg-[#faf9f5] p-4 sm:grid-cols-[1.6fr_0.8fr_0.8fr_auto]">
             <div className="relative">
+              <label htmlFor="paper-search" className="sr-only">搜尋真題</label>
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-300" />
               <input
+                id="paper-search"
                 type="search"
                 name="q"
                 defaultValue={params.q ?? ""}
@@ -123,19 +139,23 @@ export default async function PapersPage({
                 className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-[14px] text-neutral-700 outline-none transition focus:border-neutral-300"
               />
             </div>
+            <label htmlFor="paper-year" className="sr-only">按年份篩選</label>
             <select
+              id="paper-year"
               name="year"
               defaultValue={params.year ?? "all"}
               className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[14px] text-neutral-600 outline-none"
             >
               <option value="all">全部年份</option>
-              {years.map((year) => (
+              {catalog.years.map((year) => (
                 <option key={year} value={year}>
                   {year}
                 </option>
               ))}
             </select>
+            <label htmlFor="paper-sort" className="sr-only">真題排序方式</label>
             <select
+              id="paper-sort"
               name="sort"
               defaultValue={sort}
               className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[14px] text-neutral-600 outline-none"
@@ -167,21 +187,34 @@ export default async function PapersPage({
               沒有找到符合條件的真題
             </h2>
             <p className="mx-auto mt-3 max-w-md text-[14px] leading-7 text-neutral-500">
-              可以試試改搜年份、topic，或直接回論壇看這週最熱門的討論。
+              可以試試改搜年份或 topic，或清除篩選查看全部真題。
             </p>
             <Button asChild className="mt-6 rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
-              <Link href="/forum">
-                去論壇看看
+              <Link href="/papers">
+                清除篩選
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
         ) : (
-          <div className="grid gap-5 lg:grid-cols-2">
-            {catalog.papers.map((paper) => (
-              <PaperCard key={paper.id} paper={paper} />
-            ))}
-          </div>
+          <>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 text-sm text-[#665f55]">
+              <p>顯示第 {firstResult}–{lastResult} 份，共 {catalog.total} 份真題</p>
+              <p className="font-mono text-xs">PAGE {catalog.page} / {totalPages}</p>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {catalog.papers.map((paper) => (
+                <PaperCard key={paper.id} paper={paper} />
+              ))}
+            </div>
+            {totalPages > 1 ? (
+              <nav aria-label="真題分頁" className="mt-8 flex items-center justify-between gap-4 border-t border-[#bdb3a2] pt-6">
+                {catalog.page > 1 ? <Link href={pageHref(catalog.page - 1)} rel="prev" className="inline-flex min-h-11 items-center rounded-full border border-[#9f9687] px-5 text-sm font-semibold">上一頁</Link> : <span />}
+                <span className="text-sm text-[#665f55]">第 {catalog.page} / {totalPages} 頁</span>
+                {catalog.page < totalPages ? <Link href={pageHref(catalog.page + 1)} rel="next" className="inline-flex min-h-11 items-center rounded-full bg-[#172019] px-5 text-sm font-semibold text-white">下一頁</Link> : <span />}
+              </nav>
+            ) : null}
+          </>
         )}
       </div>
       </main>

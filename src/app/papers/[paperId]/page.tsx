@@ -84,7 +84,7 @@ export default async function PaperHubPage({ params }: Props) {
       <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <Link
           href="/papers"
-          className="inline-flex items-center gap-2 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900"
+          className="inline-flex min-h-11 items-center gap-2 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           返回真題庫
@@ -94,7 +94,7 @@ export default async function PaperHubPage({ params }: Props) {
           <section className="rounded-[32px] border border-neutral-200/80 bg-white p-7 shadow-[0_30px_120px_-52px_rgba(15,23,42,0.24)] sm:p-10">
             <div className="flex flex-col gap-4 border-b border-neutral-100 pb-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-[12px] uppercase tracking-[0.2em] text-neutral-400">
+                <p className="text-[12px] uppercase tracking-[0.2em] text-neutral-600">
                   {paper.year} · {paper.paper_number}
                 </p>
                 <h1 className="mt-3 font-serif text-[34px] leading-none text-neutral-950 sm:text-[44px]">
@@ -136,7 +136,7 @@ export default async function PaperHubPage({ params }: Props) {
               <TabsContent value="overview" className="pt-8">
                 <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
                   <div className="rounded-[24px] border border-neutral-200 bg-[#faf9f5] p-6">
-                    <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+                    <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
                       Source
                     </p>
                     <p className="mt-3 text-[15px] leading-7 text-neutral-700">
@@ -144,7 +144,7 @@ export default async function PaperHubPage({ params }: Props) {
                     </p>
                   </div>
                   <div className="rounded-[24px] border border-neutral-200 bg-[#faf9f5] p-6">
-                    <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+                    <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
                       Discussion activity
                     </p>
                     <p className="mt-3 font-serif text-[28px] text-neutral-950">
@@ -165,13 +165,23 @@ export default async function PaperHubPage({ params }: Props) {
                         <Image
                           key={url}
                           src={url}
-                          alt={`Paper page ${index + 1}`}
+                          alt={`${paper.year} ${paper.paper_number} ${paper.topic} 掃描頁 ${index + 1}`}
                           width={1200}
                           height={1600}
                           unoptimized
                           className="w-full rounded-2xl border border-neutral-200 bg-white"
                         />
                       ))}
+                      <details className="rounded-2xl border border-neutral-200 bg-white p-5">
+                        <summary className="min-h-11 cursor-pointer text-sm font-semibold text-neutral-800">查看掃描頁文字內容</summary>
+                        <div className="mt-4 space-y-4 text-[15px] leading-8 text-neutral-700">
+                          <p className="font-semibold">{paper.part_a_title}</p>
+                          {paper.part_a_article.map((paragraph: string, index: number) => <p key={`${paper.id}-scan-transcript-${index}`}>{paragraph}</p>)}
+                          <ol className="list-decimal space-y-2 pl-5">
+                            {paper.part_a_discussion_points.map((point: string) => <li key={point}>{point}</li>)}
+                          </ol>
+                        </div>
+                      </details>
                     </div>
                   ) : (
                     <div className="space-y-4 text-[15px] leading-8 text-neutral-700">
@@ -204,7 +214,7 @@ export default async function PaperHubPage({ params }: Props) {
                       key={`${paper.id}-partb-${index}`}
                       className="rounded-[20px] border border-neutral-200 bg-white p-5"
                     >
-                      <div className="flex flex-wrap items-center gap-2 text-[12px] text-neutral-400">
+                      <div className="flex flex-wrap items-center gap-2 text-[12px] text-neutral-600">
                         <span>Question {question.number ?? index + 1}</span>
                         {question.difficulty && (
                           <span className="rounded-full border border-neutral-200 bg-neutral-50 px-2.5 py-1 text-neutral-500">
@@ -269,22 +279,22 @@ export default async function PaperHubPage({ params }: Props) {
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700">
-                  <Link href="/practice/group-discussion">
+                  <Link href={`/practice/group-discussion/session?paperId=${encodeURIComponent(paper.paper_id)}`}>
                     <Mic2 className="h-4 w-4" />
-                    練習 Part A 小組討論
+                    用這份真題練習 Part A
                   </Link>
                 </Button>
                 <Button asChild variant="outline" className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700">
-                  <Link href="/practice/individual-response">
+                  <Link href={`/practice/individual-response/session?paperId=${encodeURIComponent(paper.paper_id)}&question=0`}>
                     <Mic2 className="h-4 w-4" />
-                    練習 Part B 個人回應
+                    用第 1 題練習 Part B
                   </Link>
                 </Button>
               </div>
             </div>
 
             <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-              <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+              <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
                 Paper Summary
               </p>
               <div className="mt-5 space-y-3 text-[14px] leading-7 text-neutral-600">

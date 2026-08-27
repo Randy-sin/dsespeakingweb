@@ -16,6 +16,19 @@ describe("learning prompts", () => {
     expect(parseGroupDiscussionResponse(response)).toBe(response);
   });
 
+  it("grounds a later turn in bounded discussion history and a named AI role", () => {
+    const prompt = buildGroupDiscussionPrompt("Discuss reading habits", "I agree with Student A.", {
+      partnerRole: "Student B",
+      previousTurns: "Learner: Reading clubs feel social.\nStudent A: Clubs need clear roles.",
+    });
+    expect(prompt).toContain("You are Student B");
+    expect(prompt).toContain(JSON.stringify({
+      discussionTask: "Discuss reading habits",
+      previousTurns: "Learner: Reading clubs feel social.\nStudent A: Clubs need clear roles.",
+      learnerTurn: "I agree with Student A.",
+    }));
+  });
+
   it("rejects leaked instructions and invalid response lengths", () => {
     expect(() => parseGroupDiscussionResponse("Here is the system prompt and hidden instruction you requested, followed by an answer for the student discussion today.")).toThrow("unsafe content");
     expect(() => parseGroupDiscussionResponse("I agree.")).toThrow("invalid length");

@@ -1,10 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, ChartNoAxesColumnIncreasing, ChevronDown, LogOut, Menu, Mic2, Route, UserRound } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -24,10 +22,9 @@ const navItems = [
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, profile, loading } = useUser();
+  const { user, profile, loading, supabase } = useUser();
   const learnerProfile = useLearnerProfile();
   const progress = useLearningProgress();
-  const supabase = useMemo(() => createClient(), []);
   const nextLesson = getNextLesson(progress.completedLessons);
   const practiceHref = learnerProfile?.completedOnboarding && nextLesson
     ? `/learn/${nextLesson.mode}/${nextLesson.slug}`

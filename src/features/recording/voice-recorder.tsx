@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileAudio, LoaderCircle, Mic, RotateCcw, Square, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { convertAudioBlobToWav } from "@/features/recording/audio-to-wav";
 import { recordPractice } from "@/lib/learning/store";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/lib/supabase/client";
+import { formatDuration } from "@/lib/format-duration";
 import type { PracticeMode } from "@/lib/learning/types";
 
 type RecorderState = "idle" | "recording" | "recorded" | "text";
@@ -44,6 +44,7 @@ type VoiceRecorderProps = {
   maxSeconds?: number;
   mode: PracticeMode;
   task: string;
+  paperId?: string;
   onTranscriptChange?: (transcript: string) => void;
   onSessionChange?: (sessionId: string | null) => void;
 };
@@ -56,7 +57,7 @@ function getSpeechRecognitionConstructor() {
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
 }
 
-export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange, onSessionChange }: VoiceRecorderProps) {
+export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscriptChange, onSessionChange }: VoiceRecorderProps) {
   const [state, setState] = useState<RecorderState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -65,9 +66,10 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
   const [syncRecording, setSyncRecording] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
-  const { user } = useUser();
-  const supabase = useMemo(() => createClient(), []);
+  const { user, supabase } = useUser();
   const recorderRef = useRef<MediaRecorder | null>(null);
+  const stopButtonRef = useRef<HTMLButtonElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -78,6 +80,11 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
     if (state !== "recording") return;
     const interval = window.setInterval(() => setSeconds((value) => value + 1), 1000);
     return () => window.clearInterval(interval);
+  }, [state]);
+
+  useEffect(() => {
+    if (state === "recording") stopButtonRef.current?.focus();
+    if (state === "recorded") audioRef.current?.focus();
   }, [state]);
 
   useEffect(() => {
@@ -121,7 +128,7 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
           if (uploadError) {
             setSaveMessage("錄音仍可在本頁回放，但雲端儲存失敗。請稍後再試。");
           } else {
-            const { data: session, error: sessionError } = await supabase.from("practice_sessions").insert({ user_id: user.id, mode, task_text: task, status: "recorded", duration_seconds: duration, recording_path: path }).select("id").single();
+            const { data: session, error: sessionError } = await supabase.from("practice_sessions").insert({ user_id: user.id, mode, paper_id: paperId ?? null, task_text: task, status: "recorded", duration_seconds: duration, recording_path: path }).select("id").single();
             if (session?.id) {
               sessionIdRef.current = session.id;
               onSessionChange?.(session.id);
@@ -188,6 +195,7 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
       form.append("audio", wav, "practice.wav");
       form.append("mode", mode);
       form.append("task", task);
+      if (paperId) form.append("paperId", paperId);
       if (sessionIdRef.current) form.append("sessionId", sessionIdRef.current);
       const response = await fetch("/api/ai/transcribe", { method: "POST", body: form });
       const data = (await response.json()) as { ok?: boolean; transcript?: string; sessionId?: string; error?: string };
@@ -209,21 +217,21 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
     }
   };
 
-  const formatted = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  const recorderStatus = state === "recording" ? "錄音中" : state === "recorded" ? "錄音完成" : state === "text" ? "文字模式" : "尚未開始";
 
   return (
     <div className="border border-[#bdb3a2] bg-[#faf7ef] p-5 sm:p-7">
-      <div className="flex items-center justify-between"><p className="eyebrow text-[#665f55]">Your response</p><span className={`h-2.5 w-2.5 rounded-full ${state === "recording" ? "animate-pulse bg-[#ad3f29]" : "bg-[#bdb3a2]"}`} /></div>
+      <div className="flex items-center justify-between gap-4"><p className="eyebrow text-[#665f55]">Your response</p><p role="status" className="inline-flex items-center gap-2 text-xs text-[#665f55]"><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${state === "recording" ? "animate-pulse bg-[#ad3f29]" : "bg-[#bdb3a2]"}`} />{recorderStatus}</p></div>
       {user && state === "idle" ? <label className="mt-5 flex items-center gap-3 text-xs text-[#6d695f]"><input type="checkbox" checked={syncRecording} onChange={(event) => setSyncRecording(event.target.checked)} className="h-4 w-4 accent-[#48634c]" />把本次錄音儲存到我的私人帳號</label> : null}
       {state === "text" ? (
         <div className="mt-6"><p className="text-sm leading-7 text-[#6d695f]">已切換到文字模式。請在下方的「逐字稿草稿」輸入你原本會說的答案。</p><Button variant="ghost" onClick={reset} className="mt-3 rounded-full"><RotateCcw className="mr-2 h-4 w-4" />返回錄音模式</Button></div>
       ) : (
         <div className="mt-8 text-center">
-          <p className="font-mono text-5xl tracking-[-0.07em]">{formatted}</p><p className="mt-2 font-mono text-[10px] text-[#665f55]">LIMIT {Math.floor(maxSeconds / 60)}:{String(maxSeconds % 60).padStart(2, "0")}</p>
+          <p role="timer" aria-label={`已錄音 ${seconds} 秒`} className="font-mono text-5xl tracking-[-0.07em]">{formatDuration(seconds)}</p><p className="mt-2 font-mono text-[10px] text-[#665f55]">LIMIT {formatDuration(maxSeconds)}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {state === "idle" ? <Button onClick={startRecording} className="h-[52px] rounded-full bg-[#ad3f29] px-7 text-white hover:bg-[#aa3d27]"><Mic className="mr-2 h-4 w-4" />開始錄音</Button> : null}
-            {state === "recording" ? <Button onClick={() => recorderRef.current?.stop()} className="h-[52px] rounded-full bg-[#172019] px-7 text-white"><Square className="mr-2 h-4 w-4" />完成錄音</Button> : null}
-            {state === "recorded" && audioUrl ? <><audio controls src={audioUrl} className="w-full max-w-md" />{user ? <Button onClick={transcribeRecording} disabled={transcribing} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">{transcribing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <FileAudio className="mr-2 h-4 w-4" />}生成 AI 逐字稿</Button> : null}<Button onClick={reset} variant="outline" className="rounded-full border-[#9f9687]"><RotateCcw className="mr-2 h-4 w-4" />重錄</Button></> : null}
+            {state === "recording" ? <Button ref={stopButtonRef} onClick={() => recorderRef.current?.stop()} className="h-[52px] rounded-full bg-[#172019] px-7 text-white"><Square className="mr-2 h-4 w-4" />完成錄音</Button> : null}
+            {state === "recorded" && audioUrl ? <><audio ref={audioRef} controls src={audioUrl} aria-label="你的練習錄音" className="w-full max-w-md" />{user ? <Button onClick={transcribeRecording} disabled={transcribing} aria-busy={transcribing} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">{transcribing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <FileAudio className="mr-2 h-4 w-4" />}生成 AI 逐字稿</Button> : null}<Button onClick={reset} variant="outline" className="rounded-full border-[#9f9687]"><RotateCcw className="mr-2 h-4 w-4" />重錄</Button></> : null}
           </div>
           {error ? <p role="alert" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#a74231]">{error}</p> : null}
           {saveMessage ? <p role="status" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#48634c]">{saveMessage}</p> : null}

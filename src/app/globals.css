@@ -36,6 +36,8 @@
 }
 
 :root {
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
   --paper: #f3efe4;
   --paper-deep: #e8e0cf;
   --ink: #172019;
@@ -81,7 +83,7 @@ body {
     var(--paper);
   background-size: 100% 28px;
   color: var(--ink);
-  font-family: var(--font-body), sans-serif;
+  font-family: var(--font-body);
   padding-bottom: env(safe-area-inset-bottom);
   text-rendering: optimizeLegibility;
 }

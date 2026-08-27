@@ -66,7 +66,7 @@ export default function HomePage() {
 
       <main id="main-content">
         <section className="mx-auto grid min-h-[calc(100vh-64px)] max-w-[1440px] grid-cols-1 items-center gap-10 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-20">
-          <div className="reveal-up lg:col-span-7 lg:pr-12">
+          <div className="lg:col-span-7 lg:pr-12">
             <div className="mb-7 flex items-center gap-3">
               <span className="h-px w-10 bg-[#ad3f29]" />
               <p className="eyebrow text-[#665f55]">HKDSE English Paper 4</p>

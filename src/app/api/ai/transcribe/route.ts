@@ -3,6 +3,7 @@ import { normaliseLearningText } from "@/lib/ai/learning-prompts";
 import { AiRateLimitError, consumeAiRateLimit, requireAiUser, requireSameOriginRequest } from "@/lib/ai/require-user";
 import { transcribeWithVolcengine } from "@/lib/ai/volcengine-asr";
 import { saveTranscript } from "@/lib/learning/practice-persistence";
+import { parseOptionalUuid } from "@/lib/ids";
 
 export const runtime = "nodejs";
 
@@ -23,9 +24,10 @@ export async function POST(request: NextRequest) {
     const mode = form.get("mode") === "group-discussion" ? "group-discussion" : "individual-response";
     const task = normaliseLearningText(form.get("task"), "task", 1600);
     const existingSessionId = typeof form.get("sessionId") === "string" ? String(form.get("sessionId")) : null;
+    const paperId = parseOptionalUuid(form.get("paperId"), "paperId");
     await consumeAiRateLimit(supabase, "transcription");
     const result = await transcribeWithVolcengine(Buffer.from(await audio.arrayBuffer()));
-    const sessionId = await saveTranscript({ supabase, userId: user.id, mode, task, transcript: result.transcript, sessionId: existingSessionId });
+    const sessionId = await saveTranscript({ supabase, userId: user.id, mode, task, transcript: result.transcript, sessionId: existingSessionId, paperId });
     return NextResponse.json({ ok: true, transcript: result.transcript, durationMs: result.durationMs, sessionId, persisted: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Transcription unavailable";
@@ -34,7 +36,7 @@ export async function POST(request: NextRequest) {
       : message === "Forbidden request origin" ? 403
         : message === "Unsupported content type" || message === "Unsupported audio format" ? 415
           : message === "Request body is too large" ? 413
-            : message.includes("required") ? 400
+            : message.includes("required") || message.includes("invalid") ? 400
               : message.includes("not enabled") ? 503
                 : 502;
     const headers = error instanceof AiRateLimitError

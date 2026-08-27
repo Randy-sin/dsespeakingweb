@@ -122,7 +122,7 @@ export function NewPostForm({
         <div className="mt-8 rounded-[32px] border border-neutral-200/80 bg-white p-7 shadow-[0_30px_120px_-52px_rgba(15,23,42,0.24)] sm:p-10">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-[12px] uppercase tracking-[0.2em] text-neutral-400">
+              <p className="text-[12px] uppercase tracking-[0.2em] text-neutral-600">
                 Start a discussion
               </p>
               <h1 className="mt-3 font-serif text-[34px] leading-none text-neutral-950">
@@ -144,8 +144,9 @@ export function NewPostForm({
           <form onSubmit={handleSubmit} className="mt-10 space-y-8">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-[13px] text-neutral-600">標題</Label>
+                <Label htmlFor="post-title" className="text-[13px] text-neutral-600">標題</Label>
                 <Input
+                  id="post-title"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder="例如：2024 4.1 Part B 第 2 題如何講得自然又不空泛？"
@@ -154,12 +155,12 @@ export function NewPostForm({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[13px] text-neutral-600">貼文類型</Label>
+                <Label htmlFor="post-type" className="text-[13px] text-neutral-600">貼文類型</Label>
                 <Select
                   value={postType}
                   onValueChange={(value) => setPostType(value as ForumPostType)}
                 >
-                  <SelectTrigger className="h-12 rounded-xl border-neutral-200 bg-neutral-50 text-[14px]">
+                  <SelectTrigger id="post-type" className="h-12 rounded-xl border-neutral-200 bg-neutral-50 text-[14px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -175,9 +176,9 @@ export function NewPostForm({
 
             <div className="grid gap-6 md:grid-cols-[1.3fr_1fr]">
               <div className="space-y-2">
-                <Label className="text-[13px] text-neutral-600">關聯真題</Label>
+                <Label htmlFor="post-paper" className="text-[13px] text-neutral-600">關聯真題</Label>
                 <Select value={paperId} onValueChange={setPaperId}>
-                  <SelectTrigger className="h-12 rounded-xl border-neutral-200 bg-neutral-50 text-[14px]">
+                  <SelectTrigger id="post-paper" className="h-12 rounded-xl border-neutral-200 bg-neutral-50 text-[14px]">
                     <SelectValue placeholder="選擇一份 speaking paper" />
                   </SelectTrigger>
                   <SelectContent className="max-h-80">
@@ -192,8 +193,9 @@ export function NewPostForm({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[13px] text-neutral-600">聚焦點位</Label>
+                <Label htmlFor="post-focus" className="text-[13px] text-neutral-600">聚焦點位</Label>
                 <Input
+                  id="post-focus"
                   value={focusLabel}
                   onChange={(event) => setFocusLabel(event.target.value)}
                   placeholder="例如：Part B 第 3 題 / 練習後復盤"
@@ -203,8 +205,9 @@ export function NewPostForm({
             </div>
 
             <div className="space-y-3">
-              <Label className="text-[13px] text-neutral-600">內容</Label>
+              <Label htmlFor="post-content" className="text-[13px] text-neutral-600">內容</Label>
               <Textarea
+                id="post-content"
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 placeholder="寫出你的立場、例子、你會怎樣開場、怎樣接別人的話，或你在模擬中遇到的真問題。"
@@ -212,8 +215,8 @@ export function NewPostForm({
               />
             </div>
 
-            <div className="space-y-3">
-              <Label className="text-[13px] text-neutral-600">標籤</Label>
+            <fieldset className="space-y-3">
+              <legend className="text-[13px] text-neutral-600">標籤</legend>
               <div className="flex flex-wrap gap-2">
                 {tags.map((tag) => {
                   const active = selectedTags.includes(tag.slug);
@@ -221,6 +224,7 @@ export function NewPostForm({
                     <button
                       key={tag.id}
                       type="button"
+                      aria-pressed={active}
                       onClick={() => toggleTag(tag.slug)}
                       className={`rounded-full border px-3 py-2 text-[13px] transition-colors ${
                         active
@@ -233,7 +237,7 @@ export function NewPostForm({
                   );
                 })}
               </div>
-            </div>
+            </fieldset>
 
             <div className="rounded-[24px] border border-neutral-200 bg-[#f8f7f3] p-5">
               <div className="flex items-center gap-2 text-[13px] font-medium text-neutral-800">
@@ -248,12 +252,13 @@ export function NewPostForm({
             </div>
 
             <div className="flex flex-col gap-3 border-t border-neutral-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[12px] text-neutral-400">
+              <p className="text-[12px] text-neutral-600">
                 你的帖子會公開顯示在論壇與對應真題頁中。
               </p>
               <Button
                 type="submit"
                 disabled={submitting}
+                aria-busy={submitting}
                 className="h-11 rounded-full bg-neutral-900 px-6 text-[14px] text-white hover:bg-neutral-800"
               >
                 發佈討論

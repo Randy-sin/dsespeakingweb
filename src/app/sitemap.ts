@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...lessonRoutes,
   ];
   const [catalog, forum] = await Promise.all([
-    fetchPaperCatalog({ sort: "latest" }),
+    fetchPaperCatalog({ sort: "latest", limit: 500 }),
     fetchForumFeed({ sort: "latest" }),
   ]);
 

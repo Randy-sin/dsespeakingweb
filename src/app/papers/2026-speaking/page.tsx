@@ -43,7 +43,7 @@ export default function Speaking2026Page() {
             <article key={paper.id} className="border-t border-neutral-200 pt-8">
               {/* Paper Header */}
               <div className="mb-8">
-                <p className="text-[13px] text-neutral-400 mb-2">
+                <p className="text-[13px] text-neutral-600 mb-2">
                   {paper.date} {paper.time} · Paper {paper.paperNumber}
                 </p>
                 <h2 className="font-serif text-[24px] sm:text-[28px] font-semibold text-neutral-900">
@@ -62,7 +62,7 @@ export default function Speaking2026Page() {
                       key={idx}
                       className="flex gap-3 text-[15px] text-neutral-700 leading-relaxed"
                     >
-                      <span className="text-neutral-400">•</span>
+                      <span className="text-neutral-600">•</span>
                       {point}
                     </li>
                   ))}
@@ -80,7 +80,7 @@ export default function Speaking2026Page() {
                       key={idx}
                       className="flex gap-3 text-[15px] text-neutral-700 leading-relaxed"
                     >
-                      <span className="text-neutral-400">•</span>
+                      <span className="text-neutral-600">•</span>
                       {q}
                     </li>
                   ))}
@@ -92,7 +92,7 @@ export default function Speaking2026Page() {
 
         {/* Footer */}
         <footer className="mt-16 pt-8 border-t border-neutral-200">
-          <p className="text-[14px] text-neutral-400">
+          <p className="text-[14px] text-neutral-600">
             題目持續更新中。如有更多資料歡迎到
             <Link href="/forum" className="text-neutral-600 hover:text-neutral-900 mx-1">
               論壇

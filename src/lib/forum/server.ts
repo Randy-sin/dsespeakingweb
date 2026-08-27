@@ -1,5 +1,6 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public-server";
 import type {
   ForumComment,
   ForumPost,
@@ -40,7 +41,21 @@ export type ForumPostWithContext = RawForumPost & {
 
 export type ForumCommentWithAuthor = RawForumComment;
 
-export type PaperWithForumMeta = PastPaper & {
+type PaperCatalogRow = Pick<
+  PastPaper,
+  | "id"
+  | "paper_id"
+  | "paper_number"
+  | "year"
+  | "topic"
+  | "part_a_title"
+  | "part_a_discussion_points"
+  | "page_images"
+  | "created_at"
+  | "updated_at"
+>;
+
+export type PaperWithForumMeta = PaperCatalogRow & {
   discussionCount: number;
   heat: number;
   lastActivityAt: string | null;
@@ -79,7 +94,7 @@ function filterPostByQuery(post: RawForumPost, query: string) {
 async function fetchPostTagsByPostIds(postIds: string[]) {
   if (postIds.length === 0) return new Map<string, ForumTagOption[]>();
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("forum_post_tags")
     .select("post_id, tag:forum_tags(*)")
@@ -105,7 +120,7 @@ async function fetchPostTagsByPostIds(postIds: string[]) {
 }
 
 async function fetchPublishedPostsBase(sort: FeedOptions["sort"]) {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   let query = supabase
     .from("forum_posts")
     .select(
@@ -130,7 +145,7 @@ async function fetchPublishedPostsBase(sort: FeedOptions["sort"]) {
 }
 
 export async function fetchForumTags() {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("forum_tags")
     .select("*")
@@ -213,26 +228,65 @@ export async function fetchPaperCatalog(options?: {
   year?: string;
   sort?: "latest" | "trending";
   limit?: number;
+  page?: number;
+  pageSize?: number;
 }) {
-  const supabase = await createClient();
-  const { data: papers, error } = await supabase
+  const supabase = createPublicClient();
+  const page = Math.max(1, Math.floor(options?.page ?? 1));
+  const pageSize = Math.min(500, Math.max(1, Math.floor(options?.limit ?? options?.pageSize ?? 24)));
+  const offset = (page - 1) * pageSize;
+  const rawQuery = options?.query?.trim() ?? "";
+  const safeQuery = rawQuery.replace(/[,()%"'\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+  const yearFilter = options?.year && options.year !== "all" ? Number(options.year) : null;
+  const fields = "id,paper_id,paper_number,year,topic,part_a_title,part_a_discussion_points,page_images,created_at,updated_at";
+
+  let papersQuery = supabase
     .from("pastpaper_papers")
-    .select("*")
-    .order("year", { ascending: false })
-    .order("paper_number", { ascending: true });
+    .select(fields, { count: "exact" });
+
+  if (yearFilter && Number.isInteger(yearFilter)) papersQuery = papersQuery.eq("year", yearFilter);
+  if (safeQuery) {
+    if (/^\d{4}$/.test(safeQuery)) {
+      papersQuery = papersQuery.eq("year", Number(safeQuery));
+    } else {
+      const pattern = `*${safeQuery}*`;
+      papersQuery = papersQuery.or(`topic.ilike.${pattern},paper_number.ilike.${pattern},paper_id.ilike.${pattern},part_a_title.ilike.${pattern}`);
+    }
+  }
+
+  if (options?.sort !== "trending") {
+    papersQuery = papersQuery
+      .order("year", { ascending: false })
+      .order("paper_number", { ascending: true })
+      .range(offset, offset + pageSize - 1);
+  }
+
+  const [{ data: papers, error, count }, { data: yearRows }] = await Promise.all([
+    papersQuery,
+    supabase.from("pastpaper_papers").select("year").order("year", { ascending: false }),
+  ]);
 
   if (error || !papers) {
     return {
       forumReady: false,
       papers: [] as PaperWithForumMeta[],
       total: 0,
+      years: [] as number[],
+      page,
+      pageSize,
     };
   }
 
-  const { data: forumPosts, error: forumError } = await supabase
+  const paperRows = papers as PaperCatalogRow[];
+  const pagePaperIds = paperRows.map((paper) => paper.id);
+  let forumQuery = supabase
     .from("forum_posts")
     .select("paper_id, comment_count, last_activity_at")
     .eq("status", PUBLISHED_POST_STATUS as ForumPostStatus);
+  if (options?.sort !== "trending" && pagePaperIds.length > 0) {
+    forumQuery = forumQuery.in("paper_id", pagePaperIds);
+  }
+  const { data: forumPosts, error: forumError } = await forumQuery;
 
   const stats = new Map<
     string,
@@ -260,10 +314,7 @@ export async function fetchPaperCatalog(options?: {
     });
   }
 
-  const query = options?.query?.trim().toLowerCase() ?? "";
-  const yearFilter = options?.year && options.year !== "all" ? options.year : "";
-
-  let enriched = papers
+  let enriched = paperRows
     .map((paper) => {
       const meta = stats.get(paper.id);
       return {
@@ -272,16 +323,6 @@ export async function fetchPaperCatalog(options?: {
         lastActivityAt: meta?.lastActivityAt ?? null,
         heat: meta?.heat ?? 0,
       };
-    })
-    .filter((paper) => {
-      const matchesQuery =
-        !query ||
-        [paper.topic, paper.paper_number, paper.paper_id, paper.part_a_title]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      const matchesYear = !yearFilter || String(paper.year) === yearFilter;
-      return matchesQuery && matchesYear;
     });
 
   if (options?.sort === "trending") {
@@ -291,17 +332,22 @@ export async function fetchPaperCatalog(options?: {
     });
   }
 
-  const sliced = options?.limit ? enriched.slice(0, options.limit) : enriched;
+  if (options?.sort === "trending") enriched = enriched.slice(offset, offset + pageSize);
+
+  const years = Array.from(new Set((yearRows ?? []).map((row) => row.year))).sort((a, b) => b - a);
 
   return {
     forumReady: !forumError || !isForumUnavailable(forumError),
-    papers: sliced,
-    total: enriched.length,
+    papers: enriched,
+    total: count ?? paperRows.length,
+    years,
+    page,
+    pageSize,
   };
 }
 
 export async function fetchPaperHub(paperId: string) {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data: paper, error } = await supabase
     .from("pastpaper_papers")
     .select("*")

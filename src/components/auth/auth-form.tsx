@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,12 +9,14 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { Loader2, Mail, ArrowLeft, CheckCircle2, RotateCw } from "lucide-react";
 import type { Provider } from "@supabase/supabase-js";
+import { useUser } from "@/hooks/use-user";
 
 interface AuthFormProps {
   mode: "login" | "register";
+  nextPath?: string;
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -28,7 +29,8 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const router = useRouter();
-  const supabase = createClient();
+  const { supabase } = useUser();
+  const nextQuery = nextPath === "/learn" ? "" : `?next=${encodeURIComponent(nextPath)}`;
 
   // Cooldown timer for resend button
   useEffect(() => {
@@ -42,7 +44,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
       },
     });
     if (error) {
@@ -82,6 +84,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`,
             data: {
               display_name: displayName || email.split("@")[0],
             },
@@ -102,7 +105,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         // If session exists, user is auto-confirmed (e.g. email confirmation disabled)
         toast.success("註冊成功");
-        router.push("/learn");
+        router.push(nextPath);
         router.refresh();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -125,7 +128,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         toast.success("登入成功");
-        router.push("/learn");
+        router.push(nextPath);
         router.refresh();
       }
     } catch (error: unknown) {
@@ -195,7 +198,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 <span className="text-[12px] font-semibold text-emerald-700">3</span>
               </div>
               <p className="text-[13px] text-neutral-600 leading-relaxed">
-                驗證完成後回來<Link href="/login" className="font-medium text-neutral-900 underline underline-offset-2">登入</Link>即可
+                驗證完成後回來<Link href={`/login${nextQuery}`} className="font-medium text-neutral-900 underline underline-offset-2">登入</Link>即可
               </p>
             </div>
           </div>
@@ -252,7 +255,7 @@ export function AuthForm({ mode }: AuthFormProps) {
               setEmail("");
               setPassword("");
             }}
-            className="inline-flex items-center justify-center text-[13px] text-neutral-400 hover:text-neutral-900 mt-6 transition-colors"
+            className="inline-flex items-center justify-center text-[13px] text-neutral-600 hover:text-neutral-900 mt-6 transition-colors"
           >
             <ArrowLeft className="mr-1 h-3.5 w-3.5" />
             使用其他方式{mode === "register" ? "註冊" : "登入"}
@@ -278,7 +281,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         <h1 className="font-serif text-[24px] font-semibold text-neutral-900 text-center mb-2 tracking-tight">
           {mode === "login" ? "Welcome back" : "Create account"}
         </h1>
-        <p className="text-[14px] text-neutral-400 text-center mb-8">
+        <p className="text-[14px] text-neutral-600 text-center mb-8">
           {mode === "login"
             ? "登入你的帳號繼續練習"
             : "註冊帳號開始 DSE Speaking 練習"}
@@ -326,7 +329,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             <div className="w-full border-t border-neutral-200" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-white px-3 text-[12px] text-neutral-400">
+            <span className="bg-white px-3 text-[12px] text-neutral-600">
               or
             </span>
           </div>
@@ -392,12 +395,12 @@ export function AuthForm({ mode }: AuthFormProps) {
           </Button>
         </form>
 
-        <p className="text-[13px] text-neutral-400 text-center mt-6">
+        <p className="text-[13px] text-neutral-600 text-center mt-6">
           {mode === "login" ? (
             <>
               還沒有帳號？{" "}
               <Link
-                href="/register"
+                href={`/register${nextQuery}`}
                 className="text-neutral-900 hover:underline"
               >
                 註冊
@@ -406,7 +409,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           ) : (
             <>
               已有帳號？{" "}
-              <Link href="/login" className="text-neutral-900 hover:underline">
+              <Link href={`/login${nextQuery}`} className="text-neutral-900 hover:underline">
                 登入
               </Link>
             </>

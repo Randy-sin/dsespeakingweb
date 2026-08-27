@@ -50,7 +50,7 @@ export default async function ForumPage({
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
           <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
             <div>
-              <p className="text-[12px] uppercase tracking-[0.22em] text-neutral-400">
+              <p className="text-[12px] uppercase tracking-[0.22em] text-neutral-600">
                 DSE Speaking Forum
               </p>
               <h1 className="mt-4 max-w-3xl font-serif text-[40px] leading-[0.94] text-neutral-950 sm:text-[64px]">
@@ -80,7 +80,7 @@ export default async function ForumPage({
             <div className="rounded-[28px] border border-neutral-200/80 bg-[#faf9f5] p-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-400">
+                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-600">
                     Hot now
                   </p>
                   <p className="mt-3 text-[26px] font-serif text-neutral-950">
@@ -91,7 +91,7 @@ export default async function ForumPage({
                   </p>
                 </div>
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-400">
+                  <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-600">
                     Papers
                   </p>
                   <p className="mt-3 text-[26px] font-serif text-neutral-950">
@@ -125,8 +125,10 @@ export default async function ForumPage({
 
           <form className="mt-10 grid gap-3 rounded-[28px] border border-neutral-200/80 bg-[#faf9f5] p-4 sm:grid-cols-[1.5fr_0.7fr_0.7fr_auto]">
             <div className="relative">
+              <label htmlFor="forum-search" className="sr-only">搜尋論壇討論</label>
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-300" />
               <input
+                id="forum-search"
                 type="search"
                 name="q"
                 defaultValue={params.q ?? ""}
@@ -134,7 +136,9 @@ export default async function ForumPage({
                 className="h-12 w-full rounded-2xl border border-neutral-200 bg-white pl-11 pr-4 text-[14px] text-neutral-700 outline-none transition focus:border-neutral-300"
               />
             </div>
+            <label htmlFor="forum-sort" className="sr-only">論壇排序方式</label>
             <select
+              id="forum-sort"
               name="sort"
               defaultValue={sort}
               className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[14px] text-neutral-600 outline-none"
@@ -143,7 +147,9 @@ export default async function ForumPage({
               <option value="popular">最多互動</option>
               <option value="latest">最新發布</option>
             </select>
+            <label htmlFor="forum-type" className="sr-only">貼文類型</label>
             <select
+              id="forum-type"
               name="type"
               defaultValue={postType}
               className="h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-[14px] text-neutral-600 outline-none"
@@ -180,7 +186,7 @@ export default async function ForumPage({
                 還沒有符合條件的討論
               </h2>
               <p className="mx-auto mt-3 max-w-md text-[14px] leading-7 text-neutral-500">
-                可以先從真題頁發第一篇帖，或把剛練完的一次房間復盤整理成一篇具體的討論。
+                可以先從真題頁發第一篇帖，或把剛練完的一次口語練習復盤整理成一篇具體的討論。
               </p>
               <div className="mt-6 flex justify-center gap-3">
                 <Button asChild className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
@@ -218,7 +224,7 @@ export default async function ForumPage({
           </Link>
 
           <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
               Top Papers This Week
             </p>
             <div className="mt-5 space-y-3">
@@ -228,7 +234,7 @@ export default async function ForumPage({
                   href={`/papers/${paper.paper_id}`}
                   className="block rounded-2xl border border-neutral-100 bg-neutral-50 px-4 py-4 transition-colors hover:border-neutral-200 hover:bg-white"
                 >
-                  <p className="text-[12px] text-neutral-400">
+                  <p className="text-[12px] text-neutral-600">
                     {paper.year} · {paper.paper_number}
                   </p>
                   <p className="mt-1 text-[15px] font-medium leading-6 text-neutral-900">
@@ -243,7 +249,7 @@ export default async function ForumPage({
           </div>
 
           <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
+            <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-600">
               Popular Tags
             </p>
             <div className="mt-5 flex flex-wrap gap-2">

@@ -9,6 +9,7 @@ type SaveBase = {
   task: string;
   transcript: string;
   sessionId?: string | null;
+  paperId?: string | null;
 };
 
 async function ensureSession(input: SaveBase, feedback: Record<string, unknown>, status: "transcribed" | "analyzed") {
@@ -25,7 +26,7 @@ async function ensureSession(input: SaveBase, feedback: Record<string, unknown>,
   }
   const { data, error } = await input.supabase
     .from("practice_sessions")
-    .insert({ user_id: input.userId, mode: input.mode, task_text: input.task, transcript: input.transcript, feedback, status })
+    .insert({ user_id: input.userId, mode: input.mode, paper_id: input.paperId ?? null, task_text: input.task, transcript: input.transcript, feedback, status })
     .select("id")
     .single();
   if (error || !data) throw new Error("Unable to save the private practice session");
@@ -78,17 +79,26 @@ export async function saveDiscussionTurns(input: SaveBase, aiResponse: string) {
   }
   const feedback = { ...previousFeedback, aiTeammate: { kind: "ai_teammate_turn", evidenceSource: "learner_transcript" } };
   const session = await ensureSession(input, feedback, "analyzed");
-  const { error } = await input.supabase.from("practice_turns").upsert([
+  const { data: lastTurn } = await input.supabase
+    .from("practice_turns")
+    .select("sequence_number")
+    .eq("session_id", session.id)
+    .eq("user_id", input.userId)
+    .order("sequence_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const learnerSequence = (lastTurn?.sequence_number ?? 0) + 1;
+  const { error } = await input.supabase.from("practice_turns").insert([
     {
       session_id: session.id,
       user_id: input.userId,
-      sequence_number: 1,
+      sequence_number: learnerSequence,
       speaker: "learner",
       transcript: input.transcript,
       evidence_feedback: Object.keys(previousFeedback).length > 0 ? previousFeedback : null,
     },
-    { session_id: session.id, user_id: input.userId, sequence_number: 2, speaker: "ai", transcript: aiResponse, evidence_feedback: feedback },
-  ], { onConflict: "session_id,sequence_number" });
+    { session_id: session.id, user_id: input.userId, sequence_number: learnerSequence + 1, speaker: "ai", transcript: aiResponse, evidence_feedback: feedback },
+  ]);
   if (error) {
     await rollbackCreatedSession(input.supabase, session.id, session.created);
     throw new Error("Unable to save the private discussion turns");

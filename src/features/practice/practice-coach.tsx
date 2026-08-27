@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { Bot, LoaderCircle, MessageSquareText, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Bot, Flag, LoaderCircle, MessageSquareText, RotateCcw, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceRecorder } from "@/features/recording/voice-recorder";
@@ -14,6 +14,8 @@ type PracticeCoachProps = {
   maxSeconds: number;
   mode: PracticeMode;
   task: string;
+  paperId?: string;
+  onBeforeLogin?: () => void;
 };
 
 type AiFeedbackResponse = {
@@ -21,8 +23,33 @@ type AiFeedbackResponse = {
   feedback?: string;
   assessment?: PracticeAssessment;
   response?: string;
+  partnerRole?: "Student A" | "Student B";
+  round?: number;
   sessionId?: string;
   error?: string;
+};
+
+type DiscussionTurn = {
+  speaker: "learner" | "ai";
+  label: string;
+  text: string;
+};
+
+const PRACTICE_DRAFT_KEY = "dse-speaking:practice-draft:v1";
+
+const selfCheckItems: Record<PracticeMode, Array<{ id: string; label: string }>> = {
+  "individual-response": [
+    { id: "direct-answer", label: "開首直接回答題目，而不是重複題目" },
+    { id: "developed-points", label: "至少兩個重點都有原因、例子或解釋" },
+    { id: "clear-order", label: "答案次序清楚，聽眾能跟上你的思路" },
+    { id: "complete-ending", label: "結尾有總結立場或回扣問題" },
+  ],
+  "group-discussion": [
+    { id: "reference", label: "點出上一位同學的一個具體觀點" },
+    { id: "position", label: "清楚表明同意、補充或提出限制" },
+    { id: "new-information", label: "加入一個新的原因、例子或考慮" },
+    { id: "invite", label: "結尾留下讓其他組員接話的位置" },
+  ],
 };
 
 async function readAiResponse(response: Response) {
@@ -35,19 +62,53 @@ async function readAiResponse(response: Response) {
   return data;
 }
 
-export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
+export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }: PracticeCoachProps) {
   const { user, loading } = useUser();
+  const router = useRouter();
   const [transcript, setTranscript] = useState("");
   const [assessment, setAssessment] = useState<PracticeAssessment | null>(null);
-  const [teammateReply, setTeammateReply] = useState<string | null>(null);
+  const [discussionTurns, setDiscussionTurns] = useState<DiscussionTurn[]>([]);
+  const [discussionEnded, setDiscussionEnded] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<"feedback" | "teammate" | null>(null);
+  const [completedChecks, setCompletedChecks] = useState<string[]>([]);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  const checks = selfCheckItems[mode];
+  const completedDiscussionRounds = discussionTurns.filter((turn) => turn.speaker === "ai").length;
+  const nextDiscussionRound = completedDiscussionRounds + 1;
+
+  useEffect(() => {
+    try {
+      const stored = window.sessionStorage.getItem(PRACTICE_DRAFT_KEY);
+      if (!stored) return;
+      const draft = JSON.parse(stored) as { path?: string; mode?: PracticeMode; task?: string; transcript?: string };
+      const currentPath = `${window.location.pathname}${window.location.search}`;
+      if (draft.path === currentPath && draft.mode === mode && draft.task === task && draft.transcript?.trim()) {
+        setTranscript(draft.transcript);
+        setRestoredDraft(true);
+        window.sessionStorage.removeItem(PRACTICE_DRAFT_KEY);
+      }
+    } catch {
+      window.sessionStorage.removeItem(PRACTICE_DRAFT_KEY);
+    }
+  }, [mode, task]);
 
   const updateTranscript = (value: string) => {
     setTranscript(value);
     setAssessment(null);
-    setTeammateReply(null);
+    setError(null);
+  };
+
+  const toggleCheck = (id: string) => {
+    setCompletedChecks((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  };
+
+  const continueToLogin = () => {
+    const path = `${window.location.pathname}${window.location.search}`;
+    onBeforeLogin?.();
+    window.sessionStorage.setItem(PRACTICE_DRAFT_KEY, JSON.stringify({ path, mode, task, transcript }));
+    router.push(`/login?next=${encodeURIComponent(path)}`);
   };
 
   const requestFeedback = async () => {
@@ -61,7 +122,7 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
       const response = await fetch("/api/ai/practice/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, task, transcript, sessionId }),
+        body: JSON.stringify({ mode, task, transcript, sessionId, paperId }),
       });
       const data = await readAiResponse(response);
       if (!data.assessment) throw new Error("AI 教練沒有返回可用的訓練量表，請稍後再試。");
@@ -75,6 +136,7 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
   };
 
   const requestTeammate = async () => {
+    if (discussionEnded || nextDiscussionRound > 3) return;
     if (!transcript.trim()) {
       setError("請先完成你的發言，AI 組員才可以接話。");
       return;
@@ -82,13 +144,24 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
     setError(null);
     setPendingAction("teammate");
     try {
+      const previousTurns = discussionTurns
+        .map((turn) => `${turn.label}: ${turn.text}`)
+        .join("\n")
+        .slice(-2200);
       const response = await fetch("/api/ai/group-discussion/respond", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ context: task, learnerTurn: transcript, sessionId }),
+        body: JSON.stringify({ context: task, learnerTurn: transcript, previousTurns, round: nextDiscussionRound, sessionId, paperId }),
       });
       const data = await readAiResponse(response);
-      setTeammateReply(data.response || "我暫時沒有新的觀點，請再補充一個具體理由。");
+      const reply = data.response || "I do not have a new point yet. Could you add one specific reason?";
+      const role = data.partnerRole === "Student B" ? "AI 組員 B" : "AI 組員 A";
+      setDiscussionTurns((current) => [
+        ...current,
+        { speaker: "learner", label: "你", text: transcript.trim() },
+        { speaker: "ai", label: role, text: reply },
+      ]);
+      if (nextDiscussionRound === 3) setDiscussionEnded(true);
       if (data.sessionId) setSessionId(data.sessionId);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "AI 組員暫時未能回應，請稍後再試。");
@@ -97,17 +170,17 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
     }
   };
 
-  const speakReply = () => {
-    if (!teammateReply || !("speechSynthesis" in window)) return;
+  const speakReply = (reply: string) => {
+    if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(teammateReply);
+    const utterance = new SpeechSynthesisUtterance(reply);
     utterance.lang = "en-HK";
     window.speechSynthesis.speak(utterance);
   };
 
   return (
     <div className="space-y-5">
-      <VoiceRecorder maxSeconds={maxSeconds} mode={mode} task={task} onTranscriptChange={updateTranscript} onSessionChange={setSessionId} />
+      <VoiceRecorder maxSeconds={maxSeconds} mode={mode} task={task} paperId={paperId} onTranscriptChange={updateTranscript} onSessionChange={setSessionId} />
 
       <section className="border border-[#bdb3a2] bg-white/35 p-5 sm:p-7" aria-labelledby="transcript-title">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -117,8 +190,11 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-[#bdb3a2] px-3 py-1 text-[11px] text-[#6d695f]"><ShieldCheck className="h-3.5 w-3.5" />先校對，再分析</span>
         </div>
-        <p className="mt-3 max-w-2xl text-xs leading-6 text-[#665f55]">支援的瀏覽器會在錄音時產生即時草稿，但它可能聽錯字。你也可以手動輸入；送出前請先修正成自己真正說過的內容。</p>
+        <p id="transcript-help" className="mt-3 max-w-2xl text-xs leading-6 text-[#665f55]">支援的瀏覽器會在錄音時產生即時草稿，但它可能聽錯字。你也可以手動輸入；送出前請先修正成自己真正說過的內容。</p>
         <Textarea
+          id="transcript-draft"
+          aria-labelledby="transcript-title"
+          aria-describedby="transcript-help transcript-count"
           value={transcript}
           onChange={(event) => {
             updateTranscript(event.target.value);
@@ -127,25 +203,54 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
           placeholder="輸入或校對你剛才的英文回答……"
           maxLength={5000}
         />
-        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#665f55]"><span>{transcript.trim().split(/\s+/).filter(Boolean).length} words</span><span>{transcript.length}/5000</span></div>
+        <div id="transcript-count" className="mt-3 flex items-center justify-between gap-3 text-xs text-[#665f55]"><span>{transcript.trim().split(/\s+/).filter(Boolean).length} words</span><span>{transcript.length}/5000</span></div>
+        {restoredDraft ? <p role="status" className="mt-4 border-l-2 border-[#48634c] pl-4 text-sm text-[#48634c]">已返回原本的題目，並恢復登入前的逐字稿草稿。</p> : null}
+
+        <fieldset className="mt-6 border-t border-[#c9c0b1] pt-6">
+          <legend className="font-serif text-xl text-[#26352a]">先做 30 秒自我檢查</legend>
+          <p className="mt-2 text-xs leading-5 text-[#665f55]">這一步不需要登入。請對照你真正說過的內容逐項檢查，不確定就先不要勾。</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {checks.map((item) => {
+              const checked = completedChecks.includes(item.id);
+              return (
+                <label key={item.id} className={`flex min-h-12 cursor-pointer items-start gap-3 border p-3 text-sm leading-6 transition-colors ${checked ? "border-[#48634c] bg-[#edf0e8] text-[#26352a]" : "border-[#c9c0b1] bg-[#faf7ef] text-[#5e5b53]"}`}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={!transcript.trim()}
+                    onChange={() => toggleCheck(item.id)}
+                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#48634c]"
+                  />
+                  <span>{item.label}</span>
+                </label>
+              );
+            })}
+          </div>
+          <p aria-live="polite" className="mt-3 text-xs font-medium text-[#48634c]">
+            {transcript.trim() ? `已完成 ${completedChecks.length} / ${checks.length} 項自我檢查${completedChecks.length === checks.length ? "。現在選一項做得最弱的，下一次只改善這一項。" : "。"}` : "先輸入或錄下回答，自我檢查便會開放。"}
+          </p>
+        </fieldset>
 
         {loading ? <p className="mt-5 inline-flex items-center gap-2 text-sm text-[#6d695f]"><LoaderCircle className="h-4 w-4 animate-spin" />正在確認登入狀態……</p> : null}
         {!loading && !user ? (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-l-2 border-[#ad3f29] bg-[#f3efe4] p-4">
-            <p className="max-w-xl text-sm leading-6 text-[#6d695f]">逐字稿與自我檢查可以直接使用；AI 回饋會消耗服務資源，因此只開放給已登入學生。</p>
-            <Button asChild className="rounded-full bg-[#172019] text-white"><Link href="/login">登入後使用 AI 教練</Link></Button>
+            <p className="max-w-xl text-sm leading-6 text-[#6d695f]">逐字稿與自我檢查可以直接使用；AI 回饋只開放給已登入學生。登入後會返回同一題，並恢復這份逐字稿。</p>
+            <Button type="button" onClick={continueToLogin} className="rounded-full bg-[#172019] text-white">保留逐字稿並登入</Button>
           </div>
         ) : null}
 
         {user ? (
           <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={requestFeedback} disabled={pendingAction !== null} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">
+            <Button onClick={requestFeedback} disabled={pendingAction !== null} aria-busy={pendingAction === "feedback"} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">
               {pendingAction === "feedback" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}取得證據化回饋
             </Button>
             {mode === "group-discussion" ? (
-              <Button onClick={requestTeammate} disabled={pendingAction !== null} variant="outline" className="rounded-full border-[#9f9687] px-5">
-                {pendingAction === "teammate" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}請 AI 組員接話
-              </Button>
+              <>
+                {!discussionEnded ? <Button onClick={requestTeammate} disabled={pendingAction !== null} aria-busy={pendingAction === "teammate"} variant="outline" className="rounded-full border-[#9f9687] px-5">
+                  {pendingAction === "teammate" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}請 AI 組員接第 {nextDiscussionRound} 輪
+                </Button> : null}
+                {completedDiscussionRounds > 0 && !discussionEnded ? <Button type="button" onClick={() => setDiscussionEnded(true)} variant="ghost" className="rounded-full text-[#665f55]"><Flag className="mr-2 h-4 w-4" />結束本輪討論</Button> : null}
+              </>
             ) : null}
           </div>
         ) : null}
@@ -162,12 +267,30 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
         </section>
       ) : null}
 
-      {teammateReply ? (
-        <section className="border border-[#48634c] bg-[#edf0e8] p-6" aria-live="polite">
-          <p className="eyebrow flex items-center gap-2 text-[#48634c]"><Bot className="h-4 w-4" />AI teammate</p>
-          <blockquote className="mt-4 font-serif text-xl leading-8 text-[#26352a]">“{teammateReply}”</blockquote>
-          <Button onClick={speakReply} variant="ghost" className="mt-4 rounded-full text-[#48634c]"><Volume2 className="mr-2 h-4 w-4" />朗讀這段回應</Button>
-          <p className="mt-3 text-xs leading-5 text-[#6d695f]">這是 AI 產生的練習回應，不代表真人學生或考官意見。聽完後，請針對其中一個具體觀點再接一句。</p>
+      {discussionTurns.length > 0 ? (
+        <section className="border border-[#48634c] bg-[#edf0e8] p-5 sm:p-6" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="eyebrow flex items-center gap-2 text-[#48634c]"><Bot className="h-4 w-4" />3-round discussion track</p>
+            <span className="font-mono text-xs text-[#48634c]">{completedDiscussionRounds} / 3 ROUNDS</span>
+          </div>
+          <ol className="mt-5 space-y-3">
+            {discussionTurns.map((turn, index) => (
+              <li key={`${turn.speaker}-${index}`} className={`border p-4 ${turn.speaker === "ai" ? "border-[#8da08f] bg-[#f7f8f2]" : "border-[#c9c0b1] bg-[#faf7ef]"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-semibold text-[#48634c]">{turn.label}</p>
+                  {turn.speaker === "ai" ? <Button type="button" onClick={() => speakReply(turn.text)} variant="ghost" size="sm" className="min-h-11 rounded-full text-[#48634c]"><Volume2 className="mr-1 h-4 w-4" />朗讀</Button> : null}
+                </div>
+                <p className="mt-2 text-sm leading-7 text-[#26352a]">{turn.text}</p>
+              </li>
+            ))}
+          </ol>
+          {discussionEnded ? (
+            <div className="mt-5 border-t border-[#8da08f] pt-5">
+              <p className="font-serif text-2xl text-[#26352a]">本輪練習已收束</p>
+              <p className="mt-2 text-sm leading-6 text-[#5e5b53]">你完成了 {completedDiscussionRounds} 輪接話。回看上面的自我檢查，選一項未做到的行為，再用不同說法重練。</p>
+              <Button type="button" onClick={() => { setDiscussionTurns([]); setDiscussionEnded(false); setSessionId(null); setTranscript(""); setCompletedChecks([]); }} variant="outline" className="mt-4 rounded-full border-[#8da08f]"><RotateCcw className="mr-2 h-4 w-4" />開始新的 3 輪練習</Button>
+            </div>
+          ) : <p className="mt-4 text-xs leading-5 text-[#6d695f]">閱讀 AI 組員的具體觀點後，修改上方逐字稿成為你的下一句，再請另一位組員接話。AI A／B 都是合成練習角色，不是真人或考官。</p>}
         </section>
       ) : null}
     </div>
