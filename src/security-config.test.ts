@@ -9,6 +9,8 @@ describe("production security headers", () => {
 
     expect(values.get("Content-Security-Policy")).toContain("frame-ancestors 'none'");
     expect(values.get("Content-Security-Policy")).toContain("object-src 'none'");
+    expect(values.get("Content-Security-Policy")).toContain("https://static.cloudflareinsights.com");
+    expect(values.get("Content-Security-Policy")).toContain("https://cloudflareinsights.com");
     expect(values.get("X-Content-Type-Options")).toBe("nosniff");
     expect(values.get("X-Frame-Options")).toBe("DENY");
     expect(values.get("Permissions-Policy")).toContain("microphone=(self)");
