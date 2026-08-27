@@ -1,0 +1,205 @@
+import type { Lesson } from "@/lib/learning/types";
+
+export const gdLessons: Lesson[] = [
+  {
+    slug: "respond-and-build",
+    mode: "group-discussion",
+    number: "01",
+    title: "回應，再加入新資訊",
+    englishTitle: "Respond & Build",
+    summary: "不要只說 I agree。先接住上一位的具體觀點，再帶討論向前一步。",
+    duration: 8,
+    skill: "Interaction",
+    principle: "有效互動 = 指出對方說了甚麼 + 表明你的反應 + 加入一項新資訊。",
+    steps: ["重述對方的一個關鍵詞", "選擇同意、補充或反駁", "加入原因、例子或另一個角度", "把話題交給下一位"],
+    examples: [
+      { label: "只表態，沒有推進", text: "I agree with you. That is a very good idea.", note: "考官聽不到你理解了哪一點，也沒有新內容可以評核。", tone: "weak" },
+      { label: "接住觀點，再推進", text: "You mentioned that sports can reduce students’ stress. I agree, and regular team practice can also help shy students build friendships. Should schools offer more lunchtime sessions?", note: "點出 stress，加入 friendship 的新角度，最後邀請其他人回應。", tone: "strong" },
+    ],
+    prompt: "上一位同學認為學校應該增加體育活動，因為學生壓力很大。請用 20–30 秒回應並加入一項新資訊。",
+  },
+  {
+    slug: "open-with-direction",
+    mode: "group-discussion",
+    number: "02",
+    title: "有方向地開始討論",
+    englishTitle: "Open with Direction",
+    summary: "簡短交代任務、直接進入第一個討論點，再邀請組員參與。",
+    duration: 6,
+    skill: "Opening",
+    principle: "好的開場不是背誦問候，而是讓全組知道現在要討論哪一項。",
+    steps: ["用一句話確認任務", "提出第一個可討論觀點", "簡短展開", "邀請具體回應"],
+    examples: [
+      { label: "過度正式", text: "Good afternoon, ladies and gentlemen. It is my great honour to discuss this meaningful topic.", note: "花了太多時間，但仍未開始處理題目。", tone: "weak" },
+      { label: "直接建立方向", text: "Let’s start with how the visit could benefit students. I think meeting an athlete in person could make goal-setting feel more realistic. What other benefits can you think of?", note: "直接處理第一點，並留下清晰的接話位置。", tone: "strong" },
+    ],
+    prompt: "題目是如何改善學校的閱讀文化。請用 20 秒開始討論。",
+  },
+  {
+    slug: "disagree-politely",
+    mode: "group-discussion",
+    number: "03",
+    title: "禮貌反駁，不令討論中斷",
+    englishTitle: "Disagree without Stopping",
+    summary: "先承認對方觀點，再指出限制、提出替代方案並尋求共識。",
+    duration: 9,
+    skill: "Communication",
+    principle: "反駁的目標是改善方案，不是證明對方錯。",
+    steps: ["承認合理部分", "指出一個具體限制", "提出可行替代", "問對方是否接受"],
+    examples: [
+      { label: "直接否定", text: "No, I don’t think your idea will work.", note: "沒有理由，也容易令交流停止。", tone: "weak" },
+      { label: "保留合作空間", text: "That could attract many students, but the cost may be too high for our school. Perhaps we could invite local athletes instead. Would that be more practical?", note: "限制、替代方案和共識問題都很清楚。", tone: "strong" },
+    ],
+    prompt: "組員建議舉辦昂貴的海外交流團。請提出一個有建設性的反駁。",
+  },
+  {
+    slug: "clarify-and-invite",
+    mode: "group-discussion",
+    number: "04",
+    title: "澄清與邀請組員",
+    englishTitle: "Clarify & Invite",
+    summary: "聽不清楚就追問；有人沉默時，給一個容易接住的問題。",
+    duration: 7,
+    skill: "Teamwork",
+    principle: "幫助組員說得更清楚，也是一項可被觀察的溝通策略。",
+    steps: ["指出不清楚的詞或想法", "提出具體澄清問題", "必要時提供兩個選項", "回應對方的答案"],
+    examples: [
+      { label: "泛泛邀請", text: "Do you have anything to say?", note: "問題太大，較弱的組員仍然不知道怎樣開始。", tone: "weak" },
+      { label: "降低接話難度", text: "We haven’t heard your view on publicity yet. Would posters or short videos work better for students?", note: "點明範圍並提供選項，組員更容易參與。", tone: "strong" },
+    ],
+    prompt: "一位組員很久沒有發言。請用一條具體問題邀請他加入。",
+  },
+  {
+    slug: "elaborate-with-evidence",
+    mode: "group-discussion",
+    number: "05",
+    title: "把觀點展開成完整論述",
+    englishTitle: "Elaborate with Evidence",
+    summary: "用 Topic Sentence、Reasoning、Example 和 Short Conclusion 建立完整論點。",
+    duration: 10,
+    skill: "Ideas",
+    principle: "每個觀點至少回答：為甚麼、會帶來甚麼影響，以及有甚麼具體例子。",
+    steps: ["一句主題句", "往前找原因或往後推影響", "加入具體例子", "短句扣回題目"],
+    examples: [
+      { label: "只有結論", text: "Reading is important because it is useful for students.", note: "important 和 useful 都沒有被解釋。", tone: "weak" },
+      { label: "形成因果鏈", text: "Daily reading can improve students’ writing because they repeatedly see how strong paragraphs are organised. For example, they can collect useful topic sentences from short articles and apply the patterns in essays.", note: "原因、影響和可操作例子連在一起。", tone: "strong" },
+    ],
+    prompt: "為「學校應保留閱讀課」提出一個完整論點。",
+  },
+  {
+    slug: "transition-and-conclude",
+    mode: "group-discussion",
+    number: "06",
+    title: "自然轉題與總結",
+    englishTitle: "Transition & Conclude",
+    summary: "判斷目前討論是否足夠，再帶大家進入下一點或完成簡短總結。",
+    duration: 7,
+    skill: "Organisation",
+    principle: "轉題前先說明已經得到甚麼，總結只保留全組真正討論過的內容。",
+    steps: ["確認目前已有的重點", "指出下一個討論點", "邀請新的角度", "最後概括共識與分歧"],
+    examples: [
+      { label: "突然轉題", text: "Okay, next question.", note: "沒有顯示你掌握討論內容和節奏。", tone: "weak" },
+      { label: "有承接的轉題", text: "So far, we have agreed that the event should be affordable and easy to join. Shall we move on to how we can promote it?", note: "先整理共識，再清楚帶出下一點。", tone: "strong" },
+    ],
+    prompt: "全組已討論完活動的好處。請自然轉到宣傳方法。",
+  },
+];
+
+export const irLessons: Lesson[] = [
+  {
+    slug: "making-choices",
+    mode: "individual-response",
+    number: "01",
+    title: "作出選擇",
+    englishTitle: "Making Choices",
+    summary: "先表明選擇，再用兩個準則比較，避免只介紹其中一項。",
+    duration: 9,
+    skill: "Which",
+    principle: "Choice → Reason → Contrast → Conclusion。你的比較準則要保持一致。",
+    steps: ["第一句直接選擇", "用一個準則解釋", "以同一準則比較另一選項", "加入第二個理由或個人例子", "一句總結"],
+    examples: [
+      { label: "只有偏好", text: "I prefer a sports camp because I like sports and it is fun.", note: "理由太短，也沒有解釋另一個選項為甚麼較不適合。", tone: "weak" },
+      { label: "用準則比較", text: "I would choose the sports camp because it gives students a real break from classroom pressure. Unlike a music camp, it can also include beginners through simple team games, so more students can take part confidently.", note: "用減壓和參與門檻兩個準則作出比較。", tone: "strong" },
+    ],
+    prompt: "Would you prefer to read a book about history or visit a history museum? Why?",
+  },
+  {
+    slug: "giving-suggestions",
+    mode: "individual-response",
+    number: "02",
+    title: "給予建議",
+    englishTitle: "Giving Suggestions",
+    summary: "不只說 should do what，也要交代如何實行和會帶來甚麼效果。",
+    duration: 9,
+    skill: "How",
+    principle: "Suggestion → How → Benefit → Second suggestion → Conclusion。",
+    steps: ["提出第一項具體建議", "說明誰在何時怎樣執行", "解釋效用", "加入另一角度的建議", "概括可行性"],
+    examples: [
+      { label: "空泛建議", text: "The school should organise more activities and promote them.", note: "沒有執行方法，亦無法判斷是否可行。", tone: "weak" },
+      { label: "建議連到做法", text: "The school could run a ten-minute trial session at lunchtime, so students can experience the activity before signing up. Student ambassadors could then share short clips through class groups.", note: "做法、時間和宣傳渠道都具體。", tone: "strong" },
+    ],
+    prompt: "What can schools do to encourage students to read more English books?",
+  },
+  {
+    slug: "recounting-experience",
+    mode: "individual-response",
+    number: "03",
+    title: "分享個人經驗",
+    englishTitle: "Recounting Experience",
+    summary: "用 5W1H 選出最值得說的細節，最後交代這次經驗帶來的改變。",
+    duration: 8,
+    skill: "5W1H",
+    principle: "背景只需一句，主要時間留給事件、感受和反思。",
+    steps: ["交代時間、地點和人物", "描述一個具體事件", "說明當時反應", "總結學到甚麼"],
+    examples: [
+      { label: "只有事件清單", text: "I went to a museum last year. I saw many things. It was interesting.", note: "缺少一個可讓考官理解和記住的具體時刻。", tone: "weak" },
+      { label: "聚焦一個時刻", text: "During a school visit to the History Museum last year, our guide let us handle a replica ration book. That small object made wartime life feel real, and I began asking my grandparents about their childhood afterwards.", note: "具體物件、反應和後續影響令故事完整。", tone: "strong" },
+    ],
+    prompt: "Describe a school visit that you still remember clearly.",
+  },
+  {
+    slug: "justifying",
+    mode: "individual-response",
+    number: "04",
+    title: "解釋行為或現象",
+    englishTitle: "Justifying",
+    summary: "從不同人或不同層面分析成因，再指出可能影響。",
+    duration: 9,
+    skill: "Why",
+    principle: "Phenomenon → Root cause → Effect → Another angle → Conclusion。",
+    steps: ["用一句話確認現象", "解釋第一個根本原因", "把原因推到影響", "加入另一群體或角度", "提出平衡結論"],
+    examples: [
+      { label: "重述現象", text: "People use phones because phones are very popular nowadays.", note: "popular 只是重述，沒有解釋背後原因。", tone: "weak" },
+      { label: "解釋成因", text: "Many commuters rely on their phones because short videos fill otherwise empty travel time. For students, games may also provide a quick escape from academic pressure, which can gradually become a habit.", note: "兩類使用者、兩個原因和行為形成過程都很清楚。", tone: "strong" },
+    ],
+    prompt: "Why do many teenagers find it difficult to reduce screen time?",
+  },
+  {
+    slug: "giving-opinions",
+    mode: "individual-response",
+    number: "05",
+    title: "發表與支持意見",
+    englishTitle: "Giving Opinions",
+    summary: "建立清晰立場，用理由和例子支持，同時承認合理的另一面。",
+    duration: 9,
+    skill: "Opinion",
+    principle: "Stance → Reason → Example → Qualification → Conclusion。",
+    steps: ["直接表明立場", "提出最重要的理由", "加入具體例子", "承認一項限制", "重申經過權衡的結論"],
+    examples: [
+      { label: "口號式立場", text: "I agree because technology is the future and everyone needs it.", note: "沒有可核對的理由或例子。", tone: "weak" },
+      { label: "經過權衡的立場", text: "I support using tablets for research, because students can compare current sources quickly. However, schools should still require handwritten planning, since devices can easily distract students during independent work.", note: "立場、好處和限制同時存在，答案更可信。", tone: "strong" },
+    ],
+    prompt: "Do you think students should be allowed to use AI tools for homework? Why or why not?",
+  },
+];
+
+export const allLessons = [...gdLessons, ...irLessons];
+
+export function getLesson(mode: Lesson["mode"], slug: string) {
+  return allLessons.find((lesson) => lesson.mode === mode && lesson.slug === slug);
+}
+
+export function getNextLesson(completedLessons: string[], mode?: Lesson["mode"]) {
+  const lessons = mode ? allLessons.filter((lesson) => lesson.mode === mode) : allLessons;
+  return lessons.find((lesson) => !completedLessons.includes(lesson.slug)) ?? null;
+}

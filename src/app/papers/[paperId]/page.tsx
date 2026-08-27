@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ForumPostCard } from "@/components/forum/forum-post-card";
 import { fetchPaperHub } from "@/lib/forum/server";
-import { ArrowLeft, MessageSquareText, NotebookPen } from "lucide-react";
+import { ArrowLeft, BookOpenText, MessageSquareText, Mic2 } from "lucide-react";
 
 type Params = Promise<{ paperId: string }>;
 
@@ -36,7 +37,7 @@ export default async function PaperHubPage({
     <div className="min-h-screen bg-[#f7f6f2]">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+      <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <Link
           href="/papers"
           className="inline-flex items-center gap-2 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900"
@@ -61,11 +62,11 @@ export default async function PaperHubPage({
               </div>
 
               <div className="flex gap-3">
-                <Link href={`/forum/new?paperId=${paper.id}&postType=paper_discussion`}>
-                  <Button className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
-                    發起同題討論
-                  </Button>
-                </Link>
+                <Button asChild className="rounded-full bg-[#172019] px-5 text-white hover:bg-[#324036]">
+                  <Link href="/learn/group-discussion/respond-and-build">
+                    先學這題需要的技巧
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -117,10 +118,13 @@ export default async function PaperHubPage({
                   {paper.page_images?.length ? (
                     <div className="space-y-4">
                       {paper.page_images.map((url: string, index: number) => (
-                        <img
+                        <Image
                           key={url}
                           src={url}
                           alt={`Paper page ${index + 1}`}
+                          width={1200}
+                          height={1600}
+                          unoptimized
                           className="w-full rounded-2xl border border-neutral-200 bg-white"
                         />
                       ))}
@@ -194,14 +198,11 @@ export default async function PaperHubPage({
                       <p className="mx-auto mt-3 max-w-md text-[14px] leading-7 text-neutral-500">
                         如果你剛練完這題，現在就是最好的時候。把最卡的點、最想問的地方，或你自己的答法直接發成第一篇。
                       </p>
-                      <Link
-                        href={`/forum/new?paperId=${paper.id}&postType=paper_discussion`}
-                        className="mt-6 inline-flex"
-                      >
-                        <Button className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+                      <Button asChild className="mt-6 rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+                        <Link href={`/forum/new?paperId=${paper.id}&postType=paper_discussion`}>
                           寫第一篇同題帖
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                     </div>
                   ) : (
                     posts.map((post) => <ForumPostCard key={post.id} post={post} />)
@@ -213,37 +214,28 @@ export default async function PaperHubPage({
 
           <aside className="space-y-5">
             <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-              <p className="text-[12px] uppercase tracking-[0.18em] text-neutral-400">
-                Quick Actions
+              <p className="eyebrow text-[#8a8175]">
+                Practice this paper
               </p>
               <div className="mt-5 space-y-3">
-                <Link href={`/forum/new?paperId=${paper.id}&postType=part_a_analysis`}>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700"
-                  >
-                    <NotebookPen className="h-4 w-4" />
-                    寫 Part A 分析
-                  </Button>
-                </Link>
-                <Link href={`/forum/new?paperId=${paper.id}&postType=part_b_idea`}>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700"
-                  >
-                    <NotebookPen className="h-4 w-4" />
-                    寫 Part B 答法
-                  </Button>
-                </Link>
-                <Link href={`/forum/new?paperId=${paper.id}&postType=mock_review`}>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700"
-                  >
-                    <NotebookPen className="h-4 w-4" />
-                    發模擬復盤
-                  </Button>
-                </Link>
+                <Button asChild variant="outline" className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700">
+                  <Link href="/learn/group-discussion">
+                    <BookOpenText className="h-4 w-4" />
+                    學習 Part A 互動方法
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700">
+                  <Link href="/practice/group-discussion">
+                    <Mic2 className="h-4 w-4" />
+                    練習 Part A 小組討論
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full justify-start rounded-2xl border-neutral-200 bg-neutral-50 px-4 py-6 text-left text-[14px] text-neutral-700">
+                  <Link href="/practice/individual-response">
+                    <Mic2 className="h-4 w-4" />
+                    練習 Part B 個人回應
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -273,7 +265,7 @@ export default async function PaperHubPage({
             </div>
           </aside>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -29,27 +29,28 @@ export default async function PapersPage({
   );
 
   return (
-    <div className="min-h-screen bg-[#f7f6f2]">
+    <div className="min-h-screen bg-[#f3efe4]">
       <Navbar />
 
-      <section className="border-b border-neutral-200/80 bg-white">
+      <main id="main-content">
+      <section className="border-b border-[#bdb3a2] bg-[#48634c] text-[#faf7ef]">
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
           <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr]">
             <div>
-              <p className="text-[12px] uppercase tracking-[0.22em] text-neutral-400">
+              <p className="eyebrow text-[#ced6cf]">
                 Papers Archive
               </p>
-              <h1 className="mt-4 max-w-3xl font-serif text-[40px] leading-[0.94] text-neutral-950 sm:text-[64px]">
-                真題庫，不只用來選題，
+              <h1 className="display-title mt-4 max-w-3xl text-[48px] leading-[0.9] sm:text-[72px]">
+                真題不是收藏品，
                 <br />
-                也用來聚集討論
+                要用來開口練習。
               </h1>
-              <p className="mt-6 max-w-2xl text-[16px] leading-8 text-neutral-600">
-                每一份 speaking paper 都是一個討論入口。你可以先看題，再直接跳進別人對 Part A、Part B 和模擬復盤的討論。
+              <p className="mt-6 max-w-2xl text-[16px] leading-8 text-[#dce3dc]">
+                先看題目需要哪一種能力，再學方法、準備關鍵詞，最後進入 Part A 或 Part B 計時練習。
               </p>
             </div>
 
-            <div className="rounded-[28px] border border-neutral-200/80 bg-[#faf9f5] p-6">
+            <div className="border border-white/30 bg-[#f3efe4] p-6 text-[#172019]">
               <div className="grid grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-neutral-200 bg-white p-4">
                   <p className="text-[12px] uppercase tracking-[0.15em] text-neutral-400">
@@ -70,18 +71,18 @@ export default async function PapersPage({
                     {catalog.papers.filter((paper) => paper.discussionCount > 0).length}
                   </p>
                   <p className="mt-1 text-[13px] text-neutral-500">
-                    有活躍討論的 paper
+                    可練習題組
                   </p>
                 </div>
               </div>
 
               <div className="mt-5 rounded-2xl border border-neutral-200 bg-white p-4 text-[14px] leading-7 text-neutral-600">
-                考試周最好的使用方式是：先從年份或題目搜尋，快速看一次題，再打開對應 paper hub 看別人的思路與復盤。
+                建議用法：選一份題目，先判斷所需技巧，再完成一次 Part A 回應和一次 Part B 錄音。
               </div>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[28px] border border-neutral-200/80 bg-[#111111] p-6 text-white sm:p-7">
+          <div className="mt-8 border border-white/30 bg-[#172019] p-6 text-white sm:p-7">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-[12px] uppercase tracking-[0.2em] text-neutral-500">
@@ -91,15 +92,15 @@ export default async function PapersPage({
                   2026 DSE Speaking Past Paper 最全整理
                 </h2>
                 <p className="mt-4 max-w-2xl text-[14px] leading-7 text-neutral-300">
-                  我另外做了一個單獨頁面，專門放 2026 Speaking 的 PDF、題目結構和後續整理。你一拿到 PDF，就可以直接補上去。
+                  按 Part A 與 Part B 整理考生分享題目，並直接連到相應的學習和練習流程。
                 </p>
               </div>
-              <Link href="/papers/2026-speaking">
-                <Button className="h-11 rounded-full bg-white px-6 text-[14px] text-neutral-900 hover:bg-neutral-100">
+              <Button asChild className="h-11 rounded-full bg-white px-6 text-[14px] text-neutral-900 hover:bg-neutral-100">
+                <Link href="/papers/2026-speaking">
                   打開 2026 專頁
                   <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -160,12 +161,12 @@ export default async function PapersPage({
             <p className="mx-auto mt-3 max-w-md text-[14px] leading-7 text-neutral-500">
               可以試試改搜年份、topic，或直接回論壇看這週最熱門的討論。
             </p>
-            <Link href="/forum" className="mt-6 inline-flex">
-              <Button className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+            <Button asChild className="mt-6 rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+              <Link href="/forum">
                 去論壇看看
                 <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="grid gap-5 lg:grid-cols-2">
@@ -175,6 +176,7 @@ export default async function PapersPage({
           </div>
         )}
       </div>
+      </main>
     </div>
   );
 }

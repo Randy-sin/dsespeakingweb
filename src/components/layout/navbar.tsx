@@ -1,226 +1,160 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { BookOpen, ChartNoAxesColumnIncreasing, ChevronDown, LogOut, Menu, Mic2, Route, UserRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useUser } from "@/hooks/use-user";
-import { useI18n } from "@/components/providers/i18n-provider";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { LogOut, User, LayoutGrid, BookOpenText, MessageSquareText } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { getNextLesson } from "@/lib/learning/content";
+import { useLearnerProfile, useLearningProgress } from "@/lib/learning/store";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { href: "/learn", label: "學習路徑", icon: Route },
+  { href: "/learn/group-discussion", label: "小組討論", icon: Mic2 },
+  { href: "/learn/individual-response", label: "個人回應", icon: UserRound },
+  { href: "/papers", label: "真題庫", icon: BookOpen },
+  { href: "/progress", label: "進度", icon: ChartNoAxesColumnIncreasing },
+];
 
 export function Navbar() {
-  const { user, profile, loading } = useUser();
-  const { locale, setLocale, t } = useI18n();
+  const pathname = usePathname();
   const router = useRouter();
-  const supabase = createClient();
+  const { user, profile, loading } = useUser();
+  const learnerProfile = useLearnerProfile();
+  const progress = useLearningProgress();
+  const supabase = useMemo(() => createClient(), []);
+  const nextLesson = getNextLesson(progress.completedLessons);
+  const practiceHref = learnerProfile?.completedOnboarding && nextLesson
+    ? `/learn/${nextLesson.mode}/${nextLesson.slug}`
+    : "/practice/individual-response";
+  const practiceLabel = learnerProfile?.completedOnboarding && nextLesson ? "繼續下一課" : "今日開口練習";
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast.success(t("nav.logout", "Sign out"));
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("登出失敗，請再試一次");
+      return;
+    }
+    toast.success("已登出");
     router.push("/");
     router.refresh();
   };
 
-  const initials = profile?.display_name
-    ? profile.display_name.slice(0, 2).toUpperCase()
-    : user?.email?.slice(0, 2).toUpperCase() || "??";
-
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-100 bg-white/80 backdrop-blur-xl">
-      <div className="max-w-6xl mx-auto px-5 sm:px-8">
-        <div className="flex h-14 items-center justify-between">
-          <div className="flex items-center gap-3 sm:gap-8">
-            <Link
-              href="/"
-              className="font-serif text-[16px] sm:text-[17px] font-semibold tracking-tight text-neutral-900 hover:text-neutral-600 transition-colors"
-            >
-              DSE Speaking
-            </Link>
-            <div className="hidden sm:flex items-center gap-1">
-              <Link href="/papers/2026-speaking">
-                <Button
-                  size="sm"
-                  className="text-[13px] font-medium min-h-9 px-3 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full"
-                >
-                  2026
-                </Button>
-              </Link>
-              <Link href="/papers">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
-                >
-                  Papers
-                </Button>
-              </Link>
-              <Link href="/forum">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
-                >
-                  Forum
-                </Button>
-              </Link>
-              <Link href="/rooms">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
-                >
-                  {t("nav.rooms", "Rooms")}
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <header className="sticky top-0 z-50 border-b border-[#d7cebd]/80 bg-[#f3efe4]/92 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center px-4 sm:px-7 lg:px-10">
+        <Link href="/" className="focus-ring group flex shrink-0 items-center gap-3 rounded-sm">
+          <span className="grid h-8 w-8 place-items-center border border-[#172019] bg-[#172019] font-mono text-[11px] font-semibold text-[#f3efe4] transition-transform group-hover:-rotate-3">
+            P4
+          </span>
+          <span className="font-serif text-[18px] font-semibold tracking-[-0.03em]">DSE Speaking</span>
+        </Link>
 
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <Link href="/papers/2026-speaking" className="sm:hidden">
-              <Button
-                size="sm"
-                className="text-[12px] font-medium min-h-9 px-2.5 bg-neutral-900 text-white rounded-full"
+        <nav className="ml-10 hidden items-center gap-1 lg:flex" aria-label="主要導航">
+          {navItems.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`focus-ring rounded-full px-4 py-2 text-[13px] font-medium transition-colors ${
+                  active ? "bg-[#172019] text-[#faf7ef]" : "text-[#5e5b53] hover:bg-[#e8e0cf] hover:text-[#172019]"
+                }`}
               >
-                2026
-              </Button>
-            </Link>
-            <Link href="/papers" className="sm:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-11 min-w-11 rounded-full text-neutral-500 hover:text-neutral-900"
-                aria-label="Papers"
-              >
-                <BookOpenText className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/forum" className="sm:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-11 min-w-11 rounded-full text-neutral-500 hover:text-neutral-900"
-                aria-label="Forum"
-              >
-                <MessageSquareText className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/rooms" className="sm:hidden">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="min-h-11 min-w-11 rounded-full text-neutral-500 hover:text-neutral-900"
-                aria-label={t("nav.rooms", "Rooms")}
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Select
-              value={locale}
-              onValueChange={(v) =>
-                setLocale(v === "zh-Hant" ? "zh-Hant" : "en")
-              }
-            >
-              <SelectTrigger
-                className="min-h-11 w-[74px] sm:w-auto text-[12px] border-neutral-200 text-neutral-500"
-                size="sm"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end">
-                <SelectItem value="en">
-                  <span className="sm:hidden">EN</span>
-                  <span className="hidden sm:inline">
-                    {t("nav.langEnglish", "English")}
-                  </span>
-                </SelectItem>
-                <SelectItem value="zh-Hant">
-                  <span className="sm:hidden">繁中</span>
-                  <span className="hidden sm:inline">
-                    {t("nav.langTraditionalChinese", "Traditional Chinese")}
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            {loading ? (
-              <div className="h-11 w-16 bg-neutral-100 animate-pulse rounded-full" />
-            ) : user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative min-h-11 min-w-11 rounded-full"
-                  >
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-neutral-900 text-white text-[11px] font-medium">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 rounded-xl">
-                  <div className="px-3 py-2.5">
-                    <p className="text-sm font-medium text-neutral-900">
-                      {profile?.display_name || t("nav.user", "User")}
-                    </p>
-                    <p className="text-xs text-neutral-400 mt-0.5">
-                      {user.email}
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="cursor-pointer text-[13px] rounded-lg mx-1">
-                    <User className="mr-2 h-3.5 w-3.5" />
-                    {t("nav.profile", "Profile")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="cursor-pointer text-[13px] text-neutral-500 rounded-lg mx-1"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="mr-2 h-3.5 w-3.5" />
-                    {t("nav.logout", "Sign out")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <>
-                <Link href="/login" className="hidden sm:inline-flex">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-[13px] text-neutral-500 hover:text-neutral-900 font-normal min-h-11 px-4"
-                  >
-                    {t("nav.login", "Login")}
-                  </Button>
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          <Button asChild className="hidden h-10 rounded-full bg-[#c84b31] px-5 text-[13px] text-white hover:bg-[#aa3d27] sm:inline-flex">
+            <Link href={practiceHref}>{practiceLabel}</Link>
+          </Button>
+
+          {!loading && !user ? (
+            <Button asChild variant="ghost" className="hidden h-10 rounded-full px-4 text-[13px] text-[#5e5b53] sm:inline-flex">
+              <Link href="/login">登入</Link>
+            </Button>
+          ) : null}
+
+          {!loading && user ? (
+            <details className="group relative hidden sm:block">
+              <summary className="focus-ring flex h-10 cursor-pointer list-none items-center gap-2 rounded-full border border-[#c9bfad] bg-[#faf7ef] px-3 text-[13px] [&::-webkit-details-marker]:hidden">
+                <span className="grid h-6 w-6 place-items-center rounded-full bg-[#48634c] text-[10px] font-semibold text-white">
+                  {(profile?.display_name || user.email || "DS").slice(0, 2).toUpperCase()}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="absolute right-0 top-12 w-52 border border-[#c9bfad] bg-[#faf7ef] p-2 shadow-xl">
+                <p className="px-3 py-2 text-xs text-[#6d695f]">{user.email}</p>
+                <Link href="/progress" className="block rounded-md px-3 py-2 text-sm hover:bg-[#e8e0cf]">
+                  我的進度
                 </Link>
-                <Link href="/register">
-                  <Button
-                    size="sm"
-                    className="text-[13px] min-h-11 bg-neutral-900 hover:bg-neutral-800 text-white rounded-full px-4 shadow-sm"
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#8e3325] hover:bg-[#f0ded8]"
+                >
+                  <LogOut className="h-4 w-4" />
+                  登出
+                </button>
+              </div>
+            </details>
+          ) : null}
+
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full lg:hidden" aria-label="開啟導航">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" aria-describedby={undefined} className="w-[88vw] border-[#c9bfad] bg-[#f3efe4] p-0 sm:max-w-sm">
+              <SheetTitle className="sr-only">主要導航</SheetTitle>
+              <div className="flex h-full flex-col px-6 pb-8 pt-20">
+                <p className="eyebrow text-[#8a8175]">Choose your next step</p>
+                <nav className="mt-6 space-y-2">
+                  {navItems.map((item, index) => (
+                    <SheetClose asChild key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined}
+                        className="flex items-center justify-between border-b border-[#d7cebd] py-4 font-serif text-[22px]"
+                      >
+                        <span>{item.label}</span>
+                        <span className="font-mono text-[11px] text-[#8a8175]">0{index + 1}</span>
+                      </Link>
+                    </SheetClose>
+                  ))}
+                </nav>
+                <SheetClose asChild>
+                  <Link
+                    href={practiceHref}
+                    className={cn(buttonVariants(), "mt-8 h-12 w-full rounded-full bg-[#c84b31] text-white hover:bg-[#aa3d27]")}
                   >
-                    {t("nav.register", "Sign up")}
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
+                    {practiceLabel}
+                  </Link>
+                </SheetClose>
+                <div className="mt-auto border-t border-[#d7cebd] pt-5 text-sm">
+                  {user ? (
+                    <button type="button" onClick={handleSignOut} className="flex items-center gap-2 text-[#6d695f]">
+                      <LogOut className="h-4 w-4" /> 登出
+                    </button>
+                  ) : (
+                    <Link href="/login" className="text-[#172019] underline underline-offset-4">登入並同步進度</Link>
+                  )}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

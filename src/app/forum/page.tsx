@@ -37,6 +37,7 @@ export default async function ForumPage({
     <div className="min-h-screen bg-[#f7f6f2]">
       <Navbar />
 
+      <main id="main-content">
       <section className="border-b border-neutral-200/80 bg-white">
         <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8 sm:py-16">
           <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
@@ -54,20 +55,17 @@ export default async function ForumPage({
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/forum/new">
-                  <Button className="h-11 rounded-full bg-neutral-900 px-6 text-[14px] text-white hover:bg-neutral-800">
+                <Button asChild className="h-11 rounded-full bg-neutral-900 px-6 text-[14px] text-white hover:bg-neutral-800">
+                  <Link href="/forum/new">
                     發佈討論
                     <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/papers">
-                  <Button
-                    variant="outline"
-                    className="h-11 rounded-full border-neutral-200 px-6 text-[14px] text-neutral-600"
-                  >
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="h-11 rounded-full border-neutral-200 px-6 text-[14px] text-neutral-600">
+                  <Link href="/papers">
                     先看真題庫
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
 
@@ -177,16 +175,16 @@ export default async function ForumPage({
                 可以先從真題頁發第一篇帖，或把剛練完的一次房間復盤整理成一篇具體的討論。
               </p>
               <div className="mt-6 flex justify-center gap-3">
-                <Link href="/forum/new">
-                  <Button className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+                <Button asChild className="rounded-full bg-neutral-900 px-5 text-white hover:bg-neutral-800">
+                  <Link href="/forum/new">
                     發佈第一篇
-                  </Button>
-                </Link>
-                <Link href="/papers">
-                  <Button variant="outline" className="rounded-full border-neutral-200 px-5">
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="rounded-full border-neutral-200 px-5">
+                  <Link href="/papers">
                     瀏覽真題
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               </div>
             </div>
           ) : (
@@ -254,6 +252,7 @@ export default async function ForumPage({
           </div>
         </aside>
       </div>
+      </main>
     </div>
   );
 }

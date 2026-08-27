@@ -109,7 +109,7 @@ export function NewPostForm({
   };
 
   return (
-    <div className="min-h-screen bg-[#f7f6f2]">
+    <main id="main-content" className="min-h-screen bg-[#f7f6f2]">
       <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-12">
         <Link
           href="/forum"
@@ -262,6 +262,6 @@ export function NewPostForm({
           </form>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

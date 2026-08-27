@@ -47,7 +47,7 @@ export default async function ForumPostDetailPage({
     <div className="min-h-screen bg-[#f7f6f2]">
       <Navbar />
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
+      <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
         <Link
           href="/forum"
           className="inline-flex items-center gap-2 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900"
@@ -239,11 +239,11 @@ export default async function ForumPostDetailPage({
                     "這篇帖子沒有綁定特定真題，但仍然適合放在論壇首頁瀏覽。"}
                 </p>
                 {post.paper && (
-                  <Link href={buildPaperHref(post.paper)} className="mt-5 inline-flex">
-                    <Button variant="outline" className="rounded-full border-neutral-200">
+                  <Button asChild variant="outline" className="mt-5 rounded-full border-neutral-200">
+                    <Link href={buildPaperHref(post.paper)}>
                       打開 paper hub
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 )}
               </div>
             </div>
@@ -260,7 +260,7 @@ export default async function ForumPostDetailPage({
             )}
           </aside>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

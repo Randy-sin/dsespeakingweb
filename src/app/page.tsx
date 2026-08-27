@@ -1,469 +1,235 @@
 import Link from "next/link";
+import {
+  ArrowDownRight,
+  ArrowRight,
+  BookOpenText,
+  Check,
+  MessageCircleMore,
+  Mic2,
+  PenLine,
+} from "lucide-react";
+import { HomePrimaryAction } from "@/components/home/home-primary-action";
 import { Navbar } from "@/components/layout/navbar";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Mic, Users, Clock, FileText, BookOpen, MessageSquare, User } from "lucide-react";
-import { PromoVideo } from "@/components/home/promo-video";
-import { fetchForumHomepageBlocks } from "@/lib/forum/server";
+import { SiteFooter } from "@/components/layout/site-footer";
 
-export default async function HomePage() {
-  const forumBlocks = await fetchForumHomepageBlocks();
+const learningSteps = [
+  {
+    number: "01",
+    title: "先理解",
+    description: "用短課拆解高分答案的結構、互動策略和常見失誤。",
+    icon: BookOpenText,
+  },
+  {
+    number: "02",
+    title: "再開口",
+    description: "用計時準備、錄音和情境題，把方法變成說話習慣。",
+    icon: Mic2,
+  },
+  {
+    number: "03",
+    title: "有方向地改",
+    description: "按照內容、語言、表達和互動四個維度完成下一輪練習。",
+    icon: PenLine,
+  },
+];
 
+const paperPrompts = [
+  {
+    year: "2026",
+    title: "Promoting reading culture",
+    focus: "小組討論 · 校園生活",
+  },
+  {
+    year: "2025",
+    title: "A meaningful school visit",
+    focus: "個人回應 · 個人經驗",
+  },
+  {
+    year: "2024",
+    title: "Healthy use of technology",
+    focus: "個人回應 · 發表意見",
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="min-h-screen bg-white overflow-x-clip">
+    <div className="min-h-screen overflow-hidden bg-[#f3efe4]">
       <Navbar />
 
-      {/* ── Hero ── */}
-      <section className="relative dot-grid">
-        {/* Subtle radial gradient overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(0,0,0,0.02)_0%,transparent_60%)]" />
-        <div className="hidden sm:block absolute top-20 right-[10%] w-72 h-72 bg-neutral-100/60 rounded-full blur-3xl animate-float" />
-        <div className="hidden sm:block absolute bottom-10 left-[5%] w-56 h-56 bg-neutral-50 rounded-full blur-3xl animate-float delay-300" />
+      <main id="main-content">
+        <section className="mx-auto grid min-h-[calc(100vh-64px)] max-w-[1440px] grid-cols-1 items-center gap-10 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-20">
+          <div className="reveal-up lg:col-span-7 lg:pr-12">
+            <div className="mb-7 flex items-center gap-3">
+              <span className="h-px w-10 bg-[#c84b31]" />
+              <p className="eyebrow text-[#8a8175]">HKDSE English Paper 4</p>
+            </div>
 
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8">
-          <div className="pt-16 sm:pt-28 pb-14 sm:pb-24">
-            {/* Two-column layout: text left, video right on desktop */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:gap-12 xl:gap-16">
-              {/* Left column: text content */}
-              <div className="flex-1 min-w-0">
-                {/* Badge */}
-                <div className="animate-fade-up">
-                  <span className="inline-flex items-center gap-2 border border-neutral-200 rounded-full px-4 py-1.5 text-[12px] text-neutral-500 tracking-wide uppercase mb-8 bg-white/80 backdrop-blur-sm">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    DSE English Paper 4
-                  </span>
-                </div>
+            <h1 className="display-title max-w-[780px] text-[clamp(4rem,9vw,8.8rem)] leading-[0.78] text-[#172019]">
+              Learn what
+              <span className="ml-[0.7em] block italic text-[#c84b31]">to say.</span>
+              <span className="block">Say it better.</span>
+            </h1>
 
-                {/* Heading */}
-                <h1 className="animate-fade-up delay-100 font-serif text-[38px] sm:text-[64px] lg:text-[72px] leading-[0.98] sm:leading-[0.95] font-semibold text-neutral-900 tracking-tight">
-                  Practice speaking,
-                  <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-400 via-neutral-500 to-neutral-300 italic">
-                    together.
-                  </span>
-          </h1>
+            <div className="mt-10 grid max-w-2xl gap-7 border-l border-[#a9a08f] pl-5 sm:grid-cols-[1fr_auto] sm:items-end sm:pl-8">
+              <p className="max-w-xl text-[17px] leading-8 text-[#5e5b53] sm:text-[19px]">
+                不再只是找人開房練習。這裡會教你如何開始、回應、展開、轉題與總結，再把方法帶入計時口語練習。
+              </p>
+              <HomePrimaryAction />
+            </div>
+          </div>
 
-                {/* Subtext */}
-                <p className="animate-fade-up delay-200 text-[15px] sm:text-[18px] leading-relaxed text-neutral-500 mt-6 sm:mt-8 mb-9 sm:mb-10 max-w-lg">
-                  找到隊友，選擇歷年真題，完整模擬 DSE Speaking 考試。從準備閱讀、小組討論到個人回應，全流程線上練習。
+          <div className="reveal-up reveal-up-delay-2 relative lg:col-span-5 lg:pl-4">
+            <div className="absolute -left-2 top-5 hidden h-40 w-px bg-[#c84b31] lg:block" />
+            <p className="absolute -left-8 top-52 hidden font-mono text-[10px] uppercase tracking-[0.22em] text-[#8a8175] [writing-mode:vertical-rl] lg:block">
+              Today&apos;s micro lesson
+            </p>
+            <article className="paper-surface margin-note paper-rule relative mx-auto max-w-[520px] px-6 py-7 sm:px-10 sm:py-10">
+              <div className="flex items-center justify-between border-b border-[#bdb3a2] pb-4">
+                <span className="eyebrow text-[#48634c]">Group Discussion · 01</span>
+                <span className="rounded-full border border-[#bdb3a2] px-3 py-1 font-mono text-[10px] text-[#6d695f]">8 MIN</span>
+              </div>
+
+              <div className="py-8">
+                <p className="font-serif text-[13px] italic text-[#8a8175]">Respond &amp; Build</p>
+                <h2 className="mt-2 font-serif text-[38px] leading-tight tracking-[-0.04em] sm:text-[48px]">回應，再加入新資訊</h2>
+                <p className="mt-5 max-w-md text-[15px] leading-7 text-[#5e5b53]">
+                  有效互動不是只說 I agree，而是指出對方的觀點、表明你的反應，再加入一項新資訊。
                 </p>
-
-                {/* CTA */}
-                <div className="animate-fade-up delay-300 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
-                  <Link href="/rooms" className="w-full sm:w-auto">
-                    <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                      開始練習
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                  <Link href="/rooms" className="w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
-                    >
-                      瀏覽房間
-                    </Button>
-                  </Link>
-                  <Link href="/forum" className="w-full sm:w-auto">
-                    <Button
-                      variant="outline"
-                      className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
-                    >
-                      考試週論壇
-                    </Button>
-                  </Link>
-                </div>
               </div>
 
-              {/* Right column: promo video (landscape) */}
-              <div className="animate-fade-up delay-300 mt-10 lg:mt-0 lg:flex-shrink-0 lg:w-[440px] xl:w-[520px]">
-                <PromoVideo />
-              </div>
-            </div>
-
-            {/* Quick stats */}
-            <div className="animate-fade-up delay-500 grid grid-cols-2 sm:flex sm:flex-wrap items-start sm:items-center gap-5 sm:gap-8 mt-10 sm:mt-16 pt-6 sm:pt-8 border-t border-neutral-100">
-              {[
-                { value: "267", label: "歷年真題" },
-                { value: "2012–2025", label: "年份涵蓋" },
-                { value: "4 人", label: "小組討論" },
-                { value: "19 min", label: "完整模擬" },
-              ].map((stat) => (
-                <div key={stat.label}>
-                  <p className="text-[22px] sm:text-[26px] font-serif font-semibold text-neutral-900 tabular-nums tracking-tight">
-                    {stat.value}
-                  </p>
-                  <p className="text-[12px] text-neutral-400 mt-0.5">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 2026 Banner ── */}
-      <section className="bg-neutral-900">
-        <Link href="/papers/2026-speaking" className="block">
-          <div className="max-w-6xl mx-auto px-5 sm:px-8 py-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[14px] text-white">
-                <span className="font-medium">2026 DSE Speaking</span>
-                <span className="text-neutral-400 ml-2">Paper 1.1, 1.2, 1.3 已收錄</span>
-              </p>
-              <ArrowRight className="h-4 w-4 text-neutral-400" />
-            </div>
-          </div>
-        </Link>
-      </section>
-
-      {/* ── Ticker bar ── */}
-      <div className="border-y border-neutral-100 bg-neutral-50/50 py-3 overflow-hidden">
-        <div className="animate-ticker flex whitespace-nowrap">
-          {Array.from({ length: 2 }).map((_, idx) => (
-            <div key={idx} className="flex items-center gap-8 px-4">
-              {[
-                "Group Discussion", "Individual Response", "Past Papers",
-                "Real-time Voice", "Auto Timer", "2012-2023 Topics",
-                "WebRTC Powered", "Exam Simulation", "4-Person Teams",
-                "Group Discussion", "Individual Response", "Past Papers",
-              ].map((text, i) => (
-                <span key={`${idx}-${i}`} className="text-[11px] sm:text-[12px] text-neutral-400 uppercase tracking-[0.15em] flex items-center gap-8">
-                  {text}
-                  <span className="text-neutral-200">·</span>
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <section className="max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-24">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-10">
-          <div>
-            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-3">
-              Exam Week
-            </p>
-            <h2 className="font-serif text-[30px] sm:text-[46px] font-semibold text-neutral-900 tracking-tight leading-[1.05]">
-              真題庫和論壇，
-              <br className="sm:hidden" />現在放在一起了
-            </h2>
-          </div>
-          <div className="flex gap-3">
-            <Link href="/papers">
-              <Button variant="outline" className="rounded-full border-neutral-200 text-neutral-600">
-                瀏覽真題
-              </Button>
-            </Link>
-            <Link href="/forum">
-              <Button className="rounded-full bg-neutral-900 text-white hover:bg-neutral-800">
-                進入論壇
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-[1fr_0.9fr] gap-5">
-          <div className="rounded-[28px] border border-neutral-200/70 bg-[#faf9f5] p-6 sm:p-8">
-            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
-              This Week&rsquo;s Papers
-            </p>
-            <div className="space-y-3">
-              {forumBlocks.trendingPapers.map((paper) => (
-                <Link
-                  key={paper.id}
-                  href={`/papers/${paper.paper_id}`}
-                  className="block rounded-2xl border border-neutral-200 bg-white p-4 hover:border-neutral-300 transition-colors"
-                >
-                  <p className="text-[12px] text-neutral-400">
-                    {paper.year} · {paper.paper_number}
-                  </p>
-                  <p className="mt-1 font-medium text-[15px] text-neutral-900">
-                    {paper.topic}
-                  </p>
-                  <p className="mt-2 text-[12px] text-neutral-500">
-                    {paper.discussionCount} 則討論
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[28px] border border-neutral-200/70 bg-white p-6 sm:p-8">
-            <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
-              Fresh Discussions
-            </p>
-            <div className="space-y-3">
-              {forumBlocks.featuredPosts.length > 0 ? (
-                forumBlocks.featuredPosts.map((post) => (
-                  <Link
-                    key={post.id}
-                    href={`/forum/${post.slug}`}
-                    className="block rounded-2xl border border-neutral-100 bg-neutral-50 p-4 hover:bg-white hover:border-neutral-200 transition-colors"
-                  >
-                    <p className="text-[12px] text-neutral-400 mb-1">
-                      {post.paper ? `${post.paper.year} · ${post.paper.paper_number}` : "General"}
-                    </p>
-                    <p className="font-medium text-[15px] text-neutral-900 leading-6">
-                      {post.title}
-                    </p>
-                    <p className="mt-2 text-[12px] text-neutral-500 line-clamp-2">
-                      {post.excerpt_text}
-                    </p>
-                  </Link>
-                ))
-              ) : (
-                <div className="rounded-2xl border border-neutral-200 bg-[#faf9f5] p-6">
-                  <p className="font-medium text-neutral-900 mb-2">論壇已準備好</p>
-                  <p className="text-[14px] text-neutral-500 leading-relaxed">
-                    一旦你跑完 migration，就可以開始累積考試週的真題討論與模擬復盤。
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── How it works ── */}
-      <section className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-32">
-        <div className="text-center mb-12 sm:mb-20">
-          <p className="text-[12px] text-neutral-400 tracking-[0.2em] uppercase mb-4">
-            How it works
-          </p>
-          <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-neutral-900 tracking-tight leading-[1.1]">
-            三個階段，<br className="sm:hidden" />一次完整模擬
-          </h2>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-          {[
-            {
-              num: "01",
-              icon: BookOpen,
-              title: "Preparation",
-              zh: "準備階段",
-              time: "10 min",
-              desc: "閱讀文章與討論問題，在筆記區整理要點。如同真實考試，安靜準備。",
-              gradient: "from-amber-50 to-orange-50/50",
-            },
-            {
-              num: "02",
-              icon: MessageSquare,
-              title: "Group Discussion",
-              zh: "小組討論",
-              time: "8 min",
-              desc: "四人圍繞三個引導問題展開自由討論，語音視訊即時溝通，模擬面對面交流。",
-              gradient: "from-sky-50 to-blue-50/50",
-            },
-            {
-              num: "03",
-              icon: User,
-              title: "Individual Response",
-              zh: "個人回應",
-              time: "1 min each",
-              desc: "輪流回答考官的跟進問題，展示獨立思考和臨場表達能力。",
-              gradient: "from-stone-50 to-neutral-50/60",
-            },
-          ].map((item) => (
-            <div
-              key={item.num}
-              className={`group relative rounded-2xl bg-gradient-to-br ${item.gradient} border border-neutral-100 p-6 sm:p-8 hover-lift`}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-neutral-100 shadow-sm">
-                  <item.icon className="h-4.5 w-4.5 text-neutral-600" />
-                </div>
-                <span className="text-[11px] text-neutral-400 font-mono border border-neutral-200/60 rounded-full px-2.5 py-0.5 bg-white/80">
-                  {item.time}
-                </span>
-              </div>
-              <p className="text-[48px] font-serif text-neutral-100 font-bold leading-none mb-4 select-none">
-                {item.num}
-              </p>
-              <h3 className="font-serif text-[22px] font-semibold text-neutral-900 tracking-tight">
-                {item.title}
-              </h3>
-              <p className="text-[13px] text-neutral-400 mt-1 mb-3">{item.zh}</p>
-              <p className="text-[14px] text-neutral-500 leading-relaxed">
-                {item.desc}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Process flow line (desktop) */}
-        <div className="hidden md:flex items-center justify-center gap-2 mt-8">
-          <div className="h-px w-24 bg-gradient-to-r from-transparent to-neutral-200" />
-          <span className="text-[11px] text-neutral-300 uppercase tracking-widest">complete flow</span>
-          <div className="h-px w-24 bg-gradient-to-r from-neutral-200 to-transparent" />
-        </div>
-      </section>
-
-      {/* ── Bento Features Grid ── */}
-      <section className="bg-neutral-950 text-white grain">
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-16 sm:py-32">
-          <div className="text-center mb-12 sm:mb-16">
-            <p className="text-[12px] text-neutral-500 tracking-[0.2em] uppercase mb-4">
-              Features
-            </p>
-            <h2 className="font-serif text-[28px] sm:text-[44px] font-semibold text-white tracking-tight leading-[1.1]">
-              為 DSE 口試而生
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Card: Past Papers - Large */}
-            <div className="md:col-span-2 rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors group">
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06]">
-                  <FileText className="h-5 w-5 text-neutral-400" />
-                </div>
-                <span className="font-serif text-[56px] font-bold text-white/[0.06] leading-none select-none group-hover:text-white/[0.1] transition-colors">
-                  228
-                </span>
-              </div>
-              <h3 className="font-serif text-[22px] font-semibold text-white tracking-tight mb-2">
-                歷年真題庫
-              </h3>
-              <p className="text-[14px] text-neutral-400 leading-relaxed max-w-md">
-                完整收錄 2012–2023 年 DSE Speaking 真題。每份試卷包含閱讀材料、三個討論問題和多個個人回應題目，還原考場真實體驗。
-              </p>
-            </div>
-
-            {/* Card: Voice */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
-              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
-                <Mic className="h-5 w-5 text-neutral-400" />
-              </div>
-              <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                即時音視訊
-              </h3>
-              <p className="text-[14px] text-neutral-400 leading-relaxed">
-                WebRTC 驅動的高畫質音視訊。討論階段自動開啟麥克風，如同面對面交流。
-              </p>
-            </div>
-
-            {/* Card: Timer */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
-              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
-                <Clock className="h-5 w-5 text-neutral-400" />
-              </div>
-              <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                自動計時
-              </h3>
-              <p className="text-[14px] text-neutral-400 leading-relaxed">
-                嚴格按考試時間分配，階段到時自動切換。練習節奏完全對標真實考試。
-              </p>
-            </div>
-
-            {/* Card: Teamup */}
-            <div className="rounded-2xl bg-white/[0.04] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
-              <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-white/[0.08] border border-white/[0.06] mb-6">
-                <Users className="h-5 w-5 text-neutral-400" />
-              </div>
-              <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-2">
-                線上組隊
-              </h3>
-              <p className="text-[14px] text-neutral-400 leading-relaxed">
-                建立或加入房間，等待 3–4 人即可開始。隨時找到練習夥伴。
-              </p>
-            </div>
-
-            {/* Card: Assessment - spanning */}
-            <div className="md:col-span-2 lg:col-span-1 rounded-2xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.06] p-6 sm:p-8 hover:bg-white/[0.07] transition-colors">
-              <p className="text-[12px] text-neutral-500 tracking-[0.15em] uppercase mb-5">
-                Assessment Criteria
-              </p>
-              <h3 className="font-serif text-[19px] font-semibold text-white tracking-tight mb-5">
-                評分標準
-              </h3>
-              <div className="space-y-3">
-                {[
-                  { en: "Pronunciation & Expression", pct: 25 },
-                  { en: "Communication Strategy", pct: 25 },
-                  { en: "Vocabulary & Language", pct: 25 },
-                  { en: "Ideas & Organisation", pct: 25 },
-                ].map((item) => (
-                  <div key={item.en}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[13px] text-neutral-400">{item.en}</span>
-                      <span className="text-[12px] text-neutral-500 font-mono">{item.pct}%</span>
-                    </div>
-                    <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-neutral-500 to-neutral-400"
-                        style={{ width: `${item.pct}%` }}
-                      />
-                    </div>
+              <div className="space-y-3 border-y border-[#bdb3a2] py-5">
+                {["接住一個關鍵詞", "補充理由或例子", "把問題交給下一位"].map((item) => (
+                  <div key={item} className="flex items-center gap-3 text-sm">
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#48634c] text-white">
+                      <Check className="h-3 w-3" />
+                    </span>
+                    {item}
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
-      {/* ── CTA ── */}
-      <section className="relative dot-grid">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(0,0,0,0.02)_0%,transparent_60%)]" />
-        <div className="relative max-w-6xl mx-auto px-5 sm:px-8 py-20 sm:py-36 text-center">
-          <h2 className="font-serif text-[32px] sm:text-[52px] font-semibold text-neutral-900 tracking-tight leading-[1.05] mb-5">
-            Ready to practice?
-          </h2>
-          <p className="text-[16px] sm:text-[18px] text-neutral-400 mb-10 max-w-md mx-auto leading-relaxed">
-            加入平台，找到練習夥伴，<br className="hidden sm:block" />一起為 DSE Speaking 做準備。
-          </p>
-          <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3 sm:gap-4">
-            <Link href="/register" className="w-full sm:w-auto">
-              <Button className="w-full sm:w-auto min-h-11 h-12 px-8 text-[15px] bg-neutral-900 hover:bg-neutral-800 text-white rounded-full shadow-lg shadow-neutral-900/20 transition-all hover:shadow-xl hover:shadow-neutral-900/25 hover:-translate-y-0.5">
-                免費註冊
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="/rooms" className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto min-h-11 h-12 px-7 text-[15px] text-neutral-600 border-neutral-200 rounded-full hover:bg-neutral-50"
-              >
-                瀏覽房間
-              </Button>
-            </Link>
+              <Link href="/learn/group-discussion/respond-and-build" className="mt-6 flex items-center justify-between text-sm font-semibold">
+                開始這一課
+                <ArrowDownRight className="h-5 w-5 text-[#c84b31]" />
+              </Link>
+            </article>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-neutral-100 bg-white">
-        <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-6">
-              <span className="font-serif text-[15px] font-semibold text-neutral-900 tracking-tight">
-                DSE Speaking
-              </span>
-              <span className="hidden sm:block h-4 w-px bg-neutral-200" />
-              <span className="text-[12px] text-neutral-400">
-                Built for DSE candidates
-              </span>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-3">
-              <Link href="/papers" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Papers
-              </Link>
-              <Link href="/forum" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Forum
-              </Link>
-              <Link href="/rooms" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Rooms
-              </Link>
-              <Link href="/login" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Login
-              </Link>
-              <Link href="/register" className="inline-flex min-h-11 items-center px-3 text-[13px] text-neutral-400 hover:text-neutral-600 transition-colors">
-                Register
-              </Link>
-            </div>
+        <div className="border-y border-[#172019] bg-[#172019] py-3 text-[#faf7ef]">
+          <div className="mx-auto flex max-w-[1440px] items-center justify-between gap-5 overflow-hidden px-4 font-mono text-[10px] uppercase tracking-[0.18em] sm:px-7 lg:px-10">
+            <span className="shrink-0">Methods before marks</span>
+            <span className="h-px min-w-12 flex-1 bg-[#6f786f]" />
+            <span className="shrink-0">Group Discussion</span>
+            <span className="hidden h-px min-w-12 flex-1 bg-[#6f786f] sm:block" />
+            <span className="hidden shrink-0 sm:block">Individual Response</span>
+            <span className="hidden h-px min-w-12 flex-1 bg-[#6f786f] md:block" />
+            <span className="hidden shrink-0 md:block">Practice with purpose</span>
           </div>
         </div>
-      </footer>
+
+        <section className="mx-auto max-w-[1440px] px-4 py-24 sm:px-7 lg:px-10 lg:py-32">
+          <div className="grid gap-12 lg:grid-cols-12">
+            <div className="lg:col-span-4">
+              <p className="eyebrow text-[#c84b31]">A repeatable learning loop</p>
+              <h2 className="display-title mt-4 max-w-sm text-5xl leading-[0.92] sm:text-6xl">每一次練習，都知道自己在改善甚麼。</h2>
+            </div>
+            <div className="lg:col-span-8 lg:pl-10">
+              {learningSteps.map((step) => {
+                const Icon = step.icon;
+                return (
+                  <article key={step.number} className="group grid gap-5 border-t border-[#9f9687] py-7 sm:grid-cols-[56px_1fr_48px] sm:items-start">
+                    <span className="font-mono text-xs text-[#8a8175]">{step.number}</span>
+                    <div>
+                      <h3 className="font-serif text-3xl tracking-[-0.03em]">{step.title}</h3>
+                      <p className="mt-2 max-w-xl text-[15px] leading-7 text-[#6d695f]">{step.description}</p>
+                    </div>
+                    <span className="grid h-11 w-11 place-items-center rounded-full border border-[#9f9687] transition-colors group-hover:bg-[#48634c] group-hover:text-white">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section className="border-y border-[#d0c6b5] bg-[#e8e0cf]">
+          <div className="mx-auto grid max-w-[1440px] lg:grid-cols-2">
+            <article className="group flex min-h-[560px] flex-col border-b border-[#bdb3a2] p-6 sm:p-10 lg:border-b-0 lg:border-r lg:p-14">
+              <div className="flex items-start justify-between">
+                <span className="eyebrow text-[#48634c]">Track A · Interaction</span>
+                <MessageCircleMore className="h-8 w-8 stroke-[1.25]" />
+              </div>
+              <div className="my-auto py-14">
+                <p className="font-mono text-xs text-[#8a8175]">6 SHORT LESSONS</p>
+                <h2 className="display-title mt-4 text-[clamp(3.3rem,6vw,6.5rem)] leading-[0.84]">Group<br /><span className="italic text-[#48634c]">Discussion</span></h2>
+                <p className="mt-7 max-w-lg text-base leading-8 text-[#5e5b53]">學會開場、接話、反駁、澄清、邀請、轉題與總結。重點不是搶著說，而是令整組討論向前。</p>
+              </div>
+              <Link href="/learn/group-discussion" className="flex items-center justify-between border-t border-[#bdb3a2] pt-5 text-sm font-semibold">
+                查看小組討論學習路徑
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </article>
+
+            <article className="group flex min-h-[560px] flex-col bg-[#faf7ef] p-6 sm:p-10 lg:p-14">
+              <div className="flex items-start justify-between">
+                <span className="eyebrow text-[#c84b31]">Track B · Structure</span>
+                <Mic2 className="h-8 w-8 stroke-[1.25]" />
+              </div>
+              <div className="my-auto py-14">
+                <p className="font-mono text-xs text-[#8a8175]">5 RESPONSE TYPES</p>
+                <h2 className="display-title mt-4 text-[clamp(3.3rem,6vw,6.5rem)] leading-[0.84]">Individual<br /><span className="italic text-[#c84b31]">Response</span></h2>
+                <p className="mt-7 max-w-lg text-base leading-8 text-[#5e5b53]">掌握選擇、建議、經驗、原因與意見五種常見題型。從 1 分鐘準備到完整錄音，建立穩定答案骨架。</p>
+              </div>
+              <Link href="/learn/individual-response" className="flex items-center justify-between border-t border-[#bdb3a2] pt-5 text-sm font-semibold">
+                查看個人回應學習路徑
+                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Link>
+            </article>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-[1440px] px-4 py-24 sm:px-7 lg:px-10 lg:py-32">
+          <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="eyebrow text-[#8a8175]">Past paper practice</p>
+              <h2 className="display-title mt-3 text-5xl sm:text-6xl">把方法帶入真題。</h2>
+            </div>
+            <Link href="/papers" className="flex items-center gap-2 text-sm font-semibold underline decoration-[#c84b31] underline-offset-8">
+              瀏覽全部題目 <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid gap-px border border-[#bdb3a2] bg-[#bdb3a2] md:grid-cols-3">
+            {paperPrompts.map((paper) => (
+              <Link key={`${paper.year}-${paper.title}`} href="/papers" className="group flex min-h-72 flex-col bg-[#f3efe4] p-6 transition-colors hover:bg-[#faf7ef] sm:p-8">
+                <span className="font-mono text-xs text-[#c84b31]">{paper.year}</span>
+                <h3 className="mt-12 font-serif text-3xl leading-tight tracking-[-0.03em]">{paper.title}</h3>
+                <div className="mt-auto flex items-end justify-between border-t border-[#bdb3a2] pt-5">
+                  <span className="text-xs text-[#6d695f]">{paper.focus}</span>
+                  <ArrowDownRight className="h-5 w-5 transition-transform group-hover:translate-x-1 group-hover:translate-y-1" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="bg-[#48634c] text-[#faf7ef]">
+          <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-20 sm:px-7 lg:grid-cols-12 lg:px-10 lg:py-28">
+            <div className="lg:col-span-8">
+              <p className="eyebrow text-[#d9d1c2]">Start with a two-minute check-in</p>
+              <h2 className="display-title mt-5 max-w-4xl text-5xl leading-[0.92] sm:text-7xl">不用猜自己應該先學甚麼。</h2>
+            </div>
+            <div className="flex flex-col justify-end lg:col-span-4">
+              <p className="mb-7 text-[15px] leading-7 text-[#e4ded2]">告訴我們你的目標、信心和弱項，我們會排出第一週的學習與開口練習。</p>
+              <HomePrimaryAction placement="closing" />
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }

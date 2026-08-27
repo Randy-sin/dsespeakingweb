@@ -1,54 +1,59 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Source_Serif_4 } from "next/font/google";
+import { IBM_Plex_Mono, Newsreader, Noto_Sans_TC } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
-import { AppProviders } from "@/components/providers/app-providers";
 import { Toaster } from "@/components/ui/sonner";
+import { LearningSync } from "@/components/learning/learning-sync";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const bodyFont = Noto_Sans_TC({
+  variable: "--font-body",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const displayFont = Newsreader({
+  variable: "--font-display",
   subsets: ["latin"],
-});
-
-const sourceSerif = Source_Serif_4({
-  variable: "--font-serif",
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   style: ["normal", "italic"],
+  display: "swap",
+});
+
+const monoFont = IBM_Plex_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "DSE Speaking — Online Practice",
+  title: {
+    default: "DSE Speaking — Learn it. Say it better.",
+    template: "%s | DSE Speaking",
+  },
   description:
-    "Practice DSE English Paper 4 Speaking with real peers. Group discussion, individual response, past papers.",
+    "學懂 DSE English Paper 4 的答題方法，練習 Group Discussion 與 Individual Response，並獲得具體改進方向。",
+  metadataBase: new URL("https://www.dsespeaking.com"),
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#F3EFE4",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-Hant">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${sourceSerif.variable} font-sans antialiased`}
-      >
-        <AppProviders>
-          {children}
-          <Toaster position="top-center" />
-        </AppProviders>
+    <html lang="zh-Hant" data-scroll-behavior="smooth">
+      <body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
+        <a className="skip-link" href="#main-content">
+          跳到主要內容
+        </a>
+        {children}
+        <LearningSync />
+        <Toaster position="top-center" />
         <Analytics />
       </body>
     </html>

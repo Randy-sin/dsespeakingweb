@@ -5,7 +5,7 @@ import { parseRealtimeCallInput } from "@/lib/ai/realtime-api";
 
 export const runtime = "nodejs";
 
-async function assertAuthenticatedAndRoomAccess(roomId?: string) {
+async function assertAuthenticated() {
   const supabase = await createClient();
   const {
     data: { user },
@@ -15,25 +15,13 @@ async function assertAuthenticatedAndRoomAccess(roomId?: string) {
     throw new Error("Unauthorized");
   }
 
-  if (!roomId) return;
-
-  const { data: member, error } = await supabase
-    .from("room_members")
-    .select("id")
-    .eq("room_id", roomId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (error || !member) {
-    throw new Error("Not a member of this room");
-  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as Record<string, unknown>;
     const input = parseRealtimeCallInput(body);
-    await assertAuthenticatedAndRoomAccess(input.roomId);
+    await assertAuthenticated();
 
     const result = await probeDoubaoRealtime({
       text: input.text,
@@ -59,9 +47,7 @@ export async function POST(req: NextRequest) {
     const status =
       message === "Unauthorized"
         ? 401
-        : message === "Not a member of this room"
-          ? 403
-          : message.includes("required") || message.includes("too long")
+        : message.includes("required") || message.includes("too long")
             ? 400
             : 500;
 

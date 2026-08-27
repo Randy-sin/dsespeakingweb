@@ -61,15 +61,11 @@ export function ForumPostCard({ post, compact = false }: ForumPostCardProps) {
           </p>
         </div>
 
-        <Link href={buildForumPostHref(post)} className="hidden sm:block">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 rounded-full border-neutral-200 text-neutral-500 hover:bg-neutral-50"
-          >
+        <Button asChild variant="outline" size="icon" className="hidden h-11 w-11 rounded-full border-neutral-200 text-neutral-500 hover:bg-neutral-50 sm:inline-flex">
+          <Link href={buildForumPostHref(post)} aria-label={`打開 ${post.title}`}>
             <ArrowUpRight className="h-4 w-4" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {post.tags.length > 0 && (

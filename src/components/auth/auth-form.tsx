@@ -102,7 +102,7 @@ export function AuthForm({ mode }: AuthFormProps) {
 
         // If session exists, user is auto-confirmed (e.g. email confirmation disabled)
         toast.success("註冊成功");
-        router.push("/rooms");
+        router.push("/learn");
         router.refresh();
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -125,7 +125,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         }
 
         toast.success("登入成功");
-        router.push("/rooms");
+        router.push("/learn");
         router.refresh();
       }
     } catch (error: unknown) {
@@ -143,7 +143,7 @@ export function AuthForm({ mode }: AuthFormProps) {
     const mailProviderUrl = getMailProviderUrl(emailDomain);
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white px-5">
+      <main id="main-content" className="min-h-screen flex items-center justify-center bg-white px-5">
         <div className="w-full max-w-sm text-center">
           <div className="text-center mb-10">
             <Link
@@ -258,13 +258,13 @@ export function AuthForm({ mode }: AuthFormProps) {
             使用其他方式{mode === "register" ? "註冊" : "登入"}
           </button>
         </div>
-      </div>
+      </main>
     );
   }
 
   // ─── Normal Auth Form ──────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-5">
+    <main id="main-content" className="min-h-screen flex items-center justify-center bg-white px-5">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <Link
@@ -413,7 +413,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           )}
         </p>
       </div>
-    </div>
+    </main>
   );
 }
 

@@ -33,14 +33,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes - only actions that require auth
-  const protectedPaths = ["/rooms/create"];
-  const isProtectedPath =
-    protectedPaths.some((path) =>
-      request.nextUrl.pathname.startsWith(path)
-    ) ||
-    // /rooms/[id] (waiting room & session) require auth, but /rooms itself is public
-    /^\/rooms\/[^/]+/.test(request.nextUrl.pathname);
+  // Learning and practice work without an account. Keep this list for future
+  // actions that genuinely require a signed-in learner.
+  const protectedPaths: string[] = [];
+  const isProtectedPath = protectedPaths.some((path) =>
+    request.nextUrl.pathname.startsWith(path)
+  );
 
   if (!user && isProtectedPath) {
     const url = request.nextUrl.clone();
@@ -49,7 +47,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If authenticated user visits auth pages, redirect to rooms
+  // Signed-in learners return to their learning dashboard.
   const authPaths = ["/login", "/register"];
   const isAuthPath = authPaths.some(
     (path) => request.nextUrl.pathname === path
@@ -57,7 +55,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPath) {
     const url = request.nextUrl.clone();
-    url.pathname = "/rooms";
+    url.pathname = "/learn";
     return NextResponse.redirect(url);
   }
 

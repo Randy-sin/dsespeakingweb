@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? "/rooms";
+  const next = searchParams.get("next") ?? "/learn";
 
   const supabase = await createClient();
 
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       // After password recovery, redirect to a password reset page if you have one,
       // otherwise just go to the default next page
       if (type === "recovery") {
-        return NextResponse.redirect(`${origin}/rooms`);
+        return NextResponse.redirect(`${origin}/learn`);
       }
       return NextResponse.redirect(`${origin}${next}`);
     }

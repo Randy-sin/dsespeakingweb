@@ -1,81 +1,57 @@
 # CLAUDE.md
 
-> Claude Code 专用项目配置文件，每次对话自动加载。
-
 ## 项目概述
 
-DSE Speaking Practice - 香港 DSE 英文口试 (Paper 4) 在线模拟练习平台。
-
-**考试流程**: Preparation (10min) → Group Discussion (8min) → Individual Response (1min/人) → Results → Free Discussion
+DSE Speaking 是一个香港中学文凭考试 English Language Paper 4 教学与练习平台。产品不再提供会议室、真人组队或考官房间；核心闭环是「学习方法 → 开口练习 → 证据化反馈 → 下一步建议」。
 
 ## 技术栈
 
-- **框架**: Next.js 15 (App Router) + React 19 + TypeScript
-- **后端**: Supabase (PostgreSQL + Auth + Realtime)
-- **音视频**: LiveKit (WebRTC)
-- **UI**: Tailwind CSS + shadcn/ui + Radix UI
-- **部署**: Vercel
+- Next.js 16 App Router、React 19、TypeScript
+- Tailwind CSS 4、shadcn/ui、Radix UI
+- Supabase Auth、PostgreSQL、Private Storage
+- 豆包 realtime adapter（只在服务端读取凭证）
 
 ## 常用命令
 
 ```bash
-pnpm dev          # 启动开发服务器 (localhost:3000)
-pnpm build        # 生产构建
-pnpm lint         # ESLint 检查
-pnpm typecheck    # TypeScript 类型检查
+npm run dev
+npx tsc --noEmit
+npm run lint
+npm run build
 ```
 
-## 目录结构
+## 主要目录
 
-```
-src/
-├── app/                    # Next.js App Router 页面
-│   ├── rooms/[id]/         # 房间等候室
-│   │   └── session/        # 考试会话页面
-│   ├── papers/             # 历年真题浏览
-│   └── api/                # API 路由 (LiveKit token 等)
-├── components/
-│   ├── ui/                 # shadcn/ui 基础组件
-│   ├── room/               # 房间相关组件
-│   └── session/            # 考试会话组件
-├── hooks/                  # 自定义 React Hooks
-├── lib/
-│   ├── supabase/           # Supabase 客户端和类型
-│   └── i18n/               # 国际化 (EN/繁中)
-└── types/                  # TypeScript 类型定义
+```text
+src/app/
+  onboarding/                         # 四步能力诊断
+  learn/                              # 学习首页、GD/IR 课程与短练习
+  practice/                           # GD 引导练习、IR 计时与录音
+  papers/                             # 真题库与练习入口
+  progress/                           # 本地及同步进度
+  api/ai/                             # 登录保护的学习 AI 接口
+src/components/learning/              # 课程地图、课程页、同步
+src/features/                         # onboarding、学习首页、录音、练习 session
+src/lib/learning/                     # 教材、类型、本地状态与推荐逻辑
+supabase/migrations/                  # 学习表、RLS 与私人录音 bucket
+specs/dse-speaking-learning-platform/ # 需求、设计与实施任务
 ```
 
-## 数据库表 (Supabase)
+## 产品与数据规则
 
-| 表名 | 用途 |
-|------|------|
-| `profiles` | 用户资料 (display_name, speaking_level) |
-| `rooms` | 房间状态、流程阶段、倒计时 |
-| `room_members` | 房间成员、角色、心跳时间 |
-| `pastpaper_papers` | 267份历年真题 (2012-2025) |
-| `marker_scores` | 四维评分 (每项0-7分) |
+- 访客可以完成 onboarding、课程和录音；本地状态使用版本化 localStorage。
+- 登录后合并 learner profile 与 lesson progress，不可覆盖较新的完成记录。
+- 录音默认只留在浏览器；用户明确勾选后才上传至私人 bucket。
+- AI 回馈必须绑定学生 transcript，不得显示为 HKEAA 官方分数。
+- 转写或 AI 服务失败时，必须保留浏览器中的录音与已存在的 transcript。
+- 不得重新引入 room、marker、spectator、LiveKit 或 WebRTC 主流程。
 
-**房间状态流转**: `waiting` → `preparation` → `discussion` → `individual_response` → `results` → `free_discussion` → `ended`
+<!-- BEGIN:nextjs-agent-rules -->
 
-**角色**: `participant` (考生, 最多4人) | `marker` (考官, 1人) | `spectator` (观众)
+# This is NOT the Next.js you know
 
-## 实时同步
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 
-- 使用 Supabase Realtime 订阅 `rooms` 和 `room_members` 表变更
-- `useHeartbeat` hook 每30秒发送心跳，pg_cron 清理超时成员
-- LiveKit 处理音视频流
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
-## 代码规范
-
-- 组件使用函数式 + Hooks
-- 状态管理优先使用 React Context
-- 数据库操作通过 Supabase Client
-- 类型定义在 `src/lib/supabase/types.ts` (可用 MCP 生成)
-- 中英双语文案在 `src/lib/i18n/`
-
-## 注意事项
-
-- LiveKit token 通过 `/api/livekit/token` 获取
-- 房间流程由 host 或 marker 控制
-- Part B 阶段有子流程: `question_display` → `countdown` → `answering`
-- 所有表已启用 RLS，注意权限策略
+<!-- END:nextjs-agent-rules -->

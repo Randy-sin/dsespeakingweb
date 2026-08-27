@@ -15,7 +15,7 @@ export default function Speaking2026Page() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
+      <main id="main-content" className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">
         {/* Back */}
         <Link
           href="/papers"

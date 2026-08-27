@@ -45,3 +45,6 @@ data/.upload_done.json
 
 # Claude Code MCP config (contains secrets)
 .mcp.json
+
+# Supabase CLI local state
+/supabase/.temp/
