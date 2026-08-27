@@ -46,9 +46,10 @@ export function ProgressPage() {
   const completedGd = gdLessons.filter((lesson) => progress.completedLessons.includes(lesson.slug)).length;
   const completedIr = irLessons.filter((lesson) => progress.completedLessons.includes(lesson.slug)).length;
   const nextLesson = getNextLesson(progress.completedLessons);
+  const needsFirstSpeakingAttempt = !profile && progress.practiceCount === 0;
   const lastActive = progress.lastActiveAt
     ? new Intl.DateTimeFormat("zh-HK", { year: "numeric", month: "short", day: "numeric" }).format(new Date(progress.lastActiveAt))
-    : "完成第一節課後開始記錄";
+    : "完成第一次開口後開始記錄";
 
   useEffect(() => {
     let active = true;
@@ -117,7 +118,18 @@ export function ProgressPage() {
       <section className="mt-14 grid gap-8 lg:grid-cols-12">
         <article className="border-t border-[#172019] pt-6 lg:col-span-8">
           <p className="eyebrow text-[#ad3f29]">Recommended next</p>
-          {nextLesson ? (
+          {needsFirstSpeakingAttempt ? (
+            <div className="mt-5 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div>
+                <p className="font-serif text-lg italic text-[#665f55]">First voice turn</p>
+                <h2 className="display-title mt-1 text-4xl sm:text-5xl">先直接說一次</h2>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-[#6d695f]">不用填表或先寫稿。看清題目，按下錄音，用自己的英文完成第一個回答。</p>
+              </div>
+              <Button asChild className="h-12 rounded-full bg-[#172019] px-6 text-white">
+                <Link href="/onboarding">直接開始說<ArrowRight className="h-4 w-4" /></Link>
+              </Button>
+            </div>
+          ) : nextLesson ? (
             <div className="mt-5 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
                 <p className="font-serif text-lg italic text-[#665f55]">{nextLesson.englishTitle}</p>
@@ -145,9 +157,9 @@ export function ProgressPage() {
           <p className="mt-1 font-serif text-2xl">{lastActive}</p>
           <p className="mt-5 text-sm text-[#6d695f]">每週目標</p>
           <p className="mt-1 font-serif text-2xl">{profile ? `${profile.weeklyMinutes} 分鐘` : "尚未設定"}</p>
-          {!profile ? (
+          {needsFirstSpeakingAttempt ? (
             <Link href="/onboarding" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold underline decoration-[#ad3f29] underline-offset-4">
-              完成能力診斷<ArrowRight className="h-4 w-4" />
+              完成第一次開口<ArrowRight className="h-4 w-4" />
             </Link>
           ) : null}
         </aside>

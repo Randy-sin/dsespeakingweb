@@ -6,8 +6,6 @@ import { BookOpen, ChartNoAxesColumnIncreasing, ChevronDown, LogOut, Menu, Mic2,
 import { useUser } from "@/hooks/use-user";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { getNextLesson } from "@/lib/learning/content";
-import { useLearnerProfile, useLearningProgress } from "@/lib/learning/store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -19,17 +17,13 @@ const navItems = [
   { href: "/progress", label: "進度", icon: ChartNoAxesColumnIncreasing },
 ];
 
+const practiceHref = "/practice/individual-response/session?type=making-choices";
+const practiceLabel = "直接開始說";
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, profile, loading, supabase } = useUser();
-  const learnerProfile = useLearnerProfile();
-  const progress = useLearningProgress();
-  const nextLesson = getNextLesson(progress.completedLessons);
-  const practiceHref = learnerProfile?.completedOnboarding && nextLesson
-    ? `/learn/${nextLesson.mode}/${nextLesson.slug}`
-    : "/practice/individual-response";
-  const practiceLabel = learnerProfile?.completedOnboarding && nextLesson ? "繼續下一課" : "今日開口練習";
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();

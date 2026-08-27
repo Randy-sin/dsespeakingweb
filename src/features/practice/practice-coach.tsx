@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Bot, Flag, LoaderCircle, MessageSquareText, RotateCcw, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
+import { Bot, Flag, LoaderCircle, MessageSquareText, PencilLine, RotateCcw, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { VoiceRecorder } from "@/features/recording/voice-recorder";
+import { VoiceRecorder, type RecorderState } from "@/features/recording/voice-recorder";
 import { useUser } from "@/hooks/use-user";
 import type { PracticeAssessment } from "@/lib/ai/practice-assessment";
 import type { PracticeMode } from "@/lib/learning/types";
@@ -74,9 +74,18 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const [pendingAction, setPendingAction] = useState<"feedback" | "teammate" | null>(null);
   const [completedChecks, setCompletedChecks] = useState<string[]>([]);
   const [restoredDraft, setRestoredDraft] = useState(false);
+  const [recorderState, setRecorderState] = useState<RecorderState>("idle");
+  const [recorderKey, setRecorderKey] = useState(0);
+  const [editingTranscript, setEditingTranscript] = useState(false);
   const checks = selfCheckItems[mode];
   const completedDiscussionRounds = discussionTurns.filter((turn) => turn.speaker === "ai").length;
   const nextDiscussionRound = completedDiscussionRounds + 1;
+  const hasTranscript = Boolean(transcript.trim());
+  const isTextFallback = recorderState === "text";
+  const showReview = recorderState === "recorded" || isTextFallback || restoredDraft;
+  const showTranscriptEditor = isTextFallback || editingTranscript;
+  const actionsAvailable = showReview && recorderState !== "recording" && hasTranscript;
+  const showRecorder = mode === "individual-response" || !discussionEnded;
 
   useEffect(() => {
     try {
@@ -97,7 +106,32 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const updateTranscript = (value: string) => {
     setTranscript(value);
     setAssessment(null);
+    setCompletedChecks([]);
     setError(null);
+  };
+
+  const clearCurrentAttempt = () => {
+    setTranscript("");
+    setAssessment(null);
+    if (mode === "individual-response") setSessionId(null);
+    setError(null);
+    setCompletedChecks([]);
+    setEditingTranscript(false);
+    setRestoredDraft(false);
+  };
+
+  const updateRecorderSession = (nextSessionId: string | null) => {
+    if (mode === "group-discussion") {
+      if (nextSessionId) setSessionId((current) => current ?? nextSessionId);
+      return;
+    }
+    setSessionId(nextSessionId);
+  };
+
+  const prepareFreshRecorder = () => {
+    clearCurrentAttempt();
+    setRecorderState("idle");
+    setRecorderKey((current) => current + 1);
   };
 
   const toggleCheck = (id: string) => {
@@ -113,7 +147,7 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
 
   const requestFeedback = async () => {
     if (!transcript.trim()) {
-      setError("請先輸入或錄下你的回答，AI 才有證據可以分析。");
+      setError("請先完成錄音並取得逐字稿，AI 才有證據可以分析。");
       return;
     }
     setError(null);
@@ -161,8 +195,12 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
         { speaker: "learner", label: "你", text: transcript.trim() },
         { speaker: "ai", label: role, text: reply },
       ]);
-      if (nextDiscussionRound === 3) setDiscussionEnded(true);
       if (data.sessionId) setSessionId(data.sessionId);
+      if (nextDiscussionRound === 3) {
+        setDiscussionEnded(true);
+      } else {
+        prepareFreshRecorder();
+      }
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "AI 組員暫時未能回應，請稍後再試。");
     } finally {
@@ -178,85 +216,142 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
     window.speechSynthesis.speak(utterance);
   };
 
+  const startNewDiscussion = () => {
+    setDiscussionTurns([]);
+    setDiscussionEnded(false);
+    setSessionId(null);
+    prepareFreshRecorder();
+  };
+
   return (
     <div className="space-y-5">
-      <VoiceRecorder maxSeconds={maxSeconds} mode={mode} task={task} paperId={paperId} onTranscriptChange={updateTranscript} onSessionChange={setSessionId} />
-
-      <section className="border border-[#bdb3a2] bg-white/35 p-5 sm:p-7" aria-labelledby="transcript-title">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="eyebrow text-[#48634c]">Review your words</p>
-            <h2 id="transcript-title" className="mt-2 font-serif text-2xl">逐字稿草稿</h2>
-          </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-[#bdb3a2] px-3 py-1 text-[11px] text-[#6d695f]"><ShieldCheck className="h-3.5 w-3.5" />先校對，再分析</span>
-        </div>
-        <p id="transcript-help" className="mt-3 max-w-2xl text-xs leading-6 text-[#665f55]">支援的瀏覽器會在錄音時產生即時草稿，但它可能聽錯字。你也可以手動輸入；送出前請先修正成自己真正說過的內容。</p>
-        <Textarea
-          id="transcript-draft"
-          aria-labelledby="transcript-title"
-          aria-describedby="transcript-help transcript-count"
-          value={transcript}
-          onChange={(event) => {
-            updateTranscript(event.target.value);
-          }}
-          className="mt-5 min-h-44 border-[#bdb3a2] bg-[#faf7ef] text-base leading-7"
-          placeholder="輸入或校對你剛才的英文回答……"
-          maxLength={5000}
-        />
-        <div id="transcript-count" className="mt-3 flex items-center justify-between gap-3 text-xs text-[#665f55]"><span>{transcript.trim().split(/\s+/).filter(Boolean).length} words</span><span>{transcript.length}/5000</span></div>
-        {restoredDraft ? <p role="status" className="mt-4 border-l-2 border-[#48634c] pl-4 text-sm text-[#48634c]">已返回原本的題目，並恢復登入前的逐字稿草稿。</p> : null}
-
-        <fieldset className="mt-6 border-t border-[#c9c0b1] pt-6">
-          <legend className="font-serif text-xl text-[#26352a]">先做 30 秒自我檢查</legend>
-          <p className="mt-2 text-xs leading-5 text-[#665f55]">這一步不需要登入。請對照你真正說過的內容逐項檢查，不確定就先不要勾。</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {checks.map((item) => {
-              const checked = completedChecks.includes(item.id);
-              return (
-                <label key={item.id} className={`flex min-h-12 cursor-pointer items-start gap-3 border p-3 text-sm leading-6 transition-colors ${checked ? "border-[#48634c] bg-[#edf0e8] text-[#26352a]" : "border-[#c9c0b1] bg-[#faf7ef] text-[#5e5b53]"}`}>
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={!transcript.trim()}
-                    onChange={() => toggleCheck(item.id)}
-                    className="mt-0.5 h-5 w-5 shrink-0 accent-[#48634c]"
-                  />
-                  <span>{item.label}</span>
-                </label>
-              );
-            })}
-          </div>
-          <p aria-live="polite" className="mt-3 text-xs font-medium text-[#48634c]">
-            {transcript.trim() ? `已完成 ${completedChecks.length} / ${checks.length} 項自我檢查${completedChecks.length === checks.length ? "。現在選一項做得最弱的，下一次只改善這一項。" : "。"}` : "先輸入或錄下回答，自我檢查便會開放。"}
+      {mode === "group-discussion" && !discussionEnded ? (
+        <div className="border-l-2 border-[#48634c] bg-[#edf0e8] px-5 py-4" aria-live="polite">
+          <p className="eyebrow text-[#48634c]">Round {nextDiscussionRound} of 3</p>
+          <p className="mt-2 text-sm leading-6 text-[#4f4b44]">
+            {completedDiscussionRounds === 0
+              ? "先錄下你的第一段發言；AI 組員只會回應這一輪真正說過的內容。"
+              : "上一輪已保存。現在請錄下新的發言，不需要修改上一輪逐字稿。"}
           </p>
-        </fieldset>
+        </div>
+      ) : null}
 
-        {loading ? <p className="mt-5 inline-flex items-center gap-2 text-sm text-[#6d695f]"><LoaderCircle className="h-4 w-4 animate-spin" />正在確認登入狀態……</p> : null}
-        {!loading && !user ? (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-l-2 border-[#ad3f29] bg-[#f3efe4] p-4">
-            <p className="max-w-xl text-sm leading-6 text-[#6d695f]">逐字稿與自我檢查可以直接使用；AI 回饋只開放給已登入學生。登入後會返回同一題，並恢復這份逐字稿。</p>
-            <Button type="button" onClick={continueToLogin} className="rounded-full bg-[#172019] text-white">保留逐字稿並登入</Button>
+      {showRecorder ? (
+        <VoiceRecorder
+          key={`${mode}-${recorderKey}`}
+          maxSeconds={maxSeconds}
+          mode={mode}
+          task={task}
+          paperId={paperId}
+          onRecordingStart={clearCurrentAttempt}
+          onReset={clearCurrentAttempt}
+          onStateChange={setRecorderState}
+          onTranscriptChange={updateTranscript}
+          onSessionChange={updateRecorderSession}
+        />
+      ) : null}
+
+      {showReview ? (
+        <section className="border border-[#bdb3a2] bg-white/35 p-5 sm:p-7" aria-labelledby="transcript-title">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="eyebrow text-[#48634c]">Review what you said</p>
+              <h2 id="transcript-title" className="mt-2 font-serif text-2xl">{isTextFallback ? "文字後備" : "這次說話的逐字稿"}</h2>
+            </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#bdb3a2] px-3 py-1 text-[11px] text-[#6d695f]"><ShieldCheck className="h-3.5 w-3.5" />錄音後才顯示</span>
           </div>
-        ) : null}
 
-        {user ? (
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={requestFeedback} disabled={pendingAction !== null} aria-busy={pendingAction === "feedback"} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">
-              {pendingAction === "feedback" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}取得證據化回饋
-            </Button>
-            {mode === "group-discussion" ? (
-              <>
-                {!discussionEnded ? <Button onClick={requestTeammate} disabled={pendingAction !== null} aria-busy={pendingAction === "teammate"} variant="outline" className="rounded-full border-[#9f9687] px-5">
-                  {pendingAction === "teammate" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}請 AI 組員接第 {nextDiscussionRound} 輪
-                </Button> : null}
-                {completedDiscussionRounds > 0 && !discussionEnded ? <Button type="button" onClick={() => setDiscussionEnded(true)} variant="ghost" className="rounded-full text-[#665f55]"><Flag className="mr-2 h-4 w-4" />結束本輪討論</Button> : null}
-              </>
-            ) : null}
-          </div>
-        ) : null}
+          {showTranscriptEditor ? (
+            <div className="mt-5">
+              <label htmlFor="transcript-draft" className="block text-sm font-semibold text-[#26352a]">
+                {isTextFallback ? "輸入你原本會說的英文答案" : "只修正 AI 聽錯的字，不要把答案改寫成文章"}
+              </label>
+              <p id="transcript-help" className="mt-2 text-xs leading-5 text-[#665f55]">
+                {isTextFallback ? "這個欄位只會在麥克風無法使用時出現。" : "保留自己真正說過的內容，讓回饋仍然有錄音證據。"}
+              </p>
+              <Textarea
+                id="transcript-draft"
+                aria-describedby="transcript-help transcript-count"
+                value={transcript}
+                onChange={(event) => updateTranscript(event.target.value)}
+                className="mt-3 min-h-44 border-[#bdb3a2] bg-[#faf7ef] text-base leading-7"
+                placeholder={isTextFallback ? "輸入你本來會說的答案……" : "修正逐字稿……"}
+                maxLength={5000}
+              />
+            </div>
+          ) : hasTranscript ? (
+            <div className="mt-5 border border-[#c9c0b1] bg-[#faf7ef] p-5">
+              <p className="whitespace-pre-wrap text-base leading-7 text-[#26352a]">{transcript}</p>
+            </div>
+          ) : (
+            <p role="status" className="mt-5 border-l-2 border-[#ad3f29] pl-4 text-sm leading-6 text-[#665f55]">
+              {user
+                ? "錄音已完成。若瀏覽器沒有產生即時文字，請按上方的「整理成 AI 逐字稿」。"
+                : "錄音已完成，但這個瀏覽器沒有產生即時逐字稿。你仍可回放或再說一次；文字輸入不會成為預設步驟。"}
+            </p>
+          )}
 
-        {error ? <p role="alert" className="mt-5 border-l-2 border-[#ad3f29] pl-4 text-sm leading-6 text-[#a74231]">{error} 你的錄音與逐字稿仍保留在本頁。</p> : null}
-      </section>
+          {(hasTranscript || showTranscriptEditor) ? (
+            <div id="transcript-count" className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-[#665f55]">
+              <span>{transcript.trim().split(/\s+/).filter(Boolean).length} words · {transcript.length}/5000</span>
+              {!isTextFallback && hasTranscript ? (
+                <Button type="button" variant="outline" onClick={() => setEditingTranscript((current) => !current)} className="min-h-11 rounded-full border-[#9f9687]">
+                  <PencilLine className="mr-2 h-4 w-4" />{editingTranscript ? "完成修正" : "修正 AI 聽錯的字"}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {restoredDraft ? <p role="status" className="mt-4 border-l-2 border-[#48634c] pl-4 text-sm text-[#48634c]">已返回原本的題目，並恢復登入前的逐字稿。</p> : null}
+
+          {hasTranscript ? (
+            <fieldset className="mt-6 border-t border-[#c9c0b1] pt-6">
+              <legend className="font-serif text-xl text-[#26352a]">說完後做 30 秒自我檢查</legend>
+              <p className="mt-2 text-xs leading-5 text-[#665f55]">請只對照你真正說過的內容；不確定就先不要勾。</p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {checks.map((item) => {
+                  const checked = completedChecks.includes(item.id);
+                  return (
+                    <label key={item.id} className={`flex min-h-12 cursor-pointer items-start gap-3 border p-3 text-sm leading-6 transition-colors ${checked ? "border-[#48634c] bg-[#edf0e8] text-[#26352a]" : "border-[#c9c0b1] bg-[#faf7ef] text-[#5e5b53]"}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleCheck(item.id)} className="mt-0.5 h-5 w-5 shrink-0 accent-[#48634c]" />
+                      <span>{item.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p aria-live="polite" className="mt-3 text-xs font-medium text-[#48634c]">已完成 {completedChecks.length} / {checks.length} 項自我檢查。</p>
+            </fieldset>
+          ) : null}
+
+          {hasTranscript && loading ? <p className="mt-5 inline-flex items-center gap-2 text-sm text-[#6d695f]"><LoaderCircle className="h-4 w-4 animate-spin" />正在確認登入狀態……</p> : null}
+          {hasTranscript && !loading && !user ? (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-l-2 border-[#ad3f29] bg-[#f3efe4] p-4">
+              <p className="max-w-xl text-sm leading-6 text-[#6d695f]">逐字稿與自我檢查可以直接使用；AI 回饋只開放給已登入學生。登入後會返回同一題，並恢復這份逐字稿。</p>
+              <Button type="button" onClick={continueToLogin} className="rounded-full bg-[#172019] text-white">保留逐字稿並登入</Button>
+            </div>
+          ) : null}
+
+          {user && actionsAvailable ? (
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button onClick={requestFeedback} disabled={pendingAction !== null} aria-busy={pendingAction === "feedback"} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">
+                {pendingAction === "feedback" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}取得證據化回饋
+              </Button>
+              {mode === "group-discussion" ? (
+                <>
+                  {!discussionEnded ? (
+                    <Button onClick={requestTeammate} disabled={pendingAction !== null} aria-busy={pendingAction === "teammate"} variant="outline" className="rounded-full border-[#9f9687] px-5">
+                      {pendingAction === "teammate" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}請 AI 組員回應第 {nextDiscussionRound} 輪
+                    </Button>
+                  ) : null}
+                  {completedDiscussionRounds > 0 && !discussionEnded ? <Button type="button" onClick={() => setDiscussionEnded(true)} variant="ghost" className="rounded-full text-[#665f55]"><Flag className="mr-2 h-4 w-4" />結束本輪討論</Button> : null}
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {error ? <p role="alert" className="mt-5 border-l-2 border-[#ad3f29] pl-4 text-sm leading-6 text-[#a74231]">{error} 你的錄音與逐字稿仍保留在本頁。</p> : null}
+        </section>
+      ) : null}
 
       {assessment ? (
         <section className="paper-surface paper-rule p-6" aria-live="polite">
@@ -288,9 +383,9 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
             <div className="mt-5 border-t border-[#8da08f] pt-5">
               <p className="font-serif text-2xl text-[#26352a]">本輪練習已收束</p>
               <p className="mt-2 text-sm leading-6 text-[#5e5b53]">你完成了 {completedDiscussionRounds} 輪接話。回看上面的自我檢查，選一項未做到的行為，再用不同說法重練。</p>
-              <Button type="button" onClick={() => { setDiscussionTurns([]); setDiscussionEnded(false); setSessionId(null); setTranscript(""); setCompletedChecks([]); }} variant="outline" className="mt-4 rounded-full border-[#8da08f]"><RotateCcw className="mr-2 h-4 w-4" />開始新的 3 輪練習</Button>
+              <Button type="button" onClick={startNewDiscussion} variant="outline" className="mt-4 rounded-full border-[#8da08f]"><RotateCcw className="mr-2 h-4 w-4" />開始新的 3 輪練習</Button>
             </div>
-          ) : <p className="mt-4 text-xs leading-5 text-[#6d695f]">閱讀 AI 組員的具體觀點後，修改上方逐字稿成為你的下一句，再請另一位組員接話。AI A／B 都是合成練習角色，不是真人或考官。</p>}
+          ) : <p className="mt-4 text-xs leading-5 text-[#6d695f]">閱讀或播放 AI 組員的觀點後，回到上方錄下全新一輪發言。上一輪逐字稿已鎖定，不會被下一輪覆蓋。AI A／B 都是合成練習角色，不是真人或考官。</p>}
         </section>
       ) : null}
     </div>

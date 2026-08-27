@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock3, Lightbulb, Play, RotateCcw } from "lucide-react";
+import { ArrowLeft, Clock3, Lightbulb, Mic, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDuration } from "@/lib/format-duration";
@@ -39,7 +39,7 @@ export function IndividualResponseSession({
   const [phase, setPhase] = useState<"ready" | "prepare" | "speak">("ready");
   const [seconds, setSeconds] = useState(60);
   const [notes, setNotes] = useState("");
-  const [announcement, setAnnouncement] = useState("題目已準備好。按下按鈕開始一分鐘準備。");
+  const [announcement, setAnnouncement] = useState("題目已準備好。你可以直接開始說，也可以先準備一分鐘。");
   const prepareHeadingRef = useRef<HTMLHeadingElement>(null);
   const speakHeadingRef = useRef<HTMLHeadingElement>(null);
   const notesRef = useRef("");
@@ -103,7 +103,7 @@ export function IndividualResponseSession({
   };
 
   const startSpeaking = () => {
-    setAnnouncement("現在開始回答。你的準備筆記仍保留在下方。");
+    setAnnouncement("錄音工具已準備好。按下開始錄音後，直接完整回答題目。你的準備筆記仍會保留。");
     saveSessionDraft("speak", notes);
     setPhase("speak");
   };
@@ -117,7 +117,19 @@ export function IndividualResponseSession({
           <p className="eyebrow text-[#ad3f29]">{lesson.englishTitle}</p>
           <h1 className="mt-5 font-serif text-4xl leading-tight sm:text-5xl">{lesson.prompt}</h1>
           <div className="mt-8 border-l border-[#ad3f29] pl-5"><p className="eyebrow text-[#665f55]">Answer framework</p><p className="mt-3 text-sm leading-7 text-[#6d695f]">{lesson.steps.join(" → ")}</p></div>
-          {phase === "ready" ? <div className="mt-10"><Button onClick={startPreparation} className="h-[52px] w-full rounded-full bg-[#172019] px-7 text-white sm:w-auto"><Play className="mr-2 h-4 w-4" />開始 1 分鐘準備</Button></div> : null}
+          {phase === "ready" ? (
+            <div className="mt-10 border-l-2 border-[#48634c] pl-5">
+              <p className="text-sm leading-6 text-[#5e5b53]">不用先寫稿。準備好便直接開口；需要整理思路時，再使用一分鐘準備。</p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button onClick={startSpeaking} className="h-[52px] w-full rounded-full bg-[#ad3f29] px-7 text-white hover:bg-[#aa3d27] sm:w-auto">
+                  <Mic className="mr-2 h-4 w-4" />直接開始說
+                </Button>
+                <Button variant="outline" onClick={startPreparation} className="h-11 w-full rounded-full border-[#9f9687] text-[#4f4b44] sm:w-auto">
+                  <Clock3 className="mr-2 h-4 w-4" />先準備 1 分鐘
+                </Button>
+              </div>
+            </div>
+          ) : null}
           {phase === "prepare" ? (
             <section className="mt-10" aria-labelledby="preparation-title">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -138,20 +150,28 @@ export function IndividualResponseSession({
               >
                 <div className="h-full bg-[#48634c] transition-[width] duration-300" style={{ width: `${(seconds / 60) * 100}%` }} />
               </div>
-              <label htmlFor="preparation-notes" className="mt-6 block text-sm font-semibold text-[#26352a]">關鍵詞與答案次序</label>
-              <p id="preparation-notes-help" className="mt-2 text-xs leading-5 text-[#665f55]">只記提示詞，不用寫完整稿；開始回答後筆記仍會保留。</p>
-              <Textarea
-                id="preparation-notes"
-                aria-describedby="preparation-notes-help"
-                value={notes}
-                onChange={(event) => {
-                  notesRef.current = event.target.value;
-                  setNotes(event.target.value);
-                  saveSessionDraft("prepare", event.target.value);
-                }}
-                className="mt-3 min-h-44 border-[#bdb3a2] bg-[#faf7ef] text-base leading-7"
-                placeholder="例如：position → reason → example → conclusion"
-              />
+              <details className="mt-6 border border-[#c9c0b1] bg-white/35">
+                <summary className="cursor-pointer px-4 py-4 text-sm font-semibold text-[#26352a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#48634c] focus-visible:ring-inset">
+                  寫下提示詞（可選）
+                  <span className="ml-2 font-normal text-[#665f55]">不寫也可以直接開始回答</span>
+                </summary>
+                <div className="border-t border-[#c9c0b1] px-4 pb-4 pt-4">
+                  <label htmlFor="preparation-notes" className="block text-sm font-semibold text-[#26352a]">關鍵詞與答案次序</label>
+                  <p id="preparation-notes-help" className="mt-2 text-xs leading-5 text-[#665f55]">只記提示詞，不用寫完整稿；開始回答後筆記仍會保留。</p>
+                  <Textarea
+                    id="preparation-notes"
+                    aria-describedby="preparation-notes-help"
+                    value={notes}
+                    onChange={(event) => {
+                      notesRef.current = event.target.value;
+                      setNotes(event.target.value);
+                      saveSessionDraft("prepare", event.target.value);
+                    }}
+                    className="mt-3 min-h-32 border-[#bdb3a2] bg-[#faf7ef] text-base leading-7"
+                    placeholder="例如：position → reason → example → conclusion"
+                  />
+                </div>
+              </details>
             </section>
           ) : null}
           {phase === "speak" ? (

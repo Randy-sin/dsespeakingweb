@@ -16,31 +16,50 @@ import { allLessons, getLesson, getNextLesson } from "@/lib/learning/content";
 import { buildLearningPlan, useLearnerProfile, useLearningProgress } from "@/lib/learning/store";
 
 const starterSteps = [
-  { label: "找出弱項", detail: "用兩分鐘回答目標、信心與卡住的位置。" },
-  { label: "完成一節短課", detail: "先比較弱例與強例，再記住可重用的答案骨架。" },
-  { label: "離開筆記開口", detail: "用同類題目錄一次，校對逐字稿後再看回饋。" },
+  { label: "直接開口", detail: "看清題目，按下錄音，用自己的英文完整說一次。" },
+  { label: "回聽一次", detail: "先聽自己真正說過的內容，再找一項最值得改善的地方。" },
+  { label: "帶著重點再說", detail: "完成一節短課，再用同類題目把方法說出來。" },
 ];
+
+const firstIrSessionHref = "/practice/individual-response/session?type=making-choices";
 
 export function LearningDashboard() {
   const profile = useLearnerProfile();
   const progress = useLearningProgress();
 
   if (!profile?.completedOnboarding) {
+    const needsFirstSpeakingAttempt = !profile && progress.practiceCount === 0;
+    const nextLesson = getNextLesson(progress.completedLessons);
+    const primaryHref = needsFirstSpeakingAttempt
+      ? "/onboarding"
+      : nextLesson
+        ? `/learn/${nextLesson.mode}/${nextLesson.slug}`
+        : firstIrSessionHref;
+    const primaryLabel = needsFirstSpeakingAttempt
+      ? "直接開始說"
+      : nextLesson
+        ? "繼續下一課"
+        : "開始下一次口試練習";
+
     return (
       <main id="main-content">
         <section className="mx-auto grid min-h-[680px] max-w-[1440px] items-center gap-12 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:px-10">
           <div className="lg:col-span-7">
-            <p className="eyebrow text-[#ad3f29]">Your learning path</p>
-            <h1 className="display-title mt-5 max-w-4xl text-6xl leading-[0.88] sm:text-8xl">先找出最值得改善的一步。</h1>
+            <p className="eyebrow text-[#ad3f29]">Your speaking path</p>
+            <h1 className="display-title mt-5 max-w-4xl text-6xl leading-[0.88] sm:text-8xl">
+              {needsFirstSpeakingAttempt ? "先直接說一次，再知道下一步。" : "你已經開過口。現在把方法帶回聲音裡。"}
+            </h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-[#6d695f]">
-              完成兩分鐘診斷，我們會按照你的信心、弱項和每週時間安排第一課。你也可以先看課程，不必建立帳戶。
+              {needsFirstSpeakingAttempt
+                ? "不用填表或先寫稿。看一條題目，錄下第一個回答；說完才回聽並選下一課。"
+                : "繼續下一課，先看一個方法，再用同類題目真正說一次。不必建立帳戶。"}
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Button asChild className="h-12 rounded-full bg-[#ad3f29] px-6 text-white hover:bg-[#aa3d27]">
-                <Link href="/onboarding">開始能力診斷<ArrowRight className="h-4 w-4" /></Link>
+                <Link href={primaryHref}>{primaryLabel}<ArrowRight className="h-4 w-4" /></Link>
               </Button>
               <Button asChild variant="outline" className="h-12 rounded-full border-[#9f9687] bg-transparent px-6">
-                <Link href="/learn/group-discussion">先看全部課程</Link>
+                <Link href="/learn/group-discussion">查看全部課程</Link>
               </Button>
             </div>
           </div>

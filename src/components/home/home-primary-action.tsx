@@ -6,19 +6,22 @@ import { Button } from "@/components/ui/button";
 import { getNextLesson } from "@/lib/learning/content";
 import { useLearnerProfile, useLearningProgress } from "@/lib/learning/store";
 
+const firstIrSessionHref = "/practice/individual-response/session?type=making-choices";
+
 export function HomePrimaryAction({ placement = "hero" }: { placement?: "hero" | "closing" }) {
   const profile = useLearnerProfile();
   const progress = useLearningProgress();
   const nextLesson = getNextLesson(progress.completedLessons);
+  const needsFirstSpeakingAttempt = !profile && progress.practiceCount === 0;
 
-  const href = !profile?.completedOnboarding
+  const href = needsFirstSpeakingAttempt
     ? "/onboarding"
     : nextLesson
       ? `/learn/${nextLesson.mode}/${nextLesson.slug}`
-      : "/practice/individual-response";
+      : firstIrSessionHref;
 
-  const label = !profile?.completedOnboarding
-    ? "建立我的學習路徑"
+  const label = needsFirstSpeakingAttempt
+    ? "直接開始說"
     : nextLesson
       ? `繼續：${nextLesson.title}`
       : "開始今日口試練習";

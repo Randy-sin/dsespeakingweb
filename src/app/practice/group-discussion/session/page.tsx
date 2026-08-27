@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowDown, ArrowLeft, Check, MessageCircleMore } from "lucide-react";
+import { ArrowLeft, Check, MessageCircleMore } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { PracticeCoach } from "@/features/practice/practice-coach";
 import { createPublicClient } from "@/lib/supabase/public-server";
@@ -75,8 +75,7 @@ export default async function GroupDiscussionSessionPage({ searchParams }: { sea
               <p className="mt-2 text-base leading-7 text-[#4f4b44]">{selected.move}</p>
               <p className="mt-3 text-xs leading-5 text-[#665f55]">You mentioned … → I agree / I see the point, but … → Add one reason or example → Invite a response.</p>
             </div>
-            <Link href="#practice-response" className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#48634c] px-6 text-sm font-semibold text-white sm:w-auto">開始作答<ArrowDown className="ml-2 h-4 w-4" /></Link>
-            <div id="practice-response" className="mt-8 scroll-mt-24"><PracticeCoach maxSeconds={45} mode="group-discussion" task={task} paperId={databasePaperId} /></div>
+            <div className="mt-6"><PracticeCoach maxSeconds={45} mode="group-discussion" task={task} paperId={databasePaperId} /></div>
           </section>
           <aside className="space-y-4">
             <div className="paper-surface paper-rule p-6"><MessageCircleMore className="h-5 w-5 text-[#48634c]" /><p className="mt-5 font-serif text-2xl">完成標準</p><ul className="mt-5 space-y-3 text-sm leading-6 text-[#6d695f]">{["點出上一位同學的具體觀點", "清楚表明同意、補充或反駁", "加入新的原因、例子或限制", "留下讓別人接話的位置"].map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 h-3.5 w-3.5 shrink-0 text-[#48634c]" />{item}</li>)}</ul></div>

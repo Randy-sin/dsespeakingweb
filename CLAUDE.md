@@ -24,7 +24,7 @@ npm run build
 
 ```text
 src/app/
-  onboarding/                         # 四步能力诊断
+  onboarding/                         # 无表单的首次开口练习
   learn/                              # 学习首页、GD/IR 课程与短练习
   practice/                           # GD 引导练习、IR 计时与录音
   papers/                             # 真题库与练习入口
@@ -40,6 +40,8 @@ specs/dse-speaking-learning-platform/ # 需求、设计与实施任务
 ## 产品与数据规则
 
 - 访客可以完成 onboarding、课程和录音；本地状态使用版本化 localStorage。
+- 所有入口与短练习都以声音优先：题目后直接显示录音操作，不得把问卷、笔记或 transcript 输入设为开口前置条件。
+- 文字只用于录音后的逐字稿校对，或在浏览器明确无法使用麦克风后作为后备路径。
 - 登录后合并 learner profile 与 lesson progress，不可覆盖较新的完成记录。
 - 录音默认只留在浏览器；用户明确勾选后才上传至私人 bucket。
 - AI 回馈必须绑定学生 transcript，不得显示为 HKEAA 官方分数。

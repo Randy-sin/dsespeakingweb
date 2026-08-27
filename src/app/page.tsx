@@ -23,15 +23,15 @@ export const metadata = buildPageMetadata({
 const learningSteps = [
   {
     number: "01",
-    title: "先理解",
-    description: "用短課拆解高分答案的結構、互動策略和常見失誤。",
-    icon: BookOpenText,
+    title: "先開口",
+    description: "不用先填表或寫稿；看清題目，按下錄音，用自己的英文完整說一次。",
+    icon: Mic2,
   },
   {
     number: "02",
-    title: "再開口",
-    description: "用計時準備、錄音和情境題，把方法變成說話習慣。",
-    icon: Mic2,
+    title: "回聽再理解",
+    description: "先聽自己真正說過的內容，再用短課看清結構、互動策略和下一個重點。",
+    icon: BookOpenText,
   },
   {
     number: "03",
@@ -80,7 +80,7 @@ export default function HomePage() {
 
             <div className="mt-10 grid max-w-2xl gap-7 border-l border-[#a9a08f] pl-5 sm:grid-cols-[1fr_auto] sm:items-end sm:pl-8">
               <p className="max-w-xl text-[17px] leading-8 text-[#5e5b53] sm:text-[19px]">
-                不再只是找人開房練習。這裡會教你如何開始、回應、展開、轉題與總結，再把方法帶入計時口語練習。
+                先看清題目，按下麥克風，直接用自己的英文說一次；說完再學如何開始、回應、展開、轉題與總結。
               </p>
               <HomePrimaryAction />
             </div>
@@ -226,11 +226,11 @@ export default function HomePage() {
         <section className="bg-[#48634c] text-[#faf7ef]">
           <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-20 sm:px-7 lg:grid-cols-12 lg:px-10 lg:py-28">
             <div className="lg:col-span-8">
-              <p className="eyebrow text-[#eee7da]">Start with a two-minute check-in</p>
-              <h2 className="display-title mt-5 max-w-4xl text-5xl leading-[0.92] sm:text-7xl">不用猜自己應該先學甚麼。</h2>
+              <p className="eyebrow text-[#eee7da]">Start with your voice</p>
+              <h2 className="display-title mt-5 max-w-4xl text-5xl leading-[0.92] sm:text-7xl">不用先填表。直接說一次。</h2>
             </div>
             <div className="flex flex-col justify-end lg:col-span-4">
-              <p className="mb-7 text-[15px] leading-7 text-[#e4ded2]">告訴我們你的目標、信心和弱項，我們會排出第一週的學習與開口練習。</p>
+              <p className="mb-7 text-[15px] leading-7 text-[#e4ded2]">看一條題目，錄下第一個回答；說完才回聽、學方法和選下一步。</p>
               <HomePrimaryAction placement="closing" />
             </div>
           </div>

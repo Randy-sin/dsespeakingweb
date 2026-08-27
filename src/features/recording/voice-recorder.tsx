@@ -9,7 +9,7 @@ import { useUser } from "@/hooks/use-user";
 import { formatDuration } from "@/lib/format-duration";
 import type { PracticeMode } from "@/lib/learning/types";
 
-type RecorderState = "idle" | "recording" | "recorded" | "text";
+export type RecorderState = "idle" | "recording" | "recorded" | "text";
 
 interface SpeechRecognitionAlternativeLike {
   transcript: string;
@@ -45,6 +45,12 @@ type VoiceRecorderProps = {
   mode: PracticeMode;
   task: string;
   paperId?: string;
+  allowTextFallback?: boolean;
+  showAccountOptions?: boolean;
+  onRecordingComplete?: (duration: number) => void;
+  onRecordingStart?: () => void;
+  onReset?: () => void;
+  onStateChange?: (state: RecorderState) => void;
   onTranscriptChange?: (transcript: string) => void;
   onSessionChange?: (sessionId: string | null) => void;
 };
@@ -57,7 +63,20 @@ function getSpeechRecognitionConstructor() {
   return speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition ?? null;
 }
 
-export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscriptChange, onSessionChange }: VoiceRecorderProps) {
+export function VoiceRecorder({
+  maxSeconds = 60,
+  mode,
+  task,
+  paperId,
+  allowTextFallback = true,
+  showAccountOptions = true,
+  onRecordingComplete,
+  onRecordingStart,
+  onReset,
+  onStateChange,
+  onTranscriptChange,
+  onSessionChange,
+}: VoiceRecorderProps) {
   const [state, setState] = useState<RecorderState>("idle");
   const [seconds, setSeconds] = useState(0);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -70,6 +89,7 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
   const recorderRef = useRef<MediaRecorder | null>(null);
   const stopButtonRef = useRef<HTMLButtonElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const errorRef = useRef<HTMLParagraphElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -88,7 +108,17 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
   }, [state]);
 
   useEffect(() => {
-    if (state === "recording" && seconds >= maxSeconds) recorderRef.current?.stop();
+    onStateChange?.(state);
+  }, [onStateChange, state]);
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
+
+  useEffect(() => {
+    if (state === "recording" && seconds >= maxSeconds && recorderRef.current?.state === "recording") {
+      recorderRef.current.stop();
+    }
   }, [maxSeconds, seconds, state]);
 
   useEffect(() => () => {
@@ -100,14 +130,19 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
   const startRecording = async () => {
     setError(null);
     if (!("MediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
-      setError("這個瀏覽器不支援錄音，你仍可以切換到文字模式完成練習。");
+      setError(allowTextFallback
+        ? "這個瀏覽器不支援錄音。你可以使用下方的文字後備，題目不會消失。"
+        : "這個瀏覽器不支援錄音。請改用支援麥克風的瀏覽器，或先進入第一課。",
+      );
       return;
     }
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const activeStream = stream;
+      streamRef.current = activeStream;
       chunksRef.current = [];
-      const recorder = new MediaRecorder(stream);
+      const recorder = new MediaRecorder(activeStream);
       recorderRef.current = recorder;
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
       recorder.onstop = async () => {
@@ -117,10 +152,14 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
         const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
         setAudioUrl((current) => { if (current) URL.revokeObjectURL(current); return URL.createObjectURL(blob); });
-        stream.getTracks().forEach((track) => track.stop());
+        activeStream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
         const duration = startedAtRef.current ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)) : 1;
         recordPractice(duration);
+        onRecordingComplete?.(duration);
         startedAtRef.current = null;
+        setState("recorded");
         if (syncRecording && user) {
           const extension = mimeType.includes("mp4") ? "m4a" : mimeType.includes("ogg") ? "ogg" : "webm";
           const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
@@ -136,7 +175,6 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
             setSaveMessage(sessionError ? "錄音已私人儲存，但未能建立練習記錄。" : "錄音已儲存到你的私人練習記錄。");
           }
         }
-        setState("recorded");
       };
       setSeconds(0);
       sessionIdRef.current = null;
@@ -165,10 +203,24 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
           recognitionRef.current = null;
         }
       }
+      onRecordingStart?.();
       recorder.start();
       setState("recording");
-    } catch {
-      setError("未能使用麥克風。請在瀏覽器設定允許錄音，或改用文字模式。");
+    } catch (recordingError) {
+      stream?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      recorderRef.current = null;
+      const errorName = recordingError instanceof DOMException ? recordingError.name : "";
+      const recovery = allowTextFallback ? "，或使用下方的文字後備" : "後再試";
+      if (errorName === "NotAllowedError") {
+        setError(`瀏覽器未允許使用麥克風。請在網址列開啟麥克風權限${recovery}。`);
+      } else if (errorName === "NotFoundError") {
+        setError(`找不到可用的麥克風。請連接裝置${recovery}。`);
+      } else if (errorName === "NotReadableError") {
+        setError(`麥克風可能正被其他程式使用。關閉其他錄音程式${recovery}。`);
+      } else {
+        setError(`未能開始錄音。請檢查麥克風設定${recovery}。`);
+      }
     }
   };
 
@@ -181,7 +233,14 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
     setSaveMessage(null);
     sessionIdRef.current = null;
     onSessionChange?.(null);
+    onReset?.();
     setState("idle");
+  };
+
+  const useTextFallback = () => {
+    setError(null);
+    onReset?.();
+    setState("text");
   };
 
   const transcribeRecording = async () => {
@@ -222,21 +281,22 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, paperId, onTranscri
   return (
     <div className="border border-[#bdb3a2] bg-[#faf7ef] p-5 sm:p-7">
       <div className="flex items-center justify-between gap-4"><p className="eyebrow text-[#665f55]">Your response</p><p role="status" className="inline-flex items-center gap-2 text-xs text-[#665f55]"><span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${state === "recording" ? "animate-pulse bg-[#ad3f29]" : "bg-[#bdb3a2]"}`} />{recorderStatus}</p></div>
-      {user && state === "idle" ? <label className="mt-5 flex items-center gap-3 text-xs text-[#6d695f]"><input type="checkbox" checked={syncRecording} onChange={(event) => setSyncRecording(event.target.checked)} className="h-4 w-4 accent-[#48634c]" />把本次錄音儲存到我的私人帳號</label> : null}
+      {user && showAccountOptions && state === "idle" ? <label className="mt-5 flex items-center gap-3 text-xs text-[#6d695f]"><input type="checkbox" checked={syncRecording} onChange={(event) => setSyncRecording(event.target.checked)} className="h-4 w-4 accent-[#48634c]" />把本次錄音儲存到我的私人帳號</label> : null}
       {state === "text" ? (
-        <div className="mt-6"><p className="text-sm leading-7 text-[#6d695f]">已切換到文字模式。請在下方的「逐字稿草稿」輸入你原本會說的答案。</p><Button variant="ghost" onClick={reset} className="mt-3 rounded-full"><RotateCcw className="mr-2 h-4 w-4" />返回錄音模式</Button></div>
+        <div className="mt-6"><p className="text-sm leading-7 text-[#6d695f]">麥克風後備已開啟。只有在無法錄音時，才需要使用下方文字欄。</p><Button variant="ghost" onClick={reset} className="mt-3 min-h-11 rounded-full"><RotateCcw className="mr-2 h-4 w-4" />返回錄音模式</Button></div>
       ) : (
         <div className="mt-8 text-center">
           <p role="timer" aria-label={`已錄音 ${seconds} 秒`} className="font-mono text-5xl tracking-[-0.07em]">{formatDuration(seconds)}</p><p className="mt-2 font-mono text-[10px] text-[#665f55]">LIMIT {formatDuration(maxSeconds)}</p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {state === "idle" ? <Button onClick={startRecording} className="h-[52px] rounded-full bg-[#ad3f29] px-7 text-white hover:bg-[#aa3d27]"><Mic className="mr-2 h-4 w-4" />開始錄音</Button> : null}
-            {state === "recording" ? <Button ref={stopButtonRef} onClick={() => recorderRef.current?.stop()} className="h-[52px] rounded-full bg-[#172019] px-7 text-white"><Square className="mr-2 h-4 w-4" />完成錄音</Button> : null}
-            {state === "recorded" && audioUrl ? <><audio ref={audioRef} controls src={audioUrl} aria-label="你的練習錄音" className="w-full max-w-md" />{user ? <Button onClick={transcribeRecording} disabled={transcribing} aria-busy={transcribing} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">{transcribing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <FileAudio className="mr-2 h-4 w-4" />}生成 AI 逐字稿</Button> : null}<Button onClick={reset} variant="outline" className="rounded-full border-[#9f9687]"><RotateCcw className="mr-2 h-4 w-4" />重錄</Button></> : null}
+          {state === "idle" ? <p className="mx-auto mt-4 max-w-sm text-xs leading-5 text-[#665f55]">按下後才會請求麥克風權限。錄音預設只留在這個瀏覽器。</p> : null}
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            {state === "idle" ? <Button onClick={startRecording} className="h-24 w-24 flex-col rounded-full bg-[#ad3f29] px-3 text-white shadow-[0_0_0_10px_rgba(173,63,41,0.10)] hover:bg-[#aa3d27]"><Mic className="mb-1 h-6 w-6" /><span>開始說</span></Button> : null}
+            {state === "recording" ? <Button ref={stopButtonRef} onClick={() => recorderRef.current?.stop()} className="h-24 w-24 flex-col rounded-full bg-[#172019] px-3 text-white shadow-[0_0_0_10px_rgba(23,32,25,0.10)]"><Square className="mb-1 h-5 w-5" /><span>說完了</span></Button> : null}
+            {state === "recorded" && audioUrl ? <><audio ref={audioRef} controls src={audioUrl} aria-label="你的練習錄音" className="w-full max-w-md" />{user && showAccountOptions ? <Button onClick={transcribeRecording} disabled={transcribing} aria-busy={transcribing} className="min-h-11 rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">{transcribing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <FileAudio className="mr-2 h-4 w-4" />}整理成 AI 逐字稿</Button> : null}<Button onClick={reset} variant="outline" className="min-h-11 rounded-full border-[#9f9687]"><RotateCcw className="mr-2 h-4 w-4" />再說一次</Button></> : null}
           </div>
-          {error ? <p role="alert" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#a74231]">{error}</p> : null}
+          {error ? <p ref={errorRef} tabIndex={-1} role="alert" className="mx-auto mt-5 max-w-md outline-none text-sm leading-6 text-[#a74231]">{error}</p> : null}
           {saveMessage ? <p role="status" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#48634c]">{saveMessage}</p> : null}
-          {state === "recorded" && user ? <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-[#665f55]">按下「生成 AI 逐字稿」後，錄音會轉成 WAV 並傳送到火山引擎進行識別；逐字稿會儲存到你的私人記錄。原始錄音只會在勾選上方選項時儲存。</p> : null}
-          {state === "idle" || error ? <button type="button" onClick={() => setState("text")} className="mt-5 inline-flex items-center gap-2 text-xs text-[#6d695f] underline underline-offset-4"><Type className="h-3.5 w-3.5" />改用文字模式</button> : null}
+          {state === "recorded" && user && showAccountOptions ? <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-[#665f55]">按下「整理成 AI 逐字稿」後，錄音會轉成 WAV 並傳送到火山引擎進行識別；逐字稿會儲存到你的私人記錄。原始錄音只會在勾選上方選項時儲存。</p> : null}
+          {error && allowTextFallback ? <button type="button" onClick={useTextFallback} className="mt-5 inline-flex min-h-11 items-center gap-2 text-xs text-[#6d695f] underline underline-offset-4"><Type className="h-3.5 w-3.5" />麥克風無法使用，開啟文字後備</button> : null}
         </div>
       )}
     </div>

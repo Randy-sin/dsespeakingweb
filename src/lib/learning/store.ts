@@ -148,7 +148,7 @@ export function buildLearningPlan(profile: LearnerProfile): LearningPlan {
       lessonSlug: "elaborate-with-evidence",
       title: "先練：把一個想法展開",
       reason: "你不是需要更多空泛句型，而是需要把一個觀點變成原因、影響和例子。",
-      weeklyTasks: ["完成論述技巧課", "為 3 個題目各寫一條因果鏈", "錄製一次 30 秒完整論點"],
+      weeklyTasks: ["完成論述技巧課", "為 3 個題目各說一條因果鏈", "錄製一次 30 秒完整論點"],
     };
   }
 
