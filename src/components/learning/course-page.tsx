@@ -7,7 +7,7 @@ export function CoursePage({ mode, lessons }: { mode: PracticeMode; lessons: Les
   const isGd = mode === "group-discussion";
   return (
     <main id="main-content">
-      <section className={`border-b border-[#bdb3a2] ${isGd ? "bg-[#48634c] text-[#faf7ef]" : "bg-[#c84b31] text-white"}`}>
+      <section className={`border-b border-[#bdb3a2] ${isGd ? "bg-[#48634c] text-[#faf7ef]" : "bg-[#ad3f29] text-white"}`}>
         <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:px-10 lg:py-24">
           <div className="lg:col-span-8">
             <p className="eyebrow opacity-70">{isGd ? "Track A · Interaction" : "Track B · Structure"}</p>
@@ -17,7 +17,7 @@ export function CoursePage({ mode, lessons }: { mode: PracticeMode; lessons: Les
         </div>
       </section>
       <section className="mx-auto grid max-w-[1440px] gap-10 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:px-10 lg:py-24">
-        <aside className="lg:col-span-3"><p className="eyebrow text-[#8a8175]">Course map</p><h2 className="display-title mt-4 text-4xl">依次建立能力，而不是背一堆萬用句。</h2></aside>
+        <aside className="lg:col-span-3"><p className="eyebrow text-[#665f55]">Course map</p><h2 className="display-title mt-4 text-4xl">依次建立能力，而不是背一堆萬用句。</h2></aside>
         <div className="lg:col-span-9"><CourseMap mode={mode} lessons={lessons} /></div>
       </section>
     </main>

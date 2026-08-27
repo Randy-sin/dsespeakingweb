@@ -5,6 +5,14 @@ import { ForumPostCard } from "@/components/forum/forum-post-card";
 import { fetchForumFeed, fetchForumTags, fetchPaperCatalog } from "@/lib/forum/server";
 import { FORUM_POST_TYPE_OPTIONS } from "@/lib/forum/constants";
 import { Search, MessageSquareText, Sparkles, ArrowRight } from "lucide-react";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+  title: "DSE Speaking 討論與答題分析",
+  description:
+    "查看 DSE Speaking 真題分析、Part A 討論觀點、Part B 答法、模擬復盤與考前口試技巧。",
+  path: "/forum",
+});
 
 type SearchParams = Promise<{
   q?: string;

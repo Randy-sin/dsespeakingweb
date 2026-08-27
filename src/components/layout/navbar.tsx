@@ -74,7 +74,7 @@ export function Navbar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <Button asChild className="hidden h-10 rounded-full bg-[#c84b31] px-5 text-[13px] text-white hover:bg-[#aa3d27] sm:inline-flex">
+          <Button asChild className="hidden h-10 rounded-full bg-[#ad3f29] px-5 text-[13px] text-white hover:bg-[#aa3d27] sm:inline-flex">
             <Link href={practiceHref}>{practiceLabel}</Link>
           </Button>
 
@@ -118,7 +118,7 @@ export function Navbar() {
             <SheetContent side="right" aria-describedby={undefined} className="w-[88vw] border-[#c9bfad] bg-[#f3efe4] p-0 sm:max-w-sm">
               <SheetTitle className="sr-only">主要導航</SheetTitle>
               <div className="flex h-full flex-col px-6 pb-8 pt-20">
-                <p className="eyebrow text-[#8a8175]">Choose your next step</p>
+                <p className="eyebrow text-[#665f55]">Choose your next step</p>
                 <nav className="mt-6 space-y-2">
                   {navItems.map((item, index) => (
                     <SheetClose asChild key={item.href}>
@@ -128,7 +128,7 @@ export function Navbar() {
                         className="flex items-center justify-between border-b border-[#d7cebd] py-4 font-serif text-[22px]"
                       >
                         <span>{item.label}</span>
-                        <span className="font-mono text-[11px] text-[#8a8175]">0{index + 1}</span>
+                        <span className="font-mono text-[11px] text-[#665f55]">0{index + 1}</span>
                       </Link>
                     </SheetClose>
                   ))}
@@ -136,7 +136,7 @@ export function Navbar() {
                 <SheetClose asChild>
                   <Link
                     href={practiceHref}
-                    className={cn(buttonVariants(), "mt-8 h-12 w-full rounded-full bg-[#c84b31] text-white hover:bg-[#aa3d27]")}
+                    className={cn(buttonVariants(), "mt-8 h-12 w-full rounded-full bg-[#ad3f29] text-white hover:bg-[#aa3d27]")}
                   >
                     {practiceLabel}
                   </Link>

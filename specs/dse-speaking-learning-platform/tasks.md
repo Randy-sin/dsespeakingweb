@@ -90,3 +90,4 @@
 - 2026-08-27 安全加固加入 prompt injection 邊界、模型輸出驗證、每使用者 AI 原子限流、安全 response headers、私有 rate-limit RLS、robots／sitemap 和調試 API 移除。
 - Cloudflare Bot Fight Mode 與 HTTP DDoS 防護已開啟；AI API 邊緣突發限流規則已啟用。邊緣規則仍須以 Cloudflare 事件記錄持續確認實際命中，不能只以設定頁的 Active 狀態當作攔截證據。
 - Supabase Security Advisor 的 schema 風險已清除；Free plan 不提供 leaked-password protection，故此項仍為平台方案限制。Secure password change、修改密碼時要求目前密碼及英數密碼規則已啟用。
+- 2026-08-27 SEO 收束加入每頁獨立 title／description／canonical、Open Graph／Twitter 預覽、WebSite／LearningResource／BreadcrumbList 結構化資料、動態真題與公開論壇 sitemap、站點圖示及 web manifest。首頁 Lighthouse SEO 與 Accessibility 均為 100。

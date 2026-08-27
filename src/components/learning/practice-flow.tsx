@@ -11,7 +11,7 @@ export function PracticeFlow() {
     <section aria-labelledby="practice-flow-title" className="mt-14 border-y border-[#bdb3a2] py-7">
       <div className="grid gap-7 lg:grid-cols-[220px_1fr] lg:items-start">
         <div>
-          <p className="eyebrow text-[#8a8175]">How practice works</p>
+          <p className="eyebrow text-[#665f55]">How practice works</p>
           <h2 id="practice-flow-title" className="mt-3 font-serif text-3xl">每次只走三步。</h2>
         </div>
         <ol className="grid gap-px border border-[#bdb3a2] bg-[#bdb3a2] md:grid-cols-3">
@@ -20,7 +20,7 @@ export function PracticeFlow() {
             return (
               <li key={step.label} className="bg-[#faf7ef] p-5">
                 <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] text-[#c84b31]">0{index + 1}</span>
+                  <span className="font-mono text-[10px] text-[#ad3f29]">0{index + 1}</span>
                   <Icon className="h-4 w-4 text-[#48634c]" />
                 </div>
                 <p className="mt-6 font-serif text-xl">{step.label}</p>

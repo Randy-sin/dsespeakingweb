@@ -21,7 +21,7 @@ export function ProgressPage() {
     <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-14 sm:px-7 lg:px-10 lg:py-20">
       <div className="grid gap-10 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <p className="eyebrow text-[#c84b31]">Learning progress</p>
+          <p className="eyebrow text-[#ad3f29]">Learning progress</p>
           <h1 className="display-title mt-5 text-6xl leading-[0.88] sm:text-8xl">進步要看得見，下一步也要清楚。</h1>
           <p className="mt-7 max-w-xl text-base leading-8 text-[#6d695f]">
             這裡記錄已完成的技巧課和開口練習。登入前資料保存在這部裝置；登入後才會同步至你的帳戶。
@@ -35,7 +35,7 @@ export function ProgressPage() {
           </div>
           <p className="mt-5 font-mono text-6xl tracking-[-0.08em]">{percent}%</p>
           <div className="mt-6 h-1.5 bg-[#d7cebd]" aria-label={`總進度 ${percent}%`}>
-            <div className="h-full bg-[#c84b31]" style={{ width: `${percent}%` }} />
+            <div className="h-full bg-[#ad3f29]" style={{ width: `${percent}%` }} />
           </div>
           <p className="mt-4 text-sm text-[#6d695f]">{progress.completedLessons.length} / {allLessons.length} 個短課完成</p>
         </aside>
@@ -49,11 +49,11 @@ export function ProgressPage() {
 
       <section className="mt-14 grid gap-8 lg:grid-cols-12">
         <article className="border-t border-[#172019] pt-6 lg:col-span-8">
-          <p className="eyebrow text-[#c84b31]">Recommended next</p>
+          <p className="eyebrow text-[#ad3f29]">Recommended next</p>
           {nextLesson ? (
             <div className="mt-5 grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
-                <p className="font-serif text-lg italic text-[#8a8175]">{nextLesson.englishTitle}</p>
+                <p className="font-serif text-lg italic text-[#665f55]">{nextLesson.englishTitle}</p>
                 <h2 className="display-title mt-1 text-4xl sm:text-5xl">{nextLesson.title}</h2>
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-[#6d695f]">{nextLesson.summary}</p>
               </div>
@@ -72,14 +72,14 @@ export function ProgressPage() {
           )}
         </article>
 
-        <aside className="border-l border-[#c84b31] pl-5 lg:col-span-3 lg:col-start-10">
-          <p className="eyebrow text-[#c84b31]">Learning record</p>
+        <aside className="border-l border-[#ad3f29] pl-5 lg:col-span-3 lg:col-start-10">
+          <p className="eyebrow text-[#ad3f29]">Learning record</p>
           <p className="mt-5 text-sm text-[#6d695f]">最近活動</p>
           <p className="mt-1 font-serif text-2xl">{lastActive}</p>
           <p className="mt-5 text-sm text-[#6d695f]">每週目標</p>
           <p className="mt-1 font-serif text-2xl">{profile ? `${profile.weeklyMinutes} 分鐘` : "尚未設定"}</p>
           {!profile ? (
-            <Link href="/onboarding" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold underline decoration-[#c84b31] underline-offset-4">
+            <Link href="/onboarding" className="mt-6 inline-flex items-center gap-2 text-sm font-semibold underline decoration-[#ad3f29] underline-offset-4">
               完成能力診斷<ArrowRight className="h-4 w-4" />
             </Link>
           ) : null}
@@ -98,7 +98,7 @@ function ProgressStat({ icon: Icon, label, value }: { icon: typeof Clock3; label
   return (
     <article className="bg-[#faf7ef] p-7">
       <Icon className="h-5 w-5 text-[#48634c]" />
-      <p className="eyebrow mt-8 text-[#8a8175]">{label}</p>
+      <p className="eyebrow mt-8 text-[#665f55]">{label}</p>
       <p className="mt-2 font-serif text-4xl">{value}</p>
     </article>
   );

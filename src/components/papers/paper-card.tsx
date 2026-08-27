@@ -11,7 +11,7 @@ export function PaperCard({ paper }: PaperCardProps) {
     <article className="group flex min-h-72 flex-col border border-[#bdb3a2] bg-[#faf7ef] p-6 transition-colors hover:bg-[#eee7da] sm:p-7">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="eyebrow text-[#c84b31]">
+          <p className="eyebrow text-[#ad3f29]">
             {paper.year} · {paper.paper_number}
           </p>
           <h3 className="mt-4 font-serif text-[30px] leading-tight tracking-[-0.03em]">
@@ -36,7 +36,7 @@ export function PaperCard({ paper }: PaperCardProps) {
         </span>
       </div>
 
-      <Link href={`/papers/${paper.paper_id}`} className="mt-auto flex items-center justify-between border-t border-[#bdb3a2] pt-4 text-sm font-semibold"><span>開啟題目與練習</span><span className="font-mono text-[10px] text-[#8a8175]">{paper.discussionCount} NOTES</span></Link>
+      <Link href={`/papers/${paper.paper_id}`} className="mt-auto flex items-center justify-between border-t border-[#bdb3a2] pt-4 text-sm font-semibold"><span>開啟題目與練習</span><span className="font-mono text-[10px] text-[#665f55]">{paper.discussionCount} NOTES</span></Link>
     </article>
   );
 }

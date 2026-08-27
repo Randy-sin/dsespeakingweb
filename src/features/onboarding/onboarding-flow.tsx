@@ -53,7 +53,7 @@ export function OnboardingFlow() {
         <p className="mt-6 max-w-sm text-sm leading-7 text-[#c9cfc9]">兩分鐘診斷不會替你評分，只會決定第一週先練哪項能力。所有答案會先保存在這部裝置。</p>
         <div className="mt-10 grid grid-cols-5 gap-2" aria-label={`第 ${Math.min(step + 1, 5)} 步，共 5 步`}>
           {[0, 1, 2, 3, 4].map((index) => (
-            <span key={index} className={`h-1 ${index <= step ? "bg-[#c84b31]" : "bg-[#4d554e]"}`} />
+            <span key={index} className={`h-1 ${index <= step ? "bg-[#ad3f29]" : "bg-[#4d554e]"}`} />
           ))}
         </div>
       </aside>
@@ -61,7 +61,7 @@ export function OnboardingFlow() {
       <section className="flex px-4 py-10 sm:px-10 lg:col-span-8 lg:px-16 lg:py-14">
         <div className="mx-auto flex w-full max-w-3xl flex-col">
           <div className="mb-10 flex items-center justify-between">
-            <p className="font-mono text-xs text-[#8a8175]">0{Math.min(step + 1, 5)} / 05</p>
+            <p className="font-mono text-xs text-[#665f55]">0{Math.min(step + 1, 5)} / 05</p>
             <button type="button" onClick={finish} className="text-xs text-[#6d695f] underline underline-offset-4">略過並使用建議設定</button>
           </div>
 
@@ -72,7 +72,7 @@ export function OnboardingFlow() {
                   <Choice key={year} active={examYear === year} onClick={() => setExamYear(year)} title={`${year} DSE`} detail={year === Math.max(2027, currentYear + 1) ? "較集中地建立考試表現" : "有時間逐步建立說話習慣"} />
                 ))}
               </div>
-              <p className="eyebrow mt-9 text-[#8a8175]">Target level</p>
+              <p className="eyebrow mt-9 text-[#665f55]">Target level</p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {[3, 4, 5].map((level) => (
                   <button key={level} type="button" onClick={() => setTargetLevel(level)} className={`h-12 min-w-24 rounded-full border px-5 text-sm ${targetLevel === level ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef]"}`}>Level {level}{level === 5 ? "+" : ""}</button>
@@ -112,7 +112,7 @@ export function OnboardingFlow() {
             <OnboardingStep title="你的第一週，從這裡開始。" subtitle={plan.reason}>
               <article className="paper-surface paper-rule p-6 sm:p-8">
                 <div className="flex items-center justify-between border-b border-[#bdb3a2] pb-5">
-                  <span className="eyebrow text-[#c84b31]">Recommended first lesson</span>
+                  <span className="eyebrow text-[#ad3f29]">Recommended first lesson</span>
                   <Clock3 className="h-5 w-5 text-[#48634c]" />
                 </div>
                 <h2 className="mt-7 font-serif text-4xl tracking-[-0.04em]">{plan.title}</h2>
@@ -130,7 +130,7 @@ export function OnboardingFlow() {
               <ArrowLeft className="mr-2 h-4 w-4" />返回
             </Button>
             {step < 4 ? (
-              <Button type="button" onClick={() => setStep((value) => value + 1)} disabled={step === 2 && selectedWeakAreas.length === 0} className="h-12 rounded-full bg-[#c84b31] px-6 text-white hover:bg-[#aa3d27]">
+              <Button type="button" onClick={() => setStep((value) => value + 1)} disabled={step === 2 && selectedWeakAreas.length === 0} className="h-12 rounded-full bg-[#ad3f29] px-6 text-white hover:bg-[#aa3d27]">
                 繼續<ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
@@ -150,9 +150,9 @@ function OnboardingStep({ title, subtitle, children }: { title: string; subtitle
 }
 
 function Choice({ active, onClick, title, detail }: { active: boolean; onClick: () => void; title: string; detail: string }) {
-  return <button type="button" onClick={onClick} className={`group min-h-28 border p-5 text-left transition-colors ${active ? "border-[#48634c] bg-[#48634c] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}><span className="flex items-center justify-between font-serif text-xl"><span>{title}</span>{active ? <Check className="h-5 w-5" /> : null}</span><span className={`mt-3 block text-xs ${active ? "text-[#dbe2dc]" : "text-[#8a8175]"}`}>{detail}</span></button>;
+  return <button type="button" onClick={onClick} className={`group min-h-28 border p-5 text-left transition-colors ${active ? "border-[#48634c] bg-[#48634c] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}><span className="flex items-center justify-between font-serif text-xl"><span>{title}</span>{active ? <Check className="h-5 w-5" /> : null}</span><span className={`mt-3 block text-xs ${active ? "text-[#dbe2dc]" : "text-[#665f55]"}`}>{detail}</span></button>;
 }
 
 function ConfidenceScale({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
-  return <div className="border-t border-[#bdb3a2] py-7"><div className="mb-5 flex items-center justify-between"><h3 className="font-serif text-2xl">{label}</h3><span className="font-mono text-xs text-[#8a8175]">{value} / 5</span></div><div className="grid grid-cols-5 gap-2">{[1,2,3,4,5].map((number) => <button key={number} type="button" onClick={() => onChange(number)} className={`h-12 border font-mono text-sm ${value === number ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}>{number}</button>)}</div><div className="mt-2 flex justify-between text-[11px] text-[#8a8175]"><span>不知怎樣開始</span><span>可以穩定完成</span></div></div>;
+  return <div className="border-t border-[#bdb3a2] py-7"><div className="mb-5 flex items-center justify-between"><h3 className="font-serif text-2xl">{label}</h3><span className="font-mono text-xs text-[#665f55]">{value} / 5</span></div><div className="grid grid-cols-5 gap-2">{[1,2,3,4,5].map((number) => <button key={number} type="button" onClick={() => onChange(number)} className={`h-12 border font-mono text-sm ${value === number ? "border-[#172019] bg-[#172019] text-white" : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c]"}`}>{number}</button>)}</div><div className="mt-2 flex justify-between text-[11px] text-[#665f55]"><span>不知怎樣開始</span><span>可以穩定完成</span></div></div>;
 }

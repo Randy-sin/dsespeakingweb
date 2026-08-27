@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -7,8 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ForumPostCard } from "@/components/forum/forum-post-card";
 import { fetchPaperHub } from "@/lib/forum/server";
 import { ArrowLeft, BookOpenText, MessageSquareText, Mic2 } from "lucide-react";
+import { JsonLd } from "@/components/seo/json-ld";
+import { absoluteUrl, buildPageMetadata, SITE_NAME, SITE_ORIGIN, truncateSeoText } from "@/lib/seo";
 
 type Params = Promise<{ paperId: string }>;
+type Props = { params: Params };
+const getPaperHub = cache(fetchPaperHub);
 
 type PartBQuestion = {
   number?: number;
@@ -17,13 +23,25 @@ type PartBQuestion = {
   difficulty_level?: string;
 };
 
-export default async function PaperHubPage({
-  params,
-}: {
-  params: Params;
-}) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { paperId } = await params;
-  const { paper, posts, forumReady } = await fetchPaperHub(paperId);
+  const { paper } = await getPaperHub(paperId);
+  if (!paper) return {};
+
+  return buildPageMetadata({
+    title: `${paper.year} ${paper.paper_number}｜${truncateSeoText(paper.topic, 42)}`,
+    description: truncateSeoText(
+      `${paper.year} DSE Speaking ${paper.paper_number}：${paper.part_a_title}。查看 Part A 討論點、Part B 問題並進入口試練習。`,
+      155,
+    ),
+    path: `/papers/${paperId}`,
+    type: "article",
+  });
+}
+
+export default async function PaperHubPage({ params }: Props) {
+  const { paperId } = await params;
+  const { paper, posts, forumReady } = await getPaperHub(paperId);
 
   if (!paper) {
     notFound();
@@ -32,9 +50,35 @@ export default async function PaperHubPage({
   const partBQuestions = Array.isArray(paper.part_b_questions)
     ? (paper.part_b_questions as PartBQuestion[])
     : [];
+  const url = absoluteUrl(`/papers/${paperId}`);
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "LearningResource",
+      "@id": `${url}#paper`,
+      name: `${paper.year} ${paper.paper_number} ${paper.topic}`,
+      description: paper.part_a_title,
+      url,
+      inLanguage: ["en-HK", "zh-Hant-HK"],
+      educationalLevel: "HKDSE",
+      educationalUse: "practice",
+      learningResourceType: "past paper",
+      about: ["HKDSE English Paper 4", "Group Discussion", "Individual Response"],
+      provider: { "@type": "Organization", name: SITE_NAME, url: SITE_ORIGIN },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "真題庫", item: absoluteUrl("/papers") },
+        { "@type": "ListItem", position: 2, name: `${paper.year} ${paper.paper_number}`, item: url },
+      ],
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f7f6f2]">
+      <JsonLd data={jsonLd} />
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">
@@ -214,7 +258,7 @@ export default async function PaperHubPage({
 
           <aside className="space-y-5">
             <div className="rounded-[28px] border border-neutral-200/80 bg-white p-6">
-              <p className="eyebrow text-[#8a8175]">
+              <p className="eyebrow text-[#665f55]">
                 Practice this paper
               </p>
               <div className="mt-5 space-y-3">

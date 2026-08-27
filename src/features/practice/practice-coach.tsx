@@ -117,7 +117,7 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-[#bdb3a2] px-3 py-1 text-[11px] text-[#6d695f]"><ShieldCheck className="h-3.5 w-3.5" />先校對，再分析</span>
         </div>
-        <p className="mt-3 max-w-2xl text-xs leading-6 text-[#8a8175]">支援的瀏覽器會在錄音時產生即時草稿，但它可能聽錯字。你也可以手動輸入；送出前請先修正成自己真正說過的內容。</p>
+        <p className="mt-3 max-w-2xl text-xs leading-6 text-[#665f55]">支援的瀏覽器會在錄音時產生即時草稿，但它可能聽錯字。你也可以手動輸入；送出前請先修正成自己真正說過的內容。</p>
         <Textarea
           value={transcript}
           onChange={(event) => {
@@ -127,11 +127,11 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
           placeholder="輸入或校對你剛才的英文回答……"
           maxLength={5000}
         />
-        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#8a8175]"><span>{transcript.trim().split(/\s+/).filter(Boolean).length} words</span><span>{transcript.length}/5000</span></div>
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[#665f55]"><span>{transcript.trim().split(/\s+/).filter(Boolean).length} words</span><span>{transcript.length}/5000</span></div>
 
         {loading ? <p className="mt-5 inline-flex items-center gap-2 text-sm text-[#6d695f]"><LoaderCircle className="h-4 w-4 animate-spin" />正在確認登入狀態……</p> : null}
         {!loading && !user ? (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-l-2 border-[#c84b31] bg-[#f3efe4] p-4">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-l-2 border-[#ad3f29] bg-[#f3efe4] p-4">
             <p className="max-w-xl text-sm leading-6 text-[#6d695f]">逐字稿與自我檢查可以直接使用；AI 回饋會消耗服務資源，因此只開放給已登入學生。</p>
             <Button asChild className="rounded-full bg-[#172019] text-white"><Link href="/login">登入後使用 AI 教練</Link></Button>
           </div>
@@ -150,15 +150,15 @@ export function PracticeCoach({ maxSeconds, mode, task }: PracticeCoachProps) {
           </div>
         ) : null}
 
-        {error ? <p role="alert" className="mt-5 border-l-2 border-[#c84b31] pl-4 text-sm leading-6 text-[#a74231]">{error} 你的錄音與逐字稿仍保留在本頁。</p> : null}
+        {error ? <p role="alert" className="mt-5 border-l-2 border-[#ad3f29] pl-4 text-sm leading-6 text-[#a74231]">{error} 你的錄音與逐字稿仍保留在本頁。</p> : null}
       </section>
 
       {assessment ? (
         <section className="paper-surface paper-rule p-6" aria-live="polite">
-          <p className="eyebrow flex items-center gap-2 text-[#c84b31]"><MessageSquareText className="h-4 w-4" />AI coach · formative only</p>
-          <div className="mt-3 flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-serif text-2xl">逐字稿訓練量表</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#4f4b44]">{assessment.summary}</p></div><div className="border border-[#c84b31] px-4 py-3 text-center"><span className="block font-mono text-3xl text-[#c84b31]">{assessment.trainingLevel}/5</span><span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-[#8a8175]">training signal</span></div></div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">{assessment.rubrics.map((rubric) => <article key={rubric.criterion} className="border border-[#c9c0b1] bg-white/45 p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-[#26352a]">{rubric.criterion}</h3><span className="font-mono text-sm text-[#c84b31]">{rubric.trainingLevel}/5</span></div><p className="mt-3 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">證據：</strong>{rubric.evidence}</p><p className="mt-2 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">下一步：</strong>{rubric.nextStep}</p></article>)}</div>
-          <p className="mt-5 text-xs leading-5 text-[#8a8175]">{assessment.caveat} 不能評估錄音中的發音、可聽流暢度、節奏或眼神交流。</p>
+          <p className="eyebrow flex items-center gap-2 text-[#ad3f29]"><MessageSquareText className="h-4 w-4" />AI coach · formative only</p>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-serif text-2xl">逐字稿訓練量表</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#4f4b44]">{assessment.summary}</p></div><div className="border border-[#ad3f29] px-4 py-3 text-center"><span className="block font-mono text-3xl text-[#ad3f29]">{assessment.trainingLevel}/5</span><span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-[#665f55]">training signal</span></div></div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">{assessment.rubrics.map((rubric) => <article key={rubric.criterion} className="border border-[#c9c0b1] bg-white/45 p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-[#26352a]">{rubric.criterion}</h3><span className="font-mono text-sm text-[#ad3f29]">{rubric.trainingLevel}/5</span></div><p className="mt-3 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">證據：</strong>{rubric.evidence}</p><p className="mt-2 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">下一步：</strong>{rubric.nextStep}</p></article>)}</div>
+          <p className="mt-5 text-xs leading-5 text-[#665f55]">{assessment.caveat} 不能評估錄音中的發音、可聽流暢度、節奏或眼神交流。</p>
         </section>
       ) : null}
 

@@ -3,6 +3,8 @@ import { IBM_Plex_Mono, Newsreader, Noto_Sans_TC } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "@/components/ui/sonner";
 import { LearningSync } from "@/components/learning/learning-sync";
+import { JsonLd } from "@/components/seo/json-ld";
+import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_ORIGIN, websiteJsonLd } from "@/lib/seo";
 import "./globals.css";
 
 const bodyFont = Noto_Sans_TC({
@@ -29,12 +31,20 @@ const monoFont = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "DSE Speaking — Learn it. Say it better.",
-    template: "%s | DSE Speaking",
+    default: "DSE Speaking｜HKDSE English Paper 4 口試教學與練習",
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "學懂 DSE English Paper 4 的答題方法，練習 Group Discussion 與 Individual Response，並獲得具體改進方向。",
-  metadataBase: new URL("https://www.dsespeaking.com"),
+  description: DEFAULT_DESCRIPTION,
+  metadataBase: new URL(SITE_ORIGIN),
+  applicationName: SITE_NAME,
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "education",
+  formatDetection: {
+    address: false,
+    email: false,
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -46,8 +56,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-Hant" data-scroll-behavior="smooth">
+    <html lang="zh-Hant-HK" data-scroll-behavior="smooth">
       <body className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}>
+        <JsonLd data={websiteJsonLd} />
         <a className="skip-link" href="#main-content">
           跳到主要內容
         </a>

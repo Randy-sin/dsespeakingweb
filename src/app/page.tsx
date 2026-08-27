@@ -11,6 +11,14 @@ import {
 import { HomePrimaryAction } from "@/components/home/home-primary-action";
 import { Navbar } from "@/components/layout/navbar";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+  title: "HKDSE English Paper 4 口試教學與 AI 練習",
+  description:
+    "免費學習 DSE Speaking Group Discussion 與 Individual Response 答題方法，用歷屆真題錄音練習並取得逐字稿證據化 AI 回饋。",
+  path: "/",
+});
 
 const learningSteps = [
   {
@@ -60,13 +68,13 @@ export default function HomePage() {
         <section className="mx-auto grid min-h-[calc(100vh-64px)] max-w-[1440px] grid-cols-1 items-center gap-10 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:gap-8 lg:px-10 lg:py-20">
           <div className="reveal-up lg:col-span-7 lg:pr-12">
             <div className="mb-7 flex items-center gap-3">
-              <span className="h-px w-10 bg-[#c84b31]" />
-              <p className="eyebrow text-[#8a8175]">HKDSE English Paper 4</p>
+              <span className="h-px w-10 bg-[#ad3f29]" />
+              <p className="eyebrow text-[#665f55]">HKDSE English Paper 4</p>
             </div>
 
             <h1 className="display-title max-w-[780px] text-[clamp(4rem,9vw,8.8rem)] leading-[0.78] text-[#172019]">
               Learn what
-              <span className="ml-[0.7em] block italic text-[#c84b31]">to say.</span>
+              <span className="ml-[0.7em] block italic text-[#ad3f29]">to say.</span>
               <span className="block">Say it better.</span>
             </h1>
 
@@ -79,8 +87,8 @@ export default function HomePage() {
           </div>
 
           <div className="reveal-up reveal-up-delay-2 relative lg:col-span-5 lg:pl-4">
-            <div className="absolute -left-2 top-5 hidden h-40 w-px bg-[#c84b31] lg:block" />
-            <p className="absolute -left-8 top-52 hidden font-mono text-[10px] uppercase tracking-[0.22em] text-[#8a8175] [writing-mode:vertical-rl] lg:block">
+            <div className="absolute -left-2 top-5 hidden h-40 w-px bg-[#ad3f29] lg:block" />
+            <p className="absolute -left-8 top-52 hidden font-mono text-[10px] uppercase tracking-[0.22em] text-[#665f55] [writing-mode:vertical-rl] lg:block">
               Today&apos;s micro lesson
             </p>
             <article className="paper-surface margin-note paper-rule relative mx-auto max-w-[520px] px-6 py-7 sm:px-10 sm:py-10">
@@ -90,7 +98,7 @@ export default function HomePage() {
               </div>
 
               <div className="py-8">
-                <p className="font-serif text-[13px] italic text-[#8a8175]">Respond &amp; Build</p>
+                <p className="font-serif text-[13px] italic text-[#665f55]">Respond &amp; Build</p>
                 <h2 className="mt-2 font-serif text-[38px] leading-tight tracking-[-0.04em] sm:text-[48px]">回應，再加入新資訊</h2>
                 <p className="mt-5 max-w-md text-[15px] leading-7 text-[#5e5b53]">
                   有效互動不是只說 I agree，而是指出對方的觀點、表明你的反應，再加入一項新資訊。
@@ -110,7 +118,7 @@ export default function HomePage() {
 
               <Link href="/learn/group-discussion/respond-and-build" className="mt-6 flex items-center justify-between text-sm font-semibold">
                 開始這一課
-                <ArrowDownRight className="h-5 w-5 text-[#c84b31]" />
+                <ArrowDownRight className="h-5 w-5 text-[#ad3f29]" />
               </Link>
             </article>
           </div>
@@ -131,7 +139,7 @@ export default function HomePage() {
         <section className="mx-auto max-w-[1440px] px-4 py-24 sm:px-7 lg:px-10 lg:py-32">
           <div className="grid gap-12 lg:grid-cols-12">
             <div className="lg:col-span-4">
-              <p className="eyebrow text-[#c84b31]">A repeatable learning loop</p>
+              <p className="eyebrow text-[#ad3f29]">A repeatable learning loop</p>
               <h2 className="display-title mt-4 max-w-sm text-5xl leading-[0.92] sm:text-6xl">每一次練習，都知道自己在改善甚麼。</h2>
             </div>
             <div className="lg:col-span-8 lg:pl-10">
@@ -139,7 +147,7 @@ export default function HomePage() {
                 const Icon = step.icon;
                 return (
                   <article key={step.number} className="group grid gap-5 border-t border-[#9f9687] py-7 sm:grid-cols-[56px_1fr_48px] sm:items-start">
-                    <span className="font-mono text-xs text-[#8a8175]">{step.number}</span>
+                    <span className="font-mono text-xs text-[#665f55]">{step.number}</span>
                     <div>
                       <h3 className="font-serif text-3xl tracking-[-0.03em]">{step.title}</h3>
                       <p className="mt-2 max-w-xl text-[15px] leading-7 text-[#6d695f]">{step.description}</p>
@@ -162,7 +170,7 @@ export default function HomePage() {
                 <MessageCircleMore className="h-8 w-8 stroke-[1.25]" />
               </div>
               <div className="my-auto py-14">
-                <p className="font-mono text-xs text-[#8a8175]">6 SHORT LESSONS</p>
+                <p className="font-mono text-xs text-[#665f55]">6 SHORT LESSONS</p>
                 <h2 className="display-title mt-4 text-[clamp(3.3rem,6vw,6.5rem)] leading-[0.84]">Group<br /><span className="italic text-[#48634c]">Discussion</span></h2>
                 <p className="mt-7 max-w-lg text-base leading-8 text-[#5e5b53]">學會開場、接話、反駁、澄清、邀請、轉題與總結。重點不是搶著說，而是令整組討論向前。</p>
               </div>
@@ -174,12 +182,12 @@ export default function HomePage() {
 
             <article className="group flex min-h-[560px] flex-col bg-[#faf7ef] p-6 sm:p-10 lg:p-14">
               <div className="flex items-start justify-between">
-                <span className="eyebrow text-[#c84b31]">Track B · Structure</span>
+                <span className="eyebrow text-[#ad3f29]">Track B · Structure</span>
                 <Mic2 className="h-8 w-8 stroke-[1.25]" />
               </div>
               <div className="my-auto py-14">
-                <p className="font-mono text-xs text-[#8a8175]">5 RESPONSE TYPES</p>
-                <h2 className="display-title mt-4 text-[clamp(3.3rem,6vw,6.5rem)] leading-[0.84]">Individual<br /><span className="italic text-[#c84b31]">Response</span></h2>
+                <p className="font-mono text-xs text-[#665f55]">5 RESPONSE TYPES</p>
+                <h2 className="display-title mt-4 text-[clamp(3.3rem,6vw,6.5rem)] leading-[0.84]">Individual<br /><span className="italic text-[#ad3f29]">Response</span></h2>
                 <p className="mt-7 max-w-lg text-base leading-8 text-[#5e5b53]">掌握選擇、建議、經驗、原因與意見五種常見題型。從 1 分鐘準備到完整錄音，建立穩定答案骨架。</p>
               </div>
               <Link href="/learn/individual-response" className="flex items-center justify-between border-t border-[#bdb3a2] pt-5 text-sm font-semibold">
@@ -193,10 +201,10 @@ export default function HomePage() {
         <section className="mx-auto max-w-[1440px] px-4 py-24 sm:px-7 lg:px-10 lg:py-32">
           <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="eyebrow text-[#8a8175]">Past paper practice</p>
+              <p className="eyebrow text-[#665f55]">Past paper practice</p>
               <h2 className="display-title mt-3 text-5xl sm:text-6xl">把方法帶入真題。</h2>
             </div>
-            <Link href="/papers" className="flex items-center gap-2 text-sm font-semibold underline decoration-[#c84b31] underline-offset-8">
+            <Link href="/papers" className="flex items-center gap-2 text-sm font-semibold underline decoration-[#ad3f29] underline-offset-8">
               瀏覽全部題目 <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -204,7 +212,7 @@ export default function HomePage() {
           <div className="grid gap-px border border-[#bdb3a2] bg-[#bdb3a2] md:grid-cols-3">
             {paperPrompts.map((paper) => (
               <Link key={`${paper.year}-${paper.title}`} href="/papers" className="group flex min-h-72 flex-col bg-[#f3efe4] p-6 transition-colors hover:bg-[#faf7ef] sm:p-8">
-                <span className="font-mono text-xs text-[#c84b31]">{paper.year}</span>
+                <span className="font-mono text-xs text-[#ad3f29]">{paper.year}</span>
                 <h3 className="mt-12 font-serif text-3xl leading-tight tracking-[-0.03em]">{paper.title}</h3>
                 <div className="mt-auto flex items-end justify-between border-t border-[#bdb3a2] pt-5">
                   <span className="text-xs text-[#6d695f]">{paper.focus}</span>
@@ -218,7 +226,7 @@ export default function HomePage() {
         <section className="bg-[#48634c] text-[#faf7ef]">
           <div className="mx-auto grid max-w-[1440px] gap-12 px-4 py-20 sm:px-7 lg:grid-cols-12 lg:px-10 lg:py-28">
             <div className="lg:col-span-8">
-              <p className="eyebrow text-[#d9d1c2]">Start with a two-minute check-in</p>
+              <p className="eyebrow text-[#eee7da]">Start with a two-minute check-in</p>
               <h2 className="display-title mt-5 max-w-4xl text-5xl leading-[0.92] sm:text-7xl">不用猜自己應該先學甚麼。</h2>
             </div>
             <div className="flex flex-col justify-end lg:col-span-4">

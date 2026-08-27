@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { cache } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -10,7 +12,9 @@ import { Button } from "@/components/ui/button";
 import { ForumPostCard } from "@/components/forum/forum-post-card";
 import { PostActionBar } from "@/components/forum/post-action-bar";
 import { CommentForm } from "@/components/forum/comment-form";
+import { JsonLd } from "@/components/seo/json-ld";
 import { fetchForumPostDetail } from "@/lib/forum/server";
+import { absoluteUrl, buildPageMetadata, SITE_NAME, SITE_ORIGIN, truncateSeoText } from "@/lib/seo";
 import {
   buildPaperHref,
   formatPaperShortLabel,
@@ -19,19 +23,58 @@ import {
 } from "@/lib/forum/constants";
 
 type Params = Promise<{ slug: string }>;
+type Props = { params: Params };
+const getForumPostDetail = cache(fetchForumPostDetail);
 
-export default async function ForumPostDetailPage({
-  params,
-}: {
-  params: Params;
-}) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const { post } = await getForumPostDetail(slug);
+  if (!post) return {};
+
+  return buildPageMetadata({
+    title: truncateSeoText(post.title, 58),
+    description: truncateSeoText(post.excerpt_text, 155),
+    path: `/forum/${slug}`,
+    type: "article",
+  });
+}
+
+export default async function ForumPostDetailPage({ params }: Props) {
   const { slug } = await params;
   const { post, comments, relatedPosts, userState, forumReady } =
-    await fetchForumPostDetail(slug);
+    await getForumPostDetail(slug);
 
   if (!post) {
     notFound();
   }
+  const url = absoluteUrl(`/forum/${slug}`);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "DiscussionForumPosting",
+    "@id": `${url}#post`,
+    headline: post.title,
+    articleBody: post.content,
+    description: post.excerpt_text,
+    url,
+    datePublished: post.created_at,
+    dateModified: post.updated_at,
+    commentCount: comments.length,
+    inLanguage: "zh-Hant-HK",
+    author: {
+      "@type": "Person",
+      name: post.author?.display_name || "DSE Candidate",
+    },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_ORIGIN,
+    },
+    isPartOf: {
+      "@type": "DiscussionForum",
+      name: "DSE Speaking 討論中心",
+      url: absoluteUrl("/forum"),
+    },
+  };
 
   const topLevelComments = comments.filter((comment) => !comment.parent_id);
   const childMap = new Map<string, typeof comments>();
@@ -45,6 +88,7 @@ export default async function ForumPostDetailPage({
 
   return (
     <div className="min-h-screen bg-[#f7f6f2]">
+      <JsonLd data={jsonLd} />
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">

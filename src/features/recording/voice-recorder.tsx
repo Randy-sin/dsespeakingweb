@@ -213,21 +213,21 @@ export function VoiceRecorder({ maxSeconds = 60, mode, task, onTranscriptChange,
 
   return (
     <div className="border border-[#bdb3a2] bg-[#faf7ef] p-5 sm:p-7">
-      <div className="flex items-center justify-between"><p className="eyebrow text-[#8a8175]">Your response</p><span className={`h-2.5 w-2.5 rounded-full ${state === "recording" ? "animate-pulse bg-[#c84b31]" : "bg-[#bdb3a2]"}`} /></div>
+      <div className="flex items-center justify-between"><p className="eyebrow text-[#665f55]">Your response</p><span className={`h-2.5 w-2.5 rounded-full ${state === "recording" ? "animate-pulse bg-[#ad3f29]" : "bg-[#bdb3a2]"}`} /></div>
       {user && state === "idle" ? <label className="mt-5 flex items-center gap-3 text-xs text-[#6d695f]"><input type="checkbox" checked={syncRecording} onChange={(event) => setSyncRecording(event.target.checked)} className="h-4 w-4 accent-[#48634c]" />把本次錄音儲存到我的私人帳號</label> : null}
       {state === "text" ? (
         <div className="mt-6"><p className="text-sm leading-7 text-[#6d695f]">已切換到文字模式。請在下方的「逐字稿草稿」輸入你原本會說的答案。</p><Button variant="ghost" onClick={reset} className="mt-3 rounded-full"><RotateCcw className="mr-2 h-4 w-4" />返回錄音模式</Button></div>
       ) : (
         <div className="mt-8 text-center">
-          <p className="font-mono text-5xl tracking-[-0.07em]">{formatted}</p><p className="mt-2 font-mono text-[10px] text-[#8a8175]">LIMIT {Math.floor(maxSeconds / 60)}:{String(maxSeconds % 60).padStart(2, "0")}</p>
+          <p className="font-mono text-5xl tracking-[-0.07em]">{formatted}</p><p className="mt-2 font-mono text-[10px] text-[#665f55]">LIMIT {Math.floor(maxSeconds / 60)}:{String(maxSeconds % 60).padStart(2, "0")}</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {state === "idle" ? <Button onClick={startRecording} className="h-[52px] rounded-full bg-[#c84b31] px-7 text-white hover:bg-[#aa3d27]"><Mic className="mr-2 h-4 w-4" />開始錄音</Button> : null}
+            {state === "idle" ? <Button onClick={startRecording} className="h-[52px] rounded-full bg-[#ad3f29] px-7 text-white hover:bg-[#aa3d27]"><Mic className="mr-2 h-4 w-4" />開始錄音</Button> : null}
             {state === "recording" ? <Button onClick={() => recorderRef.current?.stop()} className="h-[52px] rounded-full bg-[#172019] px-7 text-white"><Square className="mr-2 h-4 w-4" />完成錄音</Button> : null}
             {state === "recorded" && audioUrl ? <><audio controls src={audioUrl} className="w-full max-w-md" />{user ? <Button onClick={transcribeRecording} disabled={transcribing} className="rounded-full bg-[#48634c] px-5 text-white hover:bg-[#384f3c]">{transcribing ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <FileAudio className="mr-2 h-4 w-4" />}生成 AI 逐字稿</Button> : null}<Button onClick={reset} variant="outline" className="rounded-full border-[#9f9687]"><RotateCcw className="mr-2 h-4 w-4" />重錄</Button></> : null}
           </div>
           {error ? <p role="alert" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#a74231]">{error}</p> : null}
           {saveMessage ? <p role="status" className="mx-auto mt-5 max-w-md text-sm leading-6 text-[#48634c]">{saveMessage}</p> : null}
-          {state === "recorded" && user ? <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-[#8a8175]">按下「生成 AI 逐字稿」後，錄音會轉成 WAV 並傳送到火山引擎進行識別；逐字稿會儲存到你的私人記錄。原始錄音只會在勾選上方選項時儲存。</p> : null}
+          {state === "recorded" && user ? <p className="mx-auto mt-4 max-w-xl text-xs leading-5 text-[#665f55]">按下「生成 AI 逐字稿」後，錄音會轉成 WAV 並傳送到火山引擎進行識別；逐字稿會儲存到你的私人記錄。原始錄音只會在勾選上方選項時儲存。</p> : null}
           {state === "idle" || error ? <button type="button" onClick={() => setState("text")} className="mt-5 inline-flex items-center gap-2 text-xs text-[#6d695f] underline underline-offset-4"><Type className="h-3.5 w-3.5" />改用文字模式</button> : null}
         </div>
       )}

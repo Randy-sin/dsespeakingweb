@@ -30,13 +30,13 @@ export function LearningDashboard() {
       <main id="main-content">
         <section className="mx-auto grid min-h-[680px] max-w-[1440px] items-center gap-12 px-4 py-16 sm:px-7 lg:grid-cols-12 lg:px-10">
           <div className="lg:col-span-7">
-            <p className="eyebrow text-[#c84b31]">Your learning path</p>
+            <p className="eyebrow text-[#ad3f29]">Your learning path</p>
             <h1 className="display-title mt-5 max-w-4xl text-6xl leading-[0.88] sm:text-8xl">先找出最值得改善的一步。</h1>
             <p className="mt-7 max-w-xl text-base leading-8 text-[#6d695f]">
               完成兩分鐘診斷，我們會按照你的信心、弱項和每週時間安排第一課。你也可以先看課程，不必建立帳戶。
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Button asChild className="h-12 rounded-full bg-[#c84b31] px-6 text-white hover:bg-[#aa3d27]">
+              <Button asChild className="h-12 rounded-full bg-[#ad3f29] px-6 text-white hover:bg-[#aa3d27]">
                 <Link href="/onboarding">開始能力診斷<ArrowRight className="h-4 w-4" /></Link>
               </Button>
               <Button asChild variant="outline" className="h-12 rounded-full border-[#9f9687] bg-transparent px-6">
@@ -108,19 +108,19 @@ export function LearningDashboard() {
     <main id="main-content" className="mx-auto max-w-[1440px] px-4 py-12 sm:px-7 lg:px-10 lg:py-16">
       <div className="grid gap-10 lg:grid-cols-12">
         <aside className="lg:col-span-2">
-          <p className="eyebrow text-[#8a8175]">{profile.examYear} Candidate</p>
+          <p className="eyebrow text-[#665f55]">{profile.examYear} Candidate</p>
           <div className="mt-5 h-1 bg-[#d7cebd]" aria-label={`已完成 ${percentage}%`}>
-            <div className="h-full bg-[#c84b31]" style={{ width: `${percentage}%` }} />
+            <div className="h-full bg-[#ad3f29]" style={{ width: `${percentage}%` }} />
           </div>
           <p className="mt-3 font-mono text-xs text-[#6d695f]">{progress.completedLessons.length} / {allLessons.length} LESSONS</p>
           <div className="mt-9 border-l border-[#bdb3a2] pl-4">
-            <p className="eyebrow text-[#8a8175]">Last active</p>
+            <p className="eyebrow text-[#665f55]">Last active</p>
             <p className="mt-2 text-sm font-semibold">{lastActive}</p>
           </div>
         </aside>
 
         <section className="lg:col-span-7">
-          <p className="eyebrow text-[#c84b31]">Today&apos;s one task</p>
+          <p className="eyebrow text-[#ad3f29]">Today&apos;s one task</p>
           <h1 className="display-title mt-4 text-5xl leading-[0.95] sm:text-7xl">
             {nextLesson ? nextLesson.title : "把方法帶入一次完整練習。"}
           </h1>
@@ -189,7 +189,7 @@ function DashboardStat({ icon: Icon, label, value }: { icon: typeof Route; label
   return (
     <div className="border border-[#bdb3a2] bg-[#faf7ef] p-5">
       <Icon className="h-5 w-5 text-[#48634c]" />
-      <p className="eyebrow mt-6 text-[#8a8175]">{label}</p>
+      <p className="eyebrow mt-6 text-[#665f55]">{label}</p>
       <p className="mt-2 font-serif text-2xl">{value}</p>
     </div>
   );

@@ -17,7 +17,7 @@ export function CourseMap({ mode, lessons }: { mode: PracticeMode; lessons: Less
         <p className="text-sm text-[#5e5b53]">
           <span className="font-semibold text-[#172019]">{completedCount} / {lessons.length}</span> 課完成
         </p>
-        <p className="text-xs leading-5 text-[#8a8175]">所有課程都可以瀏覽；「下一課」只代表建議次序。</p>
+        <p className="text-xs leading-5 text-[#665f55]">所有課程都可以瀏覽；「下一課」只代表建議次序。</p>
       </div>
 
       <div className="relative">
@@ -34,7 +34,7 @@ export function CourseMap({ mode, lessons }: { mode: PracticeMode; lessons: Less
                     done
                       ? "border-[#48634c] bg-[#48634c] text-white"
                       : recommended
-                        ? "border-[#c84b31] bg-[#c84b31] text-white"
+                        ? "border-[#ad3f29] bg-[#ad3f29] text-white"
                         : "border-[#a79d8c] bg-[#f3efe4]"
                   }`}
                 >
@@ -45,14 +45,14 @@ export function CourseMap({ mode, lessons }: { mode: PracticeMode; lessons: Less
                   href={`${base}/${lesson.slug}`}
                   className={`group grid gap-5 border p-5 transition-colors sm:grid-cols-[1fr_auto] sm:items-center sm:p-6 ${
                     recommended
-                      ? "border-[#c84b31] bg-[#faf7ef]"
+                      ? "border-[#ad3f29] bg-[#faf7ef]"
                       : "border-[#bdb3a2] bg-[#faf7ef] hover:border-[#48634c] hover:bg-white"
                   }`}
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="eyebrow text-[#c84b31]">{lesson.skill}</span>
-                      <span className="flex items-center gap-1 font-mono text-[10px] text-[#8a8175]"><Clock3 className="h-3 w-3" />{lesson.duration} MIN</span>
+                      <span className="eyebrow text-[#ad3f29]">{lesson.skill}</span>
+                      <span className="flex items-center gap-1 font-mono text-[10px] text-[#665f55]"><Clock3 className="h-3 w-3" />{lesson.duration} MIN</span>
                       <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-[#48634c]">
                         {done ? "已完成" : recommended ? "建議下一課" : "可瀏覽"}
                       </span>

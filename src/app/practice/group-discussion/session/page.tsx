@@ -24,12 +24,12 @@ export default async function GroupDiscussionSessionPage({ searchParams }: { sea
           <section>
             <p className="eyebrow text-[#48634c]">Guided simulation · {selected.title}</p>
             <h1 className="mt-5 font-serif text-4xl leading-tight sm:text-5xl">{selected.prompt}</h1>
-            <div className="mt-8 border-l border-[#c84b31] pl-5"><p className="eyebrow text-[#8a8175]">Your move</p><p className="mt-3 text-sm leading-7 text-[#6d695f]">You mentioned … → I agree / I see the point, but … → Add one reason or example → Invite a response.</p></div>
+            <div className="mt-8 border-l border-[#ad3f29] pl-5"><p className="eyebrow text-[#665f55]">Your move</p><p className="mt-3 text-sm leading-7 text-[#6d695f]">You mentioned … → I agree / I see the point, but … → Add one reason or example → Invite a response.</p></div>
             <div className="mt-10"><PracticeCoach maxSeconds={45} mode="group-discussion" task={selected.prompt} /></div>
           </section>
           <aside className="space-y-4">
             <div className="paper-surface paper-rule p-6"><MessageCircleMore className="h-5 w-5 text-[#48634c]" /><p className="mt-5 font-serif text-2xl">完成標準</p><ul className="mt-5 space-y-3 text-sm leading-6 text-[#6d695f]">{["點出上一位同學的具體觀點", "清楚表明同意、補充或反駁", "加入新的原因、例子或限制", "留下讓別人接話的位置"].map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 h-3.5 w-3.5 shrink-0 text-[#48634c]" />{item}</li>)}</ul></div>
-            <p className="border-l border-[#c84b31] pl-4 text-xs leading-6 text-[#8a8175]">登入後可讓 AI 組員針對你逐字稿中的具體觀點接話。它只負責延續討論，不會冒充考官或給出官方分數。</p>
+            <p className="border-l border-[#ad3f29] pl-4 text-xs leading-6 text-[#665f55]">登入後可讓 AI 組員針對你逐字稿中的具體觀點接話。它只負責延續討論，不會冒充考官或給出官方分數。</p>
           </aside>
         </div>
       </main>

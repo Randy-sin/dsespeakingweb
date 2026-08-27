@@ -4,6 +4,14 @@ import { Button } from "@/components/ui/button";
 import { PaperCard } from "@/components/papers/paper-card";
 import { fetchPaperCatalog } from "@/lib/forum/server";
 import { Search, LibraryBig, ArrowRight } from "lucide-react";
+import { buildPageMetadata } from "@/lib/seo";
+
+export const metadata = buildPageMetadata({
+  title: "DSE Speaking Past Paper 歷屆口試真題",
+  description:
+    "瀏覽 HKDSE English Paper 4 歷屆 Speaking Past Paper，查看 Part A Group Discussion 和 Part B Individual Response 題目並直接練習。",
+  path: "/papers",
+});
 
 type SearchParams = Promise<{
   q?: string;

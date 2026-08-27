@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/navbar";
 import { ArrowLeft } from "lucide-react";
 import { speaking2026Papers } from "@/lib/papers/speaking-2026";
+import { buildPageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "2026 DSE Speaking | DSE Speaking",
+export const metadata: Metadata = buildPageMetadata({
+  title: "2026 DSE Speaking 題目整理",
   description:
-    "2026 DSE Speaking Paper 4 題目整理，包含 Part A Group Interaction 和 Part B Individual Response。",
-};
+    "2026 DSE English Paper 4 口試題目整理，包含 Part A Group Interaction 討論點和 Part B Individual Response 問題。",
+  path: "/papers/2026-speaking",
+});
 
 export default function Speaking2026Page() {
   return (

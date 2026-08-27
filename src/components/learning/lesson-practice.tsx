@@ -20,8 +20,8 @@ export function LessonPractice({ lesson }: { lesson: Lesson }) {
 
   return (
     <section className="border-t border-[#bdb3a2] pt-9">
-      <div className="flex items-start gap-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#c84b31] font-mono text-xs text-white">04</span><div><p className="eyebrow text-[#c84b31]">Try it now</p><h2 className="mt-2 font-serif text-3xl">輪到你把方法說出來</h2></div></div>
-      <div className="paper-surface mt-7 p-5 sm:p-7"><p className="eyebrow text-[#8a8175]">Prompt</p><p className="mt-4 font-serif text-2xl leading-9">{lesson.prompt}</p></div>
+      <div className="flex items-start gap-4"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#ad3f29] font-mono text-xs text-white">04</span><div><p className="eyebrow text-[#ad3f29]">Try it now</p><h2 className="mt-2 font-serif text-3xl">輪到你把方法說出來</h2></div></div>
+      <div className="paper-surface mt-7 p-5 sm:p-7"><p className="eyebrow text-[#665f55]">Prompt</p><p className="mt-4 font-serif text-2xl leading-9">{lesson.prompt}</p></div>
       <label htmlFor="practice-note" className="mt-7 block text-sm font-semibold">先寫下三個關鍵詞或你的答案骨架</label>
       <Textarea id="practice-note" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder="只寫關鍵詞，不需要準備完整稿……" className="mt-3 min-h-32 border-[#bdb3a2] bg-[#faf7ef] text-base leading-7 focus-visible:ring-[#48634c]" />
       {!completed ? (
