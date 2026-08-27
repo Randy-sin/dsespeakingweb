@@ -79,7 +79,14 @@ export async function saveDiscussionTurns(input: SaveBase, aiResponse: string) {
   const feedback = { ...previousFeedback, aiTeammate: { kind: "ai_teammate_turn", evidenceSource: "learner_transcript" } };
   const session = await ensureSession(input, feedback, "analyzed");
   const { error } = await input.supabase.from("practice_turns").upsert([
-    { session_id: session.id, user_id: input.userId, sequence_number: 1, speaker: "learner", transcript: input.transcript },
+    {
+      session_id: session.id,
+      user_id: input.userId,
+      sequence_number: 1,
+      speaker: "learner",
+      transcript: input.transcript,
+      evidence_feedback: Object.keys(previousFeedback).length > 0 ? previousFeedback : null,
+    },
     { session_id: session.id, user_id: input.userId, sequence_number: 2, speaker: "ai", transcript: aiResponse, evidence_feedback: feedback },
   ], { onConflict: "session_id,sequence_number" });
   if (error) {
