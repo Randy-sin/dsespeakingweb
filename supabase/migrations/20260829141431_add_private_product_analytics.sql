@@ -45,6 +45,7 @@ create table if not exists private.product_events (
       'transcription_failed',
       'analysis_completed',
       'analysis_failed',
+      'basic_coaching_delivered',
       'discussion_turn_completed',
       'discussion_completed',
       'auth_started',

@@ -82,6 +82,7 @@ const eventLabels: Record<string, string> = {
   transcription_failed: "逐字稿失敗",
   analysis_completed: "取得 AI 評析",
   analysis_failed: "AI 評析失敗",
+  basic_coaching_delivered: "收到基本教練提示",
   discussion_turn_completed: "完成討論回合",
   discussion_completed: "討論流程結束",
   auth_started: "開始登入",

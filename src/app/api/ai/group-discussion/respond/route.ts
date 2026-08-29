@@ -1,7 +1,8 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { bucketLatency, classifyAnalyticsOutcome, type ProductEventErrorCode } from "@/lib/analytics/events";
 import { recordServerProductEvent } from "@/lib/analytics/server";
-import { probeDoubaoRealtime } from "@/lib/ai/doubao-realtime";
+import { buildBasicDiscussionDrill } from "@/lib/ai/basic-coaching";
+import { DoubaoRealtimeEntitlementError, probeDoubaoRealtime } from "@/lib/ai/doubao-realtime";
 import { buildGroupDiscussionPrompt, normaliseLearningText, parseGroupDiscussionResponse } from "@/lib/ai/learning-prompts";
 import { AiRateLimitError, consumeAiRateLimit, requireAiUser, requireSameOriginJsonRequest } from "@/lib/ai/require-user";
 import { saveDiscussionTurns } from "@/lib/learning/practice-persistence";
@@ -38,7 +39,48 @@ export async function POST(request: NextRequest) {
     const paperId = parseOptionalUuid(body.paperId, "paperId");
     analyticsContentId = paperId ?? undefined;
     await consumeAiRateLimit(supabase, "teammate");
-    const result = await probeDoubaoRealtime({ text: buildGroupDiscussionPrompt(context, learnerTurn, { partnerRole, previousTurns }), model: "O", timeoutMs: 20_000 });
+    let result;
+    try {
+      result = await probeDoubaoRealtime({ text: buildGroupDiscussionPrompt(context, learnerTurn, { partnerRole, previousTurns }), model: "O", timeoutMs: 20_000 });
+    } catch (providerError) {
+      if (!(providerError instanceof DoubaoRealtimeEntitlementError)) throw providerError;
+
+      const basicCoaching = buildBasicDiscussionDrill(learnerTurn);
+      after(async () => {
+        await Promise.all([
+          recordServerProductEvent(request, {
+            name: "flow_error",
+            surface: "practice",
+            context: "practice-session",
+            mode: "group-discussion",
+            outcome: "failure",
+            errorCode: "discussion-failed",
+            latencyBucket: bucketLatency(Date.now() - startedAt),
+            authState: "authenticated",
+            contentId: analyticsContentId,
+            round: requestedRound,
+          }),
+          recordServerProductEvent(request, {
+            name: "basic_coaching_delivered",
+            surface: "practice",
+            context: "practice-session",
+            mode: "group-discussion",
+            outcome: "success",
+            authState: "authenticated",
+            contentId: analyticsContentId,
+            round: requestedRound,
+          }),
+        ]);
+      });
+      return NextResponse.json({
+        ok: true,
+        resultMode: "basic_coaching",
+        basicCoaching,
+        round: requestedRound,
+        persisted: false,
+        evidenceSource: "local_rules",
+      });
+    }
     const response = parseGroupDiscussionResponse(result.chatText);
     const savedSessionId = await saveDiscussionTurns({ supabase, userId: user.id, mode: "group-discussion", task: context, transcript: learnerTurn, sessionId, paperId }, response);
     after(() => recordServerProductEvent(request, {
@@ -52,7 +94,7 @@ export async function POST(request: NextRequest) {
       contentId: analyticsContentId,
       round: requestedRound,
     }));
-    return NextResponse.json({ ok: true, response, partnerRole, round: requestedRound, sessionId: savedSessionId, persisted: true, latencyMs: result.latencyMs });
+    return NextResponse.json({ ok: true, resultMode: "ai_teammate", response, partnerRole, round: requestedRound, sessionId: savedSessionId, persisted: true, latencyMs: result.latencyMs });
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI response failed";
     const status = error instanceof AiRateLimitError

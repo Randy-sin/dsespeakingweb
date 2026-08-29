@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { BasicAssessmentCoaching } from "@/lib/ai/basic-coaching";
 import type { PracticeAssessment } from "@/lib/ai/practice-assessment";
 import type { PracticeMode } from "@/lib/learning/types";
 
@@ -61,6 +62,17 @@ export async function saveAssessment(input: SaveBase, assessment: PracticeAssess
     await rollbackCreatedSession(input.supabase, session.id, session.created);
     throw new Error("Unable to save the private assessment");
   }
+  return session.id;
+}
+
+export async function saveBasicCoaching(input: SaveBase, basicCoaching: BasicAssessmentCoaching) {
+  const feedback = {
+    kind: "deterministic_basic_coaching",
+    evidenceSource: "local_rules",
+    providerStatus: "degraded",
+    basicCoaching,
+  };
+  const session = await ensureSession(input, feedback, "analyzed");
   return session.id;
 }
 

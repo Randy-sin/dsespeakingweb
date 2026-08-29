@@ -42,6 +42,8 @@ Request body:
 
 成功後，介面會傳回 AI 組員的回應，並把學習者與 AI 的兩次發言儲存到使用者自己的 `practice_sessions` 和 `practice_turns` 記錄。
 
+如果豆包明確傳回 `volc.speech.dialog` 未獲授權，介面會改為傳回規則式討論練習卡。練習卡不會冒充 AI 組員、不會寫入 AI 發言，也不會增加已完成討論輪次。
+
 ### 2) POST `/api/ai/practice/analyze`
 
 Purpose:
@@ -62,6 +64,8 @@ Request body:
 
 介面會傳回四個基於逐字稿的訓練維度。每個維度包含 `trainingLevel`、`evidence` 和 `nextStep`。介面不會評估發音、可聽流暢度、節奏或眼神交流，也不會傳回官方考試分數。
 
+如果豆包明確傳回 `volc.speech.dialog` 未獲授權，介面會改為傳回規則式基本提示。基本提示只檢查字數、句段和明確出現的連接或互動句型，不會傳回 `trainingLevel`，也不會標示為 AI 評分。
+
 ### 3) POST `/api/ai/transcribe`
 
 用途：
@@ -75,11 +79,29 @@ Request body:
 主要回應欄位：
 
 - `ok`
-- `assessment` 或 `response`
+- `resultMode`：`ai_assessment`、`ai_teammate` 或 `basic_coaching`
+- `assessment`、`response` 或 `basicCoaching`，由 `resultMode` 決定
 - `sessionId`
 - `persisted`
 - `latencyMs`
-- `evidenceSource`（仅分析接口）
+- `evidenceSource`（僅分析介面）
+
+## 供應商未授權時的行為
+
+只有以下條件全部成立時，分析與討論介面才使用規則式基本提示：
+
+1. 豆包 WebSocket 握手傳回 HTTP `403`。
+2. JSON 錯誤內容明確包含 `requested resource not granted`。
+
+其他認證錯誤、限流、輸入錯誤、模型輸出解析錯誤和資料儲存錯誤仍會使要求失敗。系統不會用基本提示掩蓋這些錯誤。
+
+`/api/ai/transcribe` 不提供規則式降級。系統不能在沒有語音識別服務時推測或生成逐字稿。
+
+分析資料會分開記錄：
+
+- 真正 AI 成功使用 `analysis_completed` 或 `discussion_turn_completed`。
+- 規則式基本提示使用 `basic_coaching_delivered`，不計入 AI 學習價值漏斗。
+- 供應商授權失敗仍保留 `analysis_failed` 或 `flow_error`，用於監控服務異常。
 
 ## Notes for Frontend Integration
 
@@ -96,6 +118,7 @@ Request body:
 - `413 Request body is too large`：JSON 要求或錄音超過介面限制。
 - `415 Unsupported content type`：要求內容或錄音格式不受支援。
 - `503 Transcription service is not enabled...`：目前火山應用程式未開通 `volc.bigasr.auc_turbo`，或權限尚未生效。
+- WebSocket HTTP `403`，內容包含 `requested resource not granted`：目前 APP ID 尚未獲授 `volc.speech.dialog`。在豆包語音控制台為同一應用開通端到端實時語音大模型，再重新執行正式環境驗收。
 - `500 ... failure event`: upstream realtime returned failure frame or session failed.
 - Timeout errors:
   - increase `timeoutMs` to 20-30s for unstable networks.

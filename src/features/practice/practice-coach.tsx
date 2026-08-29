@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { VoiceRecorder, type RecorderState } from "@/features/recording/voice-recorder";
 import { useUser } from "@/hooks/use-user";
 import { trackProductEvent } from "@/lib/analytics/client";
+import type { BasicAssessmentCoaching, BasicDiscussionDrill } from "@/lib/ai/basic-coaching";
 import type { PracticeAssessment } from "@/lib/ai/practice-assessment";
 import type { PracticeMode } from "@/lib/learning/types";
 
@@ -19,16 +20,25 @@ type PracticeCoachProps = {
   onBeforeLogin?: () => void;
 };
 
-type AiFeedbackResponse = {
-  ok?: boolean;
-  feedback?: string;
-  assessment?: PracticeAssessment;
-  response?: string;
-  partnerRole?: "Student A" | "Student B";
-  round?: number;
-  sessionId?: string;
-  error?: string;
-};
+type AiFeedbackSuccess =
+  | {
+      resultMode: "ai_assessment";
+      assessment: PracticeAssessment;
+      sessionId?: string;
+    }
+  | {
+      resultMode: "ai_teammate";
+      response: string;
+      partnerRole: "Student A" | "Student B";
+      round: number;
+      sessionId?: string;
+    }
+  | {
+      resultMode: "basic_coaching";
+      basicCoaching: BasicAssessmentCoaching | BasicDiscussionDrill;
+      sessionId?: string;
+      persisted: boolean;
+    };
 
 type DiscussionTurn = {
   speaker: "learner" | "ai";
@@ -53,14 +63,50 @@ const selfCheckItems: Record<PracticeMode, Array<{ id: string; label: string }>>
   ],
 };
 
-async function readAiResponse(response: Response) {
-  const data = (await response.json()) as AiFeedbackResponse;
-  if (!response.ok || !data.ok) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+async function readAiResponse(response: Response): Promise<AiFeedbackSuccess> {
+  const data: unknown = await response.json();
+  const record = isRecord(data) ? data : {};
+  if (!response.ok || record.ok !== true) {
     if (response.status === 401) throw new Error("請先登入，再使用 AI 教練。");
     if (response.status === 429) throw new Error("你剛才的 AI 練習次數較多，請稍後再試。逐字稿仍保留在本頁。");
-    throw new Error(data.error || "AI 教練暫時未能回應，請稍後再試。");
+    throw new Error(typeof record.error === "string" ? record.error : "AI 教練暫時未能回應，請稍後再試。");
   }
-  return data;
+
+  const sessionId = typeof record.sessionId === "string" ? record.sessionId : undefined;
+  if (record.resultMode === "ai_assessment" && isRecord(record.assessment)) {
+    return { resultMode: "ai_assessment", assessment: record.assessment as PracticeAssessment, sessionId };
+  }
+  if (
+    record.resultMode === "ai_teammate" &&
+    typeof record.response === "string" &&
+    (record.partnerRole === "Student A" || record.partnerRole === "Student B") &&
+    typeof record.round === "number"
+  ) {
+    return {
+      resultMode: "ai_teammate",
+      response: record.response,
+      partnerRole: record.partnerRole,
+      round: record.round,
+      sessionId,
+    };
+  }
+  if (
+    record.resultMode === "basic_coaching" &&
+    isRecord(record.basicCoaching) &&
+    (record.basicCoaching.kind === "assessment" || record.basicCoaching.kind === "discussion")
+  ) {
+    return {
+      resultMode: "basic_coaching",
+      basicCoaching: record.basicCoaching as BasicAssessmentCoaching | BasicDiscussionDrill,
+      sessionId,
+      persisted: record.persisted === true,
+    };
+  }
+  throw new Error("教練服務返回了無法辨認的結果；逐字稿仍保留，請稍後重試。");
 }
 
 export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }: PracticeCoachProps) {
@@ -68,6 +114,8 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const router = useRouter();
   const [transcript, setTranscript] = useState("");
   const [assessment, setAssessment] = useState<PracticeAssessment | null>(null);
+  const [basicAssessment, setBasicAssessment] = useState<BasicAssessmentCoaching | null>(null);
+  const [discussionDrill, setDiscussionDrill] = useState<BasicDiscussionDrill | null>(null);
   const [discussionTurns, setDiscussionTurns] = useState<DiscussionTurn[]>([]);
   const [discussionEnded, setDiscussionEnded] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -124,6 +172,8 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const updateTranscript = (value: string) => {
     setTranscript(value);
     setAssessment(null);
+    setBasicAssessment(null);
+    setDiscussionDrill(null);
     setCompletedChecks([]);
     setError(null);
   };
@@ -131,6 +181,8 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const clearCurrentAttempt = () => {
     setTranscript("");
     setAssessment(null);
+    setBasicAssessment(null);
+    setDiscussionDrill(null);
     if (mode === "individual-response") setSessionId(null);
     setError(null);
     setCompletedChecks([]);
@@ -201,8 +253,15 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
         body: JSON.stringify({ mode, task, transcript, sessionId, paperId }),
       });
       const data = await readAiResponse(response);
-      if (!data.assessment) throw new Error("AI 教練沒有返回可用的訓練量表，請稍後再試。");
-      setAssessment(data.assessment);
+      if (data.resultMode === "ai_assessment") {
+        setAssessment(data.assessment);
+        setBasicAssessment(null);
+      } else if (data.resultMode === "basic_coaching" && data.basicCoaching.kind === "assessment") {
+        setAssessment(null);
+        setBasicAssessment(data.basicCoaching);
+      } else {
+        throw new Error("教練服務沒有返回可用的個人回應結果，請稍後再試。");
+      }
       if (data.sessionId) setSessionId(data.sessionId);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "AI 教練暫時未能回應，請稍後再試。");
@@ -230,7 +289,15 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
         body: JSON.stringify({ context: task, learnerTurn: transcript, previousTurns, round: nextDiscussionRound, sessionId, paperId }),
       });
       const data = await readAiResponse(response);
-      const reply = data.response || "I do not have a new point yet. Could you add one specific reason?";
+      if (data.resultMode === "basic_coaching" && data.basicCoaching.kind === "discussion") {
+        setDiscussionDrill(data.basicCoaching);
+        return;
+      }
+      if (data.resultMode !== "ai_teammate") {
+        throw new Error("教練服務沒有返回可用的小組討論結果，請稍後再試。");
+      }
+      setDiscussionDrill(null);
+      const reply = data.response;
       const role = data.partnerRole === "Student B" ? "AI 組員 B" : "AI 組員 A";
       setDiscussionTurns((current) => [
         ...current,
@@ -260,6 +327,7 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
 
   const startNewDiscussion = () => {
     setDiscussionTurns([]);
+    setDiscussionDrill(null);
     setDiscussionEnded(false);
     setSessionId(null);
     discussionCompletionTrackedRef.current = false;
@@ -407,6 +475,44 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
           <div className="mt-3 flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-serif text-2xl">逐字稿訓練量表</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#4f4b44]">{assessment.summary}</p></div><div className="border border-[#ad3f29] px-4 py-3 text-center"><span className="block font-mono text-3xl text-[#ad3f29]">{assessment.trainingLevel}/5</span><span className="mt-1 block text-[10px] uppercase tracking-[0.16em] text-[#665f55]">training signal</span></div></div>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">{assessment.rubrics.map((rubric) => <article key={rubric.criterion} className="border border-[#c9c0b1] bg-white/45 p-4"><div className="flex items-center justify-between gap-3"><h3 className="font-semibold text-[#26352a]">{rubric.criterion}</h3><span className="font-mono text-sm text-[#ad3f29]">{rubric.trainingLevel}/5</span></div><p className="mt-3 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">證據：</strong>{rubric.evidence}</p><p className="mt-2 text-xs leading-5 text-[#6d695f]"><strong className="text-[#4f4b44]">下一步：</strong>{rubric.nextStep}</p></article>)}</div>
           <p className="mt-5 text-xs leading-5 text-[#665f55]">{assessment.caveat} 不能評估錄音中的發音、可聽流暢度、節奏或眼神交流。</p>
+        </section>
+      ) : null}
+
+      {basicAssessment ? (
+        <section className="border border-[#b08a3e] bg-[#fbf3dd] p-5 sm:p-6" aria-live="polite">
+          <p className="eyebrow text-[#80601e]">Basic coaching mode</p>
+          <h2 className="mt-3 font-serif text-2xl text-[#26352a]">AI 服務暫不可用，先給你可核對的基本提示。</h2>
+          <p className="mt-2 text-sm leading-6 text-[#5e5b53]">這裡只檢查字數、句段和明確出現的連接或互動句型；不會把規則結果包裝成 AI 分數。</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {basicAssessment.checks.map((check) => (
+              <article key={check.id} className="border border-[#cfb878] bg-white/55 p-4">
+                <div className="flex items-start gap-3">
+                  <span aria-hidden="true" className={`mt-0.5 font-mono text-sm ${check.found ? "text-[#48634c]" : "text-[#ad3f29]"}`}>{check.found ? "YES" : "NEXT"}</span>
+                  <div><h3 className="font-semibold text-[#26352a]">{check.label}</h3><p className="mt-1 text-xs leading-5 text-[#665f55]">{check.detail}</p></div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <h3 className="mt-6 font-semibold text-[#26352a]">下一次只改這幾件事</h3>
+          <ol className="mt-3 space-y-2 text-sm leading-6 text-[#4f4b44]">
+            {basicAssessment.nextSteps.map((step, index) => <li key={step}><span className="mr-2 font-mono text-[#80601e]">0{index + 1}</span>{step}</li>)}
+          </ol>
+          <p className="mt-5 border-t border-[#cfb878] pt-4 text-xs leading-5 text-[#665f55]">{basicAssessment.caveat} 你可以保留逐字稿，稍後再次按下回饋按鈕重試真正的 AI 分析。</p>
+        </section>
+      ) : null}
+
+      {discussionDrill ? (
+        <section className="border border-[#b08a3e] bg-[#fbf3dd] p-5 sm:p-6" aria-live="polite">
+          <p className="eyebrow text-[#80601e]">Basic discussion drill</p>
+          <h2 className="mt-3 font-serif text-2xl text-[#26352a]">AI 組員暫不可用，這一輪不會假裝完成。</h2>
+          <p className="mt-2 text-sm leading-6 text-[#5e5b53]">{discussionDrill.instruction}</p>
+          <div className="mt-5 grid gap-2">
+            {discussionDrill.sentenceFrames.map((frame) => <p key={frame} className="border border-[#cfb878] bg-white/55 p-3 font-mono text-sm leading-6 text-[#26352a]">{frame}</p>)}
+          </div>
+          <p className="mt-4 text-xs leading-5 text-[#665f55]">
+            {discussionDrill.detectedMoves.length > 0 ? `已偵測的互動標記：${discussionDrill.detectedMoves.join("、")}。` : "這次未偵測到常見互動標記。"}
+            {discussionDrill.caveat}
+          </p>
         </section>
       ) : null}
 

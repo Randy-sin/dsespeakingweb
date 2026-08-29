@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
+import type { IncomingMessage } from "node:http";
 import WebSocket from "ws";
-import { getDoubaoRealtimeEnv } from "@/lib/ai/env";
+import { getDoubaoRealtimeEnv } from "./env";
 
 export type DoubaoModel = "O" | "SC";
 export type DoubaoInputMode = "text" | "audio_file";
@@ -173,6 +174,40 @@ class DoubaoRealtimeError extends Error {
   }
 }
 
+export class DoubaoRealtimeEntitlementError extends Error {
+  readonly reason = "resource_not_granted" as const;
+  readonly status = 403;
+
+  constructor() {
+    super("Doubao realtime resource is not granted to this application");
+    this.name = "DoubaoRealtimeEntitlementError";
+  }
+}
+
+async function readUnexpectedResponseBody(response: IncomingMessage): Promise<string> {
+  const chunks: Buffer[] = [];
+  let totalBytes = 0;
+  for await (const chunk of response) {
+    const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += bytes.length;
+    if (totalBytes <= 4_096) chunks.push(bytes);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+export function isDoubaoRealtimeEntitlementResponse(
+  statusCode: number | undefined,
+  responseBody: string,
+): boolean {
+  if (statusCode !== 403) return false;
+  try {
+    const parsed = JSON.parse(responseBody) as { error?: unknown };
+    return typeof parsed.error === "string" && parsed.error.includes("requested resource not granted");
+  } catch {
+    return false;
+  }
+}
+
 function getFailureFrame(frames: ParsedFrame[]): ParsedFrame | undefined {
   return frames.find((f) => {
     if (f.messageType === 0b1111) return true;
@@ -263,17 +298,45 @@ export async function probeDoubaoRealtime(params: RealtimeProbeParams): Promise<
     },
   });
 
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("Realtime websocket connect timeout")), timeoutMs);
-    ws.once("open", () => {
-      clearTimeout(timer);
-      resolve();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      let unexpectedResponseReceived = false;
+      let settled = false;
+      const finish = (callback: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        callback();
+      };
+      const timer = setTimeout(
+        () => finish(() => reject(new Error("Realtime websocket connect timeout"))),
+        timeoutMs,
+      );
+      ws.once("open", () => {
+        finish(resolve);
+      });
+      ws.once("error", (err) => {
+        if (!unexpectedResponseReceived) finish(() => reject(err));
+      });
+      ws.once("unexpected-response", (_request, response) => {
+        unexpectedResponseReceived = true;
+        void readUnexpectedResponseBody(response)
+          .then((body) => {
+            if (isDoubaoRealtimeEntitlementResponse(response.statusCode, body)) {
+              finish(() => reject(new DoubaoRealtimeEntitlementError()));
+              return;
+            }
+            finish(() => reject(new Error(`Doubao realtime handshake failed with status ${response.statusCode ?? "unknown"}`)));
+          })
+          .catch(() => {
+            finish(() => reject(new Error(`Doubao realtime handshake failed with status ${response.statusCode ?? "unknown"}`)));
+          });
+      });
     });
-    ws.once("error", (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
+  } catch (error) {
+    ws.terminate();
+    throw error;
+  }
 
   const pushTimeline = (frame: ParsedFrame) => {
     const payload = decodePayload(frame);

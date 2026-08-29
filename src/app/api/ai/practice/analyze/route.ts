@@ -1,11 +1,12 @@
 import { after, NextRequest, NextResponse } from "next/server";
 import { bucketLatency, classifyAnalyticsOutcome, type ProductEventErrorCode } from "@/lib/analytics/events";
 import { recordServerProductEvent } from "@/lib/analytics/server";
-import { probeDoubaoRealtime } from "@/lib/ai/doubao-realtime";
+import { buildBasicAssessmentCoaching } from "@/lib/ai/basic-coaching";
+import { DoubaoRealtimeEntitlementError, probeDoubaoRealtime } from "@/lib/ai/doubao-realtime";
 import { normaliseLearningText } from "@/lib/ai/learning-prompts";
 import { buildAssessmentPrompt, parsePracticeAssessment } from "@/lib/ai/practice-assessment";
 import { AiRateLimitError, consumeAiRateLimit, requireAiUser, requireSameOriginJsonRequest } from "@/lib/ai/require-user";
-import { saveAssessment } from "@/lib/learning/practice-persistence";
+import { saveAssessment, saveBasicCoaching } from "@/lib/learning/practice-persistence";
 import { parseOptionalUuid } from "@/lib/ids";
 
 export const runtime = "nodejs";
@@ -34,7 +35,50 @@ export async function POST(request: NextRequest) {
     const paperId = parseOptionalUuid(body.paperId, "paperId");
     analyticsContentId = paperId ?? undefined;
     await consumeAiRateLimit(supabase, "assessment");
-    const result = await probeDoubaoRealtime({ text: buildAssessmentPrompt(mode, task, transcript), model: "O", timeoutMs: 25_000, includeTtsPcmS16le: false });
+    let result;
+    try {
+      result = await probeDoubaoRealtime({ text: buildAssessmentPrompt(mode, task, transcript), model: "O", timeoutMs: 25_000, includeTtsPcmS16le: false });
+    } catch (providerError) {
+      if (!(providerError instanceof DoubaoRealtimeEntitlementError)) throw providerError;
+
+      const basicCoaching = buildBasicAssessmentCoaching(mode, transcript);
+      const savedSessionId = await saveBasicCoaching(
+        { supabase, userId: user.id, mode, task, transcript, sessionId, paperId },
+        basicCoaching,
+      );
+      after(async () => {
+        await Promise.all([
+          recordServerProductEvent(request, {
+            name: "analysis_failed",
+            surface: "practice",
+            context: "feedback",
+            mode,
+            outcome: "failure",
+            errorCode: "analysis-failed",
+            latencyBucket: bucketLatency(Date.now() - startedAt),
+            authState: "authenticated",
+            contentId: analyticsContentId,
+          }),
+          recordServerProductEvent(request, {
+            name: "basic_coaching_delivered",
+            surface: "practice",
+            context: "feedback",
+            mode,
+            outcome: "success",
+            authState: "authenticated",
+            contentId: analyticsContentId,
+          }),
+        ]);
+      });
+      return NextResponse.json({
+        ok: true,
+        resultMode: "basic_coaching",
+        basicCoaching,
+        sessionId: savedSessionId,
+        persisted: true,
+        evidenceSource: "local_rules",
+      });
+    }
     const assessment = parsePracticeAssessment(result.chatText, mode);
     const savedSessionId = await saveAssessment({ supabase, userId: user.id, mode, task, transcript, sessionId, paperId }, assessment);
     after(() => recordServerProductEvent(request, {
@@ -47,7 +91,7 @@ export async function POST(request: NextRequest) {
       authState: "authenticated",
       contentId: analyticsContentId,
     }));
-    return NextResponse.json({ ok: true, assessment, sessionId: savedSessionId, persisted: true, evidenceSource: "learner_transcript", latencyMs: result.latencyMs });
+    return NextResponse.json({ ok: true, resultMode: "ai_assessment", assessment, sessionId: savedSessionId, persisted: true, evidenceSource: "learner_transcript", latencyMs: result.latencyMs });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Analysis failed";
     const status = error instanceof AiRateLimitError
