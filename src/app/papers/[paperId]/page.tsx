@@ -11,6 +11,7 @@ import { fetchPaperHub } from "@/lib/forum/server";
 import { ArrowLeft, BookOpenText, MessageSquareText, Mic2 } from "lucide-react";
 import { JsonLd } from "@/components/seo/json-ld";
 import { absoluteUrl, buildPageMetadata, SITE_NAME, SITE_ORIGIN, truncateSeoText } from "@/lib/seo";
+import { PaperOpenTracker } from "@/components/analytics/paper-open-tracker";
 
 type Params = Promise<{ paperId: string }>;
 type Props = { params: Params };
@@ -79,6 +80,7 @@ export default async function PaperHubPage({ params }: Props) {
   return (
     <div className="min-h-screen bg-[#f7f6f2]">
       <JsonLd data={jsonLd} />
+      <PaperOpenTracker contentId={paper.paper_id} />
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-7xl px-5 py-8 sm:px-8">

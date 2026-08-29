@@ -6,8 +6,10 @@ import Link from "next/link";
 import { ArrowLeft, Clock3, Lightbulb, Mic, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { trackProductEvent } from "@/lib/analytics/client";
 import { formatDuration } from "@/lib/format-duration";
 import type { Lesson } from "@/lib/learning/types";
+import { useUser } from "@/hooks/use-user";
 
 const PracticeCoach = dynamic(
   () => import("@/features/practice/practice-coach").then((module) => module.PracticeCoach),
@@ -40,9 +42,11 @@ export function IndividualResponseSession({
   const [seconds, setSeconds] = useState(60);
   const [notes, setNotes] = useState("");
   const [announcement, setAnnouncement] = useState("題目已準備好。你可以直接開始說，也可以先準備一分鐘。");
+  const { user, loading: userLoading } = useUser();
   const prepareHeadingRef = useRef<HTMLHeadingElement>(null);
   const speakHeadingRef = useRef<HTMLHeadingElement>(null);
   const notesRef = useRef("");
+  const practiceStartedTrackedRef = useRef(false);
   const draftKey = `${IR_SESSION_DRAFT_PREFIX}:${lesson.slug}`;
 
   const saveSessionDraft = useCallback((nextPhase: "ready" | "prepare" | "speak", nextNotes: string) => {
@@ -52,6 +56,19 @@ export function IndividualResponseSession({
       expiresAt: Date.now() + DRAFT_TTL_MS,
     }));
   }, [draftKey]);
+
+  useEffect(() => {
+    if (userLoading || practiceStartedTrackedRef.current) return;
+    practiceStartedTrackedRef.current = true;
+    trackProductEvent({
+      name: "practice_started",
+      surface: "practice",
+      context: "practice-session",
+      contentId: paperId ?? lesson.slug,
+      mode: "individual-response",
+      authState: user ? "authenticated" : "anonymous",
+    });
+  }, [lesson.slug, paperId, user, userLoading]);
 
   useEffect(() => {
     try {
@@ -96,6 +113,13 @@ export function IndividualResponseSession({
   }, [phase]);
 
   const startPreparation = () => {
+    trackProductEvent({
+      name: "preparation_started",
+      surface: "practice",
+      context: "practice-session",
+      contentId: paperId ?? `${lesson.slug}-${phase === "speak" ? "restart" : "initial"}`,
+      mode: "individual-response",
+    });
     setSeconds(60);
     setAnnouncement("一分鐘準備開始。只記關鍵詞和答案次序。");
     saveSessionDraft("prepare", notes);

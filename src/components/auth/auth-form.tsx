@@ -10,13 +10,28 @@ import Link from "next/link";
 import { Loader2, Mail, ArrowLeft, CheckCircle2, RotateCw } from "lucide-react";
 import type { Provider } from "@supabase/supabase-js";
 import { useUser } from "@/hooks/use-user";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 interface AuthFormProps {
   mode: "login" | "register";
   nextPath?: string;
+  initialError?: "auth_failed";
 }
 
-export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
+function classifyClientAuthError(error: unknown) {
+  const authCode = typeof error === "object" && error !== null && "code" in error
+    ? String(error.code).toLowerCase()
+    : "";
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (authCode.includes("email_not_confirmed") || message.includes("not confirmed")) return "unauthorized" as const;
+  if (authCode.includes("invalid_credentials") || message.includes("invalid login credentials")) return "unauthorized" as const;
+  if (authCode.includes("over_email_send_rate_limit") || authCode.includes("rate_limit")) return "rate-limited" as const;
+  if (authCode.includes("weak_password") || authCode.includes("user_already_exists")) return "invalid-input" as const;
+  return "auth-failed" as const;
+}
+
+export function AuthForm({ mode, nextPath = "/learn", initialError }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -41,6 +56,13 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
 
   const handleOAuth = async (provider: Provider) => {
     setOauthLoading(provider);
+    trackProductEvent({
+      name: "auth_started",
+      surface: "auth",
+      context: "oauth-callback",
+      contentId: provider,
+      authState: "anonymous",
+    });
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -48,6 +70,15 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
       },
     });
     if (error) {
+      trackProductEvent({
+        name: "auth_failed",
+        surface: "auth",
+        context: "oauth-callback",
+        contentId: provider,
+        outcome: "failure",
+        errorCode: "auth-failed",
+        authState: "anonymous",
+      });
       toast.error(error.message);
       setOauthLoading(null);
     }
@@ -77,6 +108,13 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const context = mode === "register" ? "register" : "login";
+    trackProductEvent({
+      name: "auth_started",
+      surface: "auth",
+      context,
+      authState: "anonymous",
+    });
 
     try {
       if (mode === "register") {
@@ -105,6 +143,13 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
 
         // If session exists, user is auto-confirmed (e.g. email confirmation disabled)
         toast.success("註冊成功");
+        trackProductEvent({
+          name: "auth_completed",
+          surface: "auth",
+          context,
+          outcome: "success",
+          authState: "authenticated",
+        });
         router.push(nextPath);
         router.refresh();
       } else {
@@ -121,6 +166,14 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
           ) {
             setEmailSent(true);
             setResendCooldown(0);
+            trackProductEvent({
+              name: "auth_failed",
+              surface: "auth",
+              context,
+              outcome: "blocked",
+              errorCode: "unauthorized",
+              authState: "anonymous",
+            });
             toast.error("請先驗證你的電郵地址");
             return;
           }
@@ -128,10 +181,25 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
         }
 
         toast.success("登入成功");
+        trackProductEvent({
+          name: "auth_completed",
+          surface: "auth",
+          context,
+          outcome: "success",
+          authState: "authenticated",
+        });
         router.push(nextPath);
         router.refresh();
       }
     } catch (error: unknown) {
+      trackProductEvent({
+        name: "auth_failed",
+        surface: "auth",
+        context,
+        outcome: "failure",
+        errorCode: classifyClientAuthError(error),
+        authState: "anonymous",
+      });
       const message =
         error instanceof Error ? error.message : "操作失敗，請重試";
       toast.error(message);
@@ -286,6 +354,12 @@ export function AuthForm({ mode, nextPath = "/learn" }: AuthFormProps) {
             ? "登入你的帳號繼續練習"
             : "註冊帳號開始 DSE Speaking 練習"}
         </p>
+
+        {initialError === "auth_failed" ? (
+          <p role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-[13px] leading-5 text-red-700">
+            登入連結未能驗證或已經失效。請重新登入；你的練習內容仍保留在原本頁面。
+          </p>
+        ) : null}
 
         {/* OAuth Buttons */}
         <div className="space-y-2.5 mb-6">

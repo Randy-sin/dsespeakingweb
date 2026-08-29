@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Newsreader } from "next/font/google";
-import { Analytics } from "@vercel/analytics/react";
+import { AnalyticsProvider } from "@/components/analytics/analytics-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { LearningSync } from "@/components/learning/learning-sync";
 import { JsonLd } from "@/components/seo/json-ld";
@@ -54,7 +54,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <LearningSync />
           <Toaster position="top-center" />
         </UserProvider>
-        <Analytics />
+        <AnalyticsProvider />
       </body>
     </html>
   );

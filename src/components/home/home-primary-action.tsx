@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, TimerReset } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { trackProductEvent } from "@/lib/analytics/client";
 import { getNextLesson } from "@/lib/learning/content";
 import { useLearnerProfile, useLearningProgress } from "@/lib/learning/store";
 
@@ -27,6 +28,7 @@ export function HomePrimaryAction({ placement = "hero" }: { placement?: "hero" |
       : "開始今日口試練習";
 
   const Icon = placement === "closing" ? TimerReset : ArrowRight;
+  const destination = needsFirstSpeakingAttempt ? "onboarding" : nextLesson ? "lesson" : "practice";
 
   return (
     <Button
@@ -37,7 +39,15 @@ export function HomePrimaryAction({ placement = "hero" }: { placement?: "hero" |
           : "h-[52px] max-w-full rounded-full bg-[#172019] px-7 text-[14px] text-[#faf7ef] hover:bg-[#324036]"
       }
     >
-      <Link href={href}>
+      <Link
+        href={href}
+        onClick={() => trackProductEvent({
+          name: "primary_cta_clicked",
+          surface: "home",
+          context: placement === "hero" ? "hero" : "navigation",
+          contentId: destination,
+        })}
+      >
         <span className="truncate">{label}</span>
         <Icon className="h-4 w-4 shrink-0" />
       </Link>

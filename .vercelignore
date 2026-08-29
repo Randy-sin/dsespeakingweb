@@ -1,0 +1,19 @@
+# Build outputs and local tooling
+.next/
+node_modules/
+coverage/
+.seo-audit/
+.playwright-cli/
+output/
+
+# Import/source material is not used by the Next.js runtime. Public paper
+# images remain included under public/.
+data/
+scripts/
+docs/
+specs/
+
+# Local-only files
+.git/
+.DS_Store
+*.log

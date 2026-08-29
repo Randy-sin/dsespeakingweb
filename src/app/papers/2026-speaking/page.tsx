@@ -4,6 +4,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { ArrowLeft } from "lucide-react";
 import { speaking2026Papers } from "@/lib/papers/speaking-2026";
 import { buildPageMetadata } from "@/lib/seo";
+import { PaperOpenTracker } from "@/components/analytics/paper-open-tracker";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "2026 DSE Speaking 題目整理",
@@ -15,6 +16,7 @@ export const metadata: Metadata = buildPageMetadata({
 export default function Speaking2026Page() {
   return (
     <div className="min-h-screen bg-white">
+      <PaperOpenTracker contentId="2026-speaking" />
       <Navbar />
 
       <main id="main-content" className="mx-auto max-w-3xl px-5 py-12 sm:px-8 sm:py-16">

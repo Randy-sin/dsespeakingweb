@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { FileAudio, LoaderCircle, Mic, RotateCcw, Square, Type } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { convertAudioBlobToWav } from "@/features/recording/audio-to-wav";
+import { trackProductEvent } from "@/lib/analytics/client";
+import { bucketDuration, type ProductEventContext, type ProductEventErrorCode, type ProductEventSurface } from "@/lib/analytics/events";
 import { recordPractice } from "@/lib/learning/store";
 import { useUser } from "@/hooks/use-user";
 import { formatDuration } from "@/lib/format-duration";
@@ -53,7 +55,19 @@ type VoiceRecorderProps = {
   onStateChange?: (state: RecorderState) => void;
   onTranscriptChange?: (transcript: string) => void;
   onSessionChange?: (sessionId: string | null) => void;
+  analyticsContext?: {
+    surface: ProductEventSurface;
+    context: ProductEventContext;
+    contentId?: string;
+  };
 };
+
+function classifyRecordingError(error: unknown): ProductEventErrorCode {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "SecurityError") return "permission-denied";
+  if (["NotFoundError", "DevicesNotFoundError", "NotReadableError", "TrackStartError"].includes(name)) return "device-unavailable";
+  return "recording-failed";
+}
 
 function getSpeechRecognitionConstructor() {
   const speechWindow = window as Window & {
@@ -76,6 +90,7 @@ export function VoiceRecorder({
   onStateChange,
   onTranscriptChange,
   onSessionChange,
+  analyticsContext,
 }: VoiceRecorderProps) {
   const [state, setState] = useState<RecorderState>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -130,6 +145,17 @@ export function VoiceRecorder({
   const startRecording = async () => {
     setError(null);
     if (!("MediaRecorder" in window) || !navigator.mediaDevices?.getUserMedia) {
+      if (analyticsContext) {
+        trackProductEvent({
+          name: "recording_failed",
+          ...analyticsContext,
+          mode,
+          outcome: "failure",
+          errorCode: "unsupported-browser",
+          inputSource: "voice",
+          authState: user ? "authenticated" : "anonymous",
+        });
+      }
       setError(allowTextFallback
         ? "這個瀏覽器不支援錄音。你可以使用下方的文字後備，題目不會消失。"
         : "這個瀏覽器不支援錄音。請改用支援麥克風的瀏覽器，或先進入第一課。",
@@ -144,10 +170,38 @@ export function VoiceRecorder({
       chunksRef.current = [];
       const recorder = new MediaRecorder(activeStream);
       recorderRef.current = recorder;
+      let stopHandled = false;
+      let recordingHadError = false;
       recorder.ondataavailable = (event) => { if (event.data.size > 0) chunksRef.current.push(event.data); };
+      recorder.onerror = () => {
+        if (recordingHadError) return;
+        recordingHadError = true;
+        if (analyticsContext) {
+          trackProductEvent({
+            name: "recording_failed",
+            ...analyticsContext,
+            mode,
+            outcome: "failure",
+            errorCode: "recording-failed",
+            inputSource: "voice",
+            authState: user ? "authenticated" : "anonymous",
+          });
+        }
+        setError("錄音被瀏覽器中斷。請檢查麥克風連線後再試。");
+      };
       recorder.onstop = async () => {
+        if (stopHandled) return;
+        stopHandled = true;
         recognitionRef.current?.stop();
         recognitionRef.current = null;
+        if (recordingHadError) {
+          activeStream.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+          recorderRef.current = null;
+          startedAtRef.current = null;
+          setState("idle");
+          return;
+        }
         const mimeType = recorder.mimeType?.split(";")[0] || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: mimeType });
         setAudioBlob(blob);
@@ -157,6 +211,17 @@ export function VoiceRecorder({
         recorderRef.current = null;
         const duration = startedAtRef.current ? Math.max(1, Math.round((Date.now() - startedAtRef.current) / 1000)) : 1;
         recordPractice(duration);
+        if (analyticsContext) {
+          trackProductEvent({
+            name: "recording_completed",
+            ...analyticsContext,
+            mode,
+            outcome: "success",
+            inputSource: "voice",
+            durationBucket: bucketDuration(duration),
+            authState: user ? "authenticated" : "anonymous",
+          });
+        }
         onRecordingComplete?.(duration);
         startedAtRef.current = null;
         setState("recorded");
@@ -179,38 +244,61 @@ export function VoiceRecorder({
       setSeconds(0);
       sessionIdRef.current = null;
       onSessionChange?.(null);
+      recorder.start();
       startedAtRef.current = Date.now();
+      if (analyticsContext) {
+        trackProductEvent({
+          name: "recording_started",
+          ...analyticsContext,
+          mode,
+          authState: user ? "authenticated" : "anonymous",
+          inputSource: "voice",
+        });
+      }
+      onRecordingStart?.();
+      setState("recording");
+
       const SpeechRecognition = getSpeechRecognitionConstructor();
       if (SpeechRecognition && onTranscriptChange) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = "en-HK";
-        recognition.onresult = (event) => {
-          let draft = "";
-          for (let index = 0; index < event.results.length; index += 1) {
-            draft += event.results[index][0]?.transcript ?? "";
-          }
-          if (draft.trim()) onTranscriptChange(draft.trim());
-        };
-        recognition.onerror = () => {
-          recognitionRef.current = null;
-        };
         try {
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = "en-HK";
+          recognition.onresult = (event) => {
+            let draft = "";
+            for (let index = 0; index < event.results.length; index += 1) {
+              draft += event.results[index][0]?.transcript ?? "";
+            }
+            if (draft.trim()) onTranscriptChange(draft.trim());
+          };
+          recognition.onerror = () => {
+            recognitionRef.current = null;
+          };
           recognition.start();
           recognitionRef.current = recognition;
         } catch {
           recognitionRef.current = null;
         }
       }
-      onRecordingStart?.();
-      recorder.start();
-      setState("recording");
     } catch (recordingError) {
       stream?.getTracks().forEach((track) => track.stop());
+      recognitionRef.current?.stop();
+      recognitionRef.current = null;
       streamRef.current = null;
       recorderRef.current = null;
       const errorName = recordingError instanceof DOMException ? recordingError.name : "";
+      if (analyticsContext) {
+        trackProductEvent({
+          name: "recording_failed",
+          ...analyticsContext,
+          mode,
+          outcome: "failure",
+          errorCode: classifyRecordingError(recordingError),
+          authState: user ? "authenticated" : "anonymous",
+          inputSource: "voice",
+        });
+      }
       const recovery = allowTextFallback ? "，或使用下方的文字後備" : "後再試";
       if (errorName === "NotAllowedError") {
         setError(`瀏覽器未允許使用麥克風。請在網址列開啟麥克風權限${recovery}。`);
@@ -240,6 +328,16 @@ export function VoiceRecorder({
   const useTextFallback = () => {
     setError(null);
     onReset?.();
+    if (analyticsContext) {
+      trackProductEvent({
+        name: "text_fallback_opened",
+        ...analyticsContext,
+        mode,
+        outcome: "success",
+        inputSource: "text-fallback",
+        authState: user ? "authenticated" : "anonymous",
+      });
+    }
     setState("text");
   };
 
@@ -248,6 +346,8 @@ export function VoiceRecorder({
     setError(null);
     setSaveMessage(null);
     setTranscribing(true);
+    let requestReachedServer = false;
+    let clientErrorCode: ProductEventErrorCode = "transcription-failed";
     try {
       const wav = await convertAudioBlobToWav(audioBlob);
       const form = new FormData();
@@ -256,7 +356,9 @@ export function VoiceRecorder({
       form.append("task", task);
       if (paperId) form.append("paperId", paperId);
       if (sessionIdRef.current) form.append("sessionId", sessionIdRef.current);
+      clientErrorCode = "network-failed";
       const response = await fetch("/api/ai/transcribe", { method: "POST", body: form });
+      requestReachedServer = true;
       const data = (await response.json()) as { ok?: boolean; transcript?: string; sessionId?: string; error?: string };
       if (!response.ok || !data.ok || !data.transcript) {
         if (response.status === 401) throw new Error("請先登入，再使用 AI 逐字稿。");
@@ -270,6 +372,17 @@ export function VoiceRecorder({
       }
       setSaveMessage("AI 逐字稿已生成並保存到你的私人練習記錄；請先校對，再取得分析。");
     } catch (transcriptionError) {
+      if (!requestReachedServer && analyticsContext) {
+        trackProductEvent({
+          name: "transcription_failed",
+          ...analyticsContext,
+          mode,
+          outcome: "failure",
+          errorCode: clientErrorCode,
+          inputSource: "voice",
+          authState: user ? "authenticated" : "anonymous",
+        });
+      }
       setError(transcriptionError instanceof Error ? transcriptionError.message : "AI 逐字稿暫時無法使用。請稍後再試。");
     } finally {
       setTranscribing(false);

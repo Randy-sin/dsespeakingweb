@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceRecorder, type RecorderState } from "@/features/recording/voice-recorder";
+import { trackProductEvent } from "@/lib/analytics/client";
 import { completeLesson } from "@/lib/learning/store";
 import type { Lesson } from "@/lib/learning/types";
 import { canCompleteVoiceLesson, hasCompletedSpeakingAttempt } from "@/lib/learning/voice-first";
@@ -16,6 +17,8 @@ export function LessonPractice({ lesson }: { lesson: Lesson }) {
   const [recorderKey, setRecorderKey] = useState(0);
   const [completed, setCompleted] = useState(false);
   const [confirmedSteps, setConfirmedSteps] = useState<string[]>([]);
+  const completionTrackedRef = useRef(false);
+  const practiceStartedTrackedRef = useRef(false);
   const nextHref = lesson.mode === "group-discussion" ? "/practice/group-discussion" : `/practice/individual-response/session?type=${lesson.slug}`;
   const fallbackWordCount = fallbackAnswer.trim().split(/\s+/).filter(Boolean).length;
   const targetSteps = lesson.steps.slice(0, 3);
@@ -27,9 +30,33 @@ export function LessonPractice({ lesson }: { lesson: Lesson }) {
     confirmedSteps: confirmedSteps.length,
   });
 
+  useEffect(() => {
+    if (practiceStartedTrackedRef.current) return;
+    practiceStartedTrackedRef.current = true;
+    trackProductEvent({
+      name: "practice_started",
+      surface: "learn",
+      context: "lesson",
+      contentId: lesson.slug,
+      mode: lesson.mode,
+    });
+  }, [lesson.mode, lesson.slug]);
+
   const markComplete = () => {
     if (!readyToComplete) return;
     completeLesson(lesson.slug, lesson.duration);
+    if (!completionTrackedRef.current) {
+      completionTrackedRef.current = true;
+      trackProductEvent({
+        name: "lesson_completed",
+        surface: "learn",
+        context: "lesson",
+        contentId: lesson.slug,
+        mode: lesson.mode,
+        outcome: "success",
+        inputSource: recorderState === "text" ? "text-fallback" : "voice",
+      });
+    }
     setCompleted(true);
   };
 
@@ -64,6 +91,7 @@ export function LessonPractice({ lesson }: { lesson: Lesson }) {
           mode={lesson.mode}
           task={lesson.prompt}
           showAccountOptions={false}
+          analyticsContext={{ surface: "learn", context: "lesson", contentId: lesson.slug }}
           onStateChange={setRecorderState}
           onRecordingStart={clearReview}
           onReset={clearReview}

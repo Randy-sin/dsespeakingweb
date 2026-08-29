@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Headphones, Mic2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VoiceRecorder } from "@/features/recording/voice-recorder";
+import { trackProductEvent } from "@/lib/analytics/client";
 
 const firstPrompt = "Should schools give students more chances to practise speaking outside English lessons? Explain your view.";
 const firstLessonHref = "/learn/individual-response/making-choices";
@@ -12,12 +13,38 @@ const firstLessonHref = "/learn/individual-response/making-choices";
 export function OnboardingFlow() {
   const router = useRouter();
   const [completed, setCompleted] = useState(false);
+  const completionTrackedRef = useRef(false);
+  const practiceStartedTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (practiceStartedTrackedRef.current) return;
+    practiceStartedTrackedRef.current = true;
+    trackProductEvent({
+      name: "practice_started",
+      surface: "onboarding",
+      context: "onboarding",
+      contentId: "first-speaking-attempt",
+      mode: "individual-response",
+    });
+  }, []);
 
   const completeFirstRecording = () => {
     setCompleted(true);
   };
 
-  const continueToFirstLesson = () => {
+  const continueToFirstLesson = (path: "recorded" | "microphone_unavailable") => {
+    if (!completionTrackedRef.current) {
+      completionTrackedRef.current = true;
+      trackProductEvent({
+        name: "onboarding_completed",
+        surface: "onboarding",
+        context: "onboarding",
+        contentId: path,
+        mode: "individual-response",
+        outcome: path === "recorded" ? "success" : "cancelled",
+        inputSource: path === "recorded" ? "voice" : undefined,
+      });
+    }
     router.push(firstLessonHref);
   };
 
@@ -82,6 +109,11 @@ export function OnboardingFlow() {
               allowTextFallback={false}
               showAccountOptions={false}
               onRecordingComplete={completeFirstRecording}
+              analyticsContext={{
+                surface: "onboarding",
+                context: "onboarding",
+                contentId: "first-speaking-attempt",
+              }}
             />
           </div>
 
@@ -98,7 +130,7 @@ export function OnboardingFlow() {
                   </p>
                 </div>
               </div>
-              <Button type="button" onClick={continueToFirstLesson} className="mt-5 h-12 w-full rounded-full bg-[#172019] px-6 text-white sm:w-auto">
+              <Button type="button" onClick={() => continueToFirstLesson("recorded")} className="mt-5 h-12 w-full rounded-full bg-[#172019] px-6 text-white sm:w-auto">
                 學會把剛才說得更完整<ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </section>
@@ -107,7 +139,7 @@ export function OnboardingFlow() {
               <p className="flex items-center gap-2 text-xs leading-5 text-[#665f55]">
                 <Headphones className="h-4 w-4 text-[#48634c]" />說完後可立即回聽，不需要先登入。
               </p>
-              <button type="button" onClick={continueToFirstLesson} className="inline-flex min-h-11 items-center gap-2 text-xs text-[#665f55] underline underline-offset-4">
+              <button type="button" onClick={() => continueToFirstLesson("microphone_unavailable")} className="inline-flex min-h-11 items-center gap-2 text-xs text-[#665f55] underline underline-offset-4">
                 麥克風暫時不可用，先學答題方法<ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>

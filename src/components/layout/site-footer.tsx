@@ -17,6 +17,7 @@ export function SiteFooter() {
           <Link className="inline-flex min-h-11 items-center" href="/learn/group-discussion">小組討論</Link>
           <Link className="inline-flex min-h-11 items-center" href="/learn/individual-response">個人回應</Link>
           <Link className="inline-flex min-h-11 items-center" href="/login">登入</Link>
+          <Link className="inline-flex min-h-11 items-center" href="/privacy">私隱與分析</Link>
         </div>
       </div>
     </footer>

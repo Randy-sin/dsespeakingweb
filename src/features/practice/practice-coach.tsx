@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Bot, Flag, LoaderCircle, MessageSquareText, PencilLine, RotateCcw, ShieldCheck, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceRecorder, type RecorderState } from "@/features/recording/voice-recorder";
 import { useUser } from "@/hooks/use-user";
+import { trackProductEvent } from "@/lib/analytics/client";
 import type { PracticeAssessment } from "@/lib/ai/practice-assessment";
 import type { PracticeMode } from "@/lib/learning/types";
 
@@ -77,6 +78,8 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const [recorderState, setRecorderState] = useState<RecorderState>("idle");
   const [recorderKey, setRecorderKey] = useState(0);
   const [editingTranscript, setEditingTranscript] = useState(false);
+  const discussionCompletionTrackedRef = useRef(false);
+  const practiceStartedTrackedRef = useRef(false);
   const checks = selfCheckItems[mode];
   const completedDiscussionRounds = discussionTurns.filter((turn) => turn.speaker === "ai").length;
   const nextDiscussionRound = completedDiscussionRounds + 1;
@@ -86,6 +89,21 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
   const showTranscriptEditor = isTextFallback || editingTranscript;
   const actionsAvailable = showReview && recorderState !== "recording" && hasTranscript;
   const showRecorder = mode === "individual-response" || !discussionEnded;
+
+  useEffect(() => {
+    // Individual-response sessions emit this once from their outer session
+    // screen; the coach is the top-level session for group discussion only.
+    if (mode !== "group-discussion" || loading || practiceStartedTrackedRef.current) return;
+    practiceStartedTrackedRef.current = true;
+    trackProductEvent({
+      name: "practice_started",
+      surface: "practice",
+      context: "practice-session",
+      ...(paperId ? { contentId: paperId } : {}),
+      mode,
+      authState: user ? "authenticated" : "anonymous",
+    });
+  }, [loading, mode, paperId, user]);
 
   useEffect(() => {
     try {
@@ -140,9 +158,33 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
 
   const continueToLogin = () => {
     const path = `${window.location.pathname}${window.location.search}`;
+    trackProductEvent({
+      name: "auth_started",
+      surface: "practice",
+      context: "feedback",
+      contentId: paperId,
+      mode,
+      authState: "anonymous",
+    });
     onBeforeLogin?.();
     window.sessionStorage.setItem(PRACTICE_DRAFT_KEY, JSON.stringify({ path, mode, task, transcript }));
     router.push(`/login?next=${encodeURIComponent(path)}`);
+  };
+
+  const completeDiscussion = (context: "three_rounds" | "ended_early") => {
+    setDiscussionEnded(true);
+    if (discussionCompletionTrackedRef.current) return;
+    discussionCompletionTrackedRef.current = true;
+    trackProductEvent({
+      name: "discussion_completed",
+      surface: "practice",
+      context: "practice-session",
+      contentId: paperId,
+      mode: "group-discussion",
+      outcome: context === "three_rounds" ? "success" : "cancelled",
+      authState: user ? "authenticated" : "anonymous",
+      round: context === "three_rounds" ? 3 : Math.max(1, completedDiscussionRounds),
+    });
   };
 
   const requestFeedback = async () => {
@@ -197,7 +239,7 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
       ]);
       if (data.sessionId) setSessionId(data.sessionId);
       if (nextDiscussionRound === 3) {
-        setDiscussionEnded(true);
+        completeDiscussion("three_rounds");
       } else {
         prepareFreshRecorder();
       }
@@ -220,6 +262,7 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
     setDiscussionTurns([]);
     setDiscussionEnded(false);
     setSessionId(null);
+    discussionCompletionTrackedRef.current = false;
     prepareFreshRecorder();
   };
 
@@ -243,6 +286,11 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
           mode={mode}
           task={task}
           paperId={paperId}
+          analyticsContext={{
+            surface: "practice",
+            context: "practice-session",
+            contentId: paperId,
+          }}
           onRecordingStart={clearCurrentAttempt}
           onReset={clearCurrentAttempt}
           onStateChange={setRecorderState}
@@ -343,7 +391,7 @@ export function PracticeCoach({ maxSeconds, mode, task, paperId, onBeforeLogin }
                       {pendingAction === "teammate" ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}請 AI 組員回應第 {nextDiscussionRound} 輪
                     </Button>
                   ) : null}
-                  {completedDiscussionRounds > 0 && !discussionEnded ? <Button type="button" onClick={() => setDiscussionEnded(true)} variant="ghost" className="rounded-full text-[#665f55]"><Flag className="mr-2 h-4 w-4" />結束本輪討論</Button> : null}
+                  {completedDiscussionRounds > 0 && !discussionEnded ? <Button type="button" onClick={() => completeDiscussion("ended_early")} variant="ghost" className="rounded-full text-[#665f55]"><Flag className="mr-2 h-4 w-4" />結束本輪討論</Button> : null}
                 </>
               ) : null}
             </div>
